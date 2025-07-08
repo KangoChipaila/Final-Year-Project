@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Sales Overview</title>
+        <script src = "https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <link rel = "stylesheet" href = "{{ url_for ('static', filename = 'css/sales_overview.css')}}" />
+    </head>
+
+    <body>
+        <div class = "drawer">
+            <img class = "logo" src = "{{ url_for ('static', filename = 'images/logo.jpg')}}" alt = "Company Logo Here" />
+            <details class="dashboard">
+                <summary>DASHBOARD</summary>
+                <div>
+                    <div>
+                        <p>submodule</p>
+                    </div>
+                </div>
+            </details>
+            <details class = "accordion-item">
+                <summary>ACCOUNTING</summary>
+                <div>
+                    <div>
+                        <p>submodule</p>
+                    </div>
+                </div>
+            </details>
+            <details class = "accordion-item">
+                <summary>ASSETS</summary>
+                <div>
+                    <div>
+                        <p>submodule</p>
+                    </div>
+                </div>
+            </details>
+            <details class = "accordion-item">
+                <summary>CUSTOMERS</summary>
+                <div>
+                    <div>
+                        <p>submodule</p>
+                    </div>
+                </div>
+            </details>
+            <details class = "accordion-item">
+                <summary>DISTRIBUTION</summary>
+                <div>
+                    <div>
+                        <p>submodule</p>
+                    </div>
+                </div>
+            </details>
+            <details class = "accordion-item">
+                <summary>FINANCE</summary>
+                <div>
+                    <div>
+                        <p>submodule</p>
+                    </div>
+                </div>
+            </details>
+            <details class = "accordion-item">
+                <summary>HUMAN RESOURCES</summary>
+                <div>
+                    <div>
+                        <p>submodule</p>
+                    </div>
+                </div>
+            </details>
+            <details class = "accordion-item">
+                <summary>PROCUREMENT</summary>
+                <div>
+                    <div>
+                        <p>submodule</p>
+                    </div>
+                </div>
+            </details>
+            <details class = "accordion-item">
+                <summary>PRODUCTION</summary>
+                <div>
+                    <div>
+                        <p>submodule</p>
+                    </div>
+                </div>
+            </details>
+            <details class = "accordion-item">
+                <summary>SALES</summary>
+                <div>
+                    <a href = "/sales-overview"><p>Overview</p></a>
+                </div>
+            </details>
+            
+        </div>
+        <div class="sales-overview">
+            <section class="top-content">
+                <div class="page-title">
+                    <div class = "module-title">SALES</div>
+                    <div class = "submodule-title">Overview</div>
+                </div>
+                <div class = "user-details">
+                    <div class = "user-info">USERNAME</div>
+                    <img class = "user-display-image" src = "./img/display picture.jpg" alt = "user display image" />
+                </div>
+            </section>
+            <section>
+                <div>
+                    <!--<img id = "sales-trend-graph" src = "./img/plot_sample.png" alt = "Sales Trend Graph" />-->
+                    <div id = "sales-trend-graph"></div>
+                </div>
+                <div>
+                    <img class = "goods-performance" src = "./img/pie-chart-sales-by-product cropped.png" alt = "Goods Performance Pie Chart" />
+                    <img class = "customer-groups" src = "./img/age group cropped.png" alt = "Customer Groups Pie Chart" />
+                </div>
+            </section>
+            <section>
+                <div class = "quick-access-links">
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                </div>
+            </section>
+            <footer></footer>
+            
+
+        </div>
+    <script>
+        var fig = {{ sales_trend_graph | tojson }};
+        Plotly.newPlot('sales-trend-graph', fig.data, fig.layout);
+    </script>
+    </body>
+</html>
