@@ -102,12 +102,11 @@
             </section>
             <section>
                 <div>
-                    <!--<img id = "sales-trend-graph" src = "./img/plot_sample.png" alt = "Sales Trend Graph" />-->
                     <div id = "sales-trend-graph"></div>
                 </div>
-                <div>
-                    <img class = "goods-performance" src = "./img/pie-chart-sales-by-product cropped.png" alt = "Goods Performance Pie Chart" />
-                    <img class = "customer-groups" src = "./img/age group cropped.png" alt = "Customer Groups Pie Chart" />
+                <div id = "pie-charts">
+                    <div id = "goods-performance-pie-chart"></div>
+                    <div id = "customers-by-expenditure-pie-chart"></div>
                 </div>
             </section>
             <section>
@@ -123,8 +122,13 @@
 
         </div>
     <script>
-        var fig = {{ sales_trend_graph | tojson }};
-        Plotly.newPlot('sales-trend-graph', fig.data, fig.layout);
+        var salesTrendGraph = {{ sales_trend_graph | tojson }};
+        var goodsPerformancePieChart = {{ goods_performance_pie_chart | tojson }};
+        var customerExpenditurePieChart = {{ customer_expenditure_pie_chart | tojson }};
+
+        Plotly.newPlot('sales-trend-graph', salesTrendGraph.data, salesTrendGraph.layout);
+        Plotly.newPlot('goods-performance-pie-chart', goodsPerformancePieChart.data, goodsPerformancePieChart.layout);
+        Plotly.newPlot('customers-by-expenditure-pie-chart', customerExpenditurePieChart.data, customerExpenditurePieChart.layout);
     </script>
     </body>
 </html>
