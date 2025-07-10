@@ -97,7 +97,7 @@
                 </div>
                 <div class = "user-details">
                     <div class = "user-info">USERNAME</div>
-                    <img class = "user-display-image" src = "./img/display picture.jpg" alt = "user display image" />
+                    <img class = "user-display-image" src = "{{url_for('static', filename = 'images/display picture.jpg')}}" alt = "user display image" />
                 </div>
             </section>
             <section>
@@ -108,10 +108,9 @@
                     <div id = "goods-performance-pie-chart"></div>
                     <div id = "customers-by-expenditure-pie-chart"></div>
                 </div>
-            </section>
-            <section>
-                <div class = "quick-access-links">
-                    <div></div>
+                <div id = "quick-access-links">
+                    <div id="quick-access-links-title">Quick Access Links</div>
+                    <div>Detailed Sales Analytics</div>
                     <div></div>
                     <div></div>
                     <div></div>
