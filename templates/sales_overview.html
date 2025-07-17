@@ -7,127 +7,139 @@
     </head>
 
     <body>
-        <div class = "drawer">
-            <img class = "logo" src = "{{ url_for ('static', filename = 'images/logo.jpg')}}" alt = "Company Logo Here" />
-            <details class="dashboard">
-                <summary>DASHBOARD</summary>
-                <div>
+        <div class="sales-page">
+            <div class = "drawer">
+                <img class = "logo" src = "{{ url_for ('static', filename = 'images/logo.jpg')}}" alt = "Company Logo Here" />
+                <details class="dashboard">
+                    <summary>DASHBOARD</summary>
                     <div>
-                        <p>submodule</p>
+                        <div>
+                            <p>submodule</p>
+                        </div>
                     </div>
-                </div>
-            </details>
-            <details class = "accordion-item">
-                <summary>ACCOUNTING</summary>
-                <div>
+                </details>
+                <details class = "accordion-item">
+                    <summary>ACCOUNTING</summary>
                     <div>
-                        <p>submodule</p>
+                        <div>
+                            <p>submodule</p>
+                        </div>
                     </div>
-                </div>
-            </details>
-            <details class = "accordion-item">
-                <summary>ASSETS</summary>
-                <div>
+                </details>
+                <details class = "accordion-item">
+                    <summary>ASSETS</summary>
                     <div>
-                        <p>submodule</p>
+                        <div>
+                            <p>submodule</p>
+                        </div>
                     </div>
-                </div>
-            </details>
-            <details class = "accordion-item">
-                <summary>CUSTOMERS</summary>
-                <div>
+                </details>
+                <details class = "accordion-item">
+                    <summary>CUSTOMERS</summary>
                     <div>
-                        <p>submodule</p>
+                        <div>
+                            <p>submodule</p>
+                        </div>
                     </div>
-                </div>
-            </details>
-            <details class = "accordion-item">
-                <summary>DISTRIBUTION</summary>
-                <div>
+                </details>
+                <details class = "accordion-item">
+                    <summary>DISTRIBUTION</summary>
                     <div>
-                        <p>submodule</p>
+                        <div>
+                            <p>submodule</p>
+                        </div>
                     </div>
-                </div>
-            </details>
-            <details class = "accordion-item">
-                <summary>FINANCE</summary>
-                <div>
+                </details>
+                <details class = "accordion-item">
+                    <summary>FINANCE</summary>
                     <div>
-                        <p>submodule</p>
+                        <div>
+                            <p>submodule</p>
+                        </div>
                     </div>
-                </div>
-            </details>
-            <details class = "accordion-item">
-                <summary>HUMAN RESOURCES</summary>
-                <div>
+                </details>
+                <details class = "accordion-item">
+                    <summary>HUMAN RESOURCES</summary>
                     <div>
-                        <p>submodule</p>
+                        <div>
+                            <p>submodule</p>
+                        </div>
                     </div>
-                </div>
-            </details>
-            <details class = "accordion-item">
-                <summary>PROCUREMENT</summary>
-                <div>
+                </details>
+                <details class = "accordion-item">
+                    <summary>PROCUREMENT</summary>
                     <div>
-                        <p>submodule</p>
+                        <div>
+                            <p>submodule</p>
+                        </div>
                     </div>
-                </div>
-            </details>
-            <details class = "accordion-item">
-                <summary>PRODUCTION</summary>
-                <div>
+                </details>
+                <details class = "accordion-item">
+                    <summary>PRODUCTION</summary>
                     <div>
-                        <p>submodule</p>
+                        <div>
+                            <p>submodule</p>
+                        </div>
                     </div>
-                </div>
-            </details>
-            <details class = "accordion-item">
-                <summary>SALES</summary>
-                <div>
-                    <a href = "/sales-overview"><p>Overview</p></a>
-                </div>
-            </details>
-            
-        </div>
-        <div class="sales-overview">
-            <section class="top-content">
-                <div class="page-title">
-                    <div class = "module-title">SALES</div>
-                    <div class = "submodule-title">Overview</div>
-                </div>
-                <div class = "user-details">
-                    <div class = "user-info">USERNAME</div>
-                    <img class = "user-display-image" src = "{{url_for('static', filename = 'images/display picture.jpg')}}" alt = "user display image" />
-                </div>
-            </section>
-            <section>
-                <div>
-                    <div id = "sales-trend-graph"></div>
-                </div>
-                <div id = "pie-charts">
-                    <div id = "goods-performance-pie-chart"></div>
-                    <div id = "customers-by-expenditure-pie-chart"></div>
-                </div>
-                <div id = "quick-access-links">
-                    <div id="quick-access-links-title">Quick Access Links</div>
-                    <div>Detailed Sales Analytics</div>
-                    <div></div>
-                    <div></div>
-                    <div></div>
-                </div>
-            </section>
-            <footer></footer>
-            
+                </details>
+                <details class = "accordion-item">
+                    <summary>SALES</summary>
+                    <div>
+                        <a href = "/sales-overview"><p>Overview</p></a>
+                    </div>
+                </details>
+                
+            </div>
+            <div class="sales-overview">
+                <section class="top-content">
+                    <div class="page-title">
+                        <div class = "module-title">SALES</div>
+                        <div class = "submodule-title">Overview</div>
+                    </div>
+                    <div class = "user-details">
+                        <div class = "user-info">USERNAME</div>
+                        <img class = "user-display-image" src = "{{url_for('static', filename = 'images/display picture.jpg')}}" alt = "user-display-image" />
+                    </div>
+                </section>
+                <section>
+                    <div>
+                        <div id = "sales-trend-graph"></div>
+                    </div>
+                    <div id = "pie-charts">
+                        <div id = "goods-performance-pie-chart"></div>
+                        <div id = "customers-by-expenditure-pie-chart"></div>
+                    </div>
+                    <div id = "quick-access-links">
 
-        </div>
-    <script>
-        var salesTrendGraph = {{ sales_trend_graph | tojson }};
-        var goodsPerformancePieChart = {{ goods_performance_pie_chart | tojson }};
-        var customerExpenditurePieChart = {{ customer_expenditure_pie_chart | tojson }};
+                        <div id="quick-access-links-title">Quick Access Links</div>
 
-        Plotly.newPlot('sales-trend-graph', salesTrendGraph.data, salesTrendGraph.layout);
-        Plotly.newPlot('goods-performance-pie-chart', goodsPerformancePieChart.data, goodsPerformancePieChart.layout);
-        Plotly.newPlot('customers-by-expenditure-pie-chart', customerExpenditurePieChart.data, customerExpenditurePieChart.layout);
-    </script>
+                        <div id="quick-access-links-body">
+                            <div class = "quick-access-link-item">
+                                <p>Detailed Sales Analytics</p>
+                                <img src = "{{ url_for ('static', filename = 'images/arrow1.svg')}}" alt = "link-arrow"/>
+                            </div>
+                            <div class = "quick-access-link-item">
+                                Goods and Services Payment Status
+                            </div>
+                            <div class = "quick-access-link-item">Customers</div>
+                            <div class = "quick-access-link-item">Sales Orders</div>
+                            <div class = "quick-access-link-item">Purchase Orders</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+        <footer id = "footer">
+            Hi
+        </footer>
+        <script>
+            var salesTrendGraph = {{ sales_trend_graph | tojson }};
+            var goodsPerformancePieChart = {{ goods_performance_pie_chart | tojson }};
+            var customerExpenditurePieChart = {{ customer_expenditure_pie_chart | tojson }};
+
+            Plotly.newPlot('sales-trend-graph', salesTrendGraph.data, salesTrendGraph.layout);
+            Plotly.newPlot('goods-performance-pie-chart', goodsPerformancePieChart.data, goodsPerformancePieChart.layout);
+            Plotly.newPlot('customers-by-expenditure-pie-chart', customerExpenditurePieChart.data, customerExpenditurePieChart.layout);
+        </script>
     </body>
 </html>

@@ -1,9 +1,13 @@
 body{
     width: 100%;
     margin: 0;
-    display: flex;
     font-family: Helvetica;
     font-weight: 700;
+}
+
+.sales-page{
+    display: flex;
+    height: 100vh;
 }
 
 .drawer{
@@ -11,7 +15,6 @@ body{
     flex-direction: column;
     align-items: center;
     width: 17.5%;
-    height: 100%;
     color: white;
     background-color: #000000f0;
     overflow-y: scroll;
@@ -47,6 +50,11 @@ body{
 
 .sales-overview{
     width: 80%;
+    overflow-y: scroll;
+}
+
+.sales-overview::-webkit-scrollbar{
+    display: none;
 }
 
 .top-content{
@@ -128,11 +136,31 @@ body{
 
 #quick-access-links{
     width: 80%;
-    margin: 1% 0 auto 2%;
+    margin: 1% 0 2% 2%;
+    border: black solid 1px;
 }
 
 #quick-access-links-title{
     font-size: 1.8rem;
     font-weight: 600;
     margin-bottom: 2%;
+}
+
+#quick-access-links-body{
+    display: flex;
+}
+
+.quick-access-link-item{
+    display: flex;
+    margin-left: 1%;
+    padding: 1% 2%;
+    border: black solid 1px;
+
+}
+
+#footer{
+    width: 100%;
+    margin: auto 0% 0% 0%;
+    background-color: black;
+    color: white;
 }
