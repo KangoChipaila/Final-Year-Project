@@ -7,7 +7,7 @@
     </head>
 
     <body>
-        <div class="sales-page">
+        <div id = "sales-page">
             <div class = "drawer">
                 <img class = "logo" src = "{{ url_for ('static', filename = 'images/logo.jpg')}}" alt = "Company Logo Here" />
                 <details class="dashboard">
@@ -115,15 +115,35 @@
 
                         <div id="quick-access-links-body">
                             <div class = "quick-access-link-item">
-                                <p>Detailed Sales Analytics</p>
-                                <img src = "{{ url_for ('static', filename = 'images/arrow1.svg')}}" alt = "link-arrow"/>
+                                <a href = "#sales-page">
+                                    <p>Detailed Sales Analytics</p>
+                                    <img src = "{{ url_for ('static', filename = 'images/arrow1.svg')}}" alt = "link-arrow"/>
+                                </a>
                             </div>
                             <div class = "quick-access-link-item">
-                                Goods and Services Payment Status
+                                <a href = "#sales-page">
+                                    <p>Goods and Services Payment Status</p>
+                                    <img src = "{{ url_for ('static', filename = 'images/arrow1.svg')}}" alt = "link-arrow"/>
+                                </a>
                             </div>
-                            <div class = "quick-access-link-item">Customers</div>
-                            <div class = "quick-access-link-item">Sales Orders</div>
-                            <div class = "quick-access-link-item">Purchase Orders</div>
+                            <div class = "quick-access-link-item">
+                                <a href = "#sales-page">
+                                    <p>Customers</p>
+                                    <img src = "{{ url_for ('static', filename = 'images/arrow1.svg')}}" alt = "link-arrow"/>
+                                </a>
+                            </div>
+                            <div class = "quick-access-link-item">
+                                <a href = "#sales-page">
+                                    <p>Sales Orders</p>
+                                    <img src = "{{ url_for ('static', filename = 'images/arrow1.svg')}}" alt = "link-arrow"/>
+                                </a>
+                            </div>
+                            <div class = "quick-access-link-item">
+                                <a href = "#sales-page">
+                                    <p>Purchase Orders</p>
+                                    <img src = "{{ url_for ('static', filename = 'images/arrow1.svg')}}" alt = "link-arrow"/>
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </section>

@@ -5,7 +5,7 @@ body{
     font-weight: 700;
 }
 
-.sales-page{
+#sales-page{
     display: flex;
     height: 100vh;
 }
@@ -27,7 +27,7 @@ body{
 .logo{
     border-radius: 50%;
     width: 60%;
-    height: 90%;
+    height: 30vh;
 }
 
 .dashboard{
@@ -135,9 +135,8 @@ body{
 }
 
 #quick-access-links{
-    width: 80%;
+    width: 95%;
     margin: 1% 0 2% 2%;
-    border: black solid 1px;
 }
 
 #quick-access-links-title{
@@ -148,14 +147,27 @@ body{
 
 #quick-access-links-body{
     display: flex;
+    justify-content: space-between;
 }
 
 .quick-access-link-item{
-    display: flex;
+    width: fit-content;
     margin-left: 1%;
-    padding: 1% 2%;
-    border: black solid 1px;
+}
 
+.quick-access-link-item a{
+    display: flex;
+    text-decoration: none;
+    height: fit-content;
+    color: #000000;
+    font-weight: 600;
+    align-items:baseline;
+    gap: 3em;
+    
+}
+
+.quick-access-link-item a:hover{
+    text-decoration: underline;
 }
 
 #footer{
