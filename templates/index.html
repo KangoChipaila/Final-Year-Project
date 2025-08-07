@@ -3,95 +3,121 @@
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta charset="utf-8" />
-    <link rel="stylesheet" href="{{ url_for ('static', filename = 'css/globals.css')}}" /> 
+    <!--<link rel="stylesheet" href="{{ url_for ('static', filename = 'css/globals.css')}}" /> 
     <link rel="stylesheet" href="{{ url_for ('static', filename = 'css/styleguide.css')}}" /> 
-    <link rel="stylesheet" href="{{ url_for ('static', filename = 'css/style.css')}}" />
+    <link rel="stylesheet" href="{{ url_for ('static', filename = 'css/style.css')}}" />-->
+    <link rel="stylesheet" href = "{{ url_for ('static', filename = 'css/styles.css')}}" />
+    <script src = "https://cdn.plot.ly/plotly-latest.min.js"></script>
   </head>
   <body>
-    <div class="DASHBOARD">
-      <div class="div">
-        <img class="rectangle" src="img/rectangle-2.png" />
-        <div class="overlap">
-          <div class="overlap-group">
-            <img class="img" src="img/rectangle-4.png" />
-            <div class="text-wrapper">ASSETS</div>
-            <img class="rectangle-2" src="img/rectangle-5.png" />
-            <div class="rectangle-3"></div>
-          </div>
-          <img class="rectangle-4" src="img/rectangle-8.png" />
-          <div class="text-wrapper-2">PRODUCTION</div>
-          <img class="rectangle-5" src="img/rectangle-9.png" />
-          <img class="rectangle-6" src="img/rectangle-23.png" />
-          <div class="text-wrapper-3">SALES ANALYTICS</div>
-          <div class="text-wrapper-4">ACCOUNTING</div>
-          <div class="text-wrapper-5">DISTRIBUTION</div>
-        </div>
-        <img class="rectangle-7" src="img/rectangle-3.png" />
-        <img class="rectangle-8" src="img/rectangle-6.png" />
-        <div class="text-wrapper-6">CUSTOMERS</div>
-        <div class="overlap-2">
-          <img class="ellipse" src="img/ellipse-1.png" />
-          <div class="group">
-            <div class="div-wrapper"><div class="text-wrapper-7">DASHBOARD</div></div>
-          </div>
-          <div class="accordion">
-            <div class="accordion-item">
-              <div class="accordion-title">
-                <div class="title">ACCOUNTING</div>
-                <img class="img-2" src="img/chevron-down.svg" />
-              </div>
+    <div id = "dashboard">
+            <div class = "drawer">
+                <a class = "home-logo" href = "/"><img class = "logo" src = "{{ url_for ('static', filename = 'images/logo.jpg')}}" alt = "Company Logo Here" /></a>
+                <div class="dashboard">
+                    <a href = "/"><p>DASHBOARD</p></a>
+                </div>
+                <details class = "accordion-item">
+                    <summary>ACCOUNTING</summary>
+                    <div>
+                        <div>
+                            <a href = "/accounting-overview"><p>Overview</p></a>
+                        </div>
+                    </div>
+                </details>
+                <details class = "accordion-item">
+                    <summary>ASSETS</summary>
+                    <div>
+                        <div>
+                            <a href = "/assets-overview"><p>Overview</p></a>
+                        </div>
+                    </div>
+                </details>
+                <details class = "accordion-item">
+                    <summary>CUSTOMERS</summary>
+                    <div>
+                        <div>
+                            <a href = "/customer-overview"><p>Overview</p></a>
+                        </div>
+                    </div>
+                </details>
+                <details class = "accordion-item">
+                    <summary>DISTRIBUTION</summary>
+                    <div>
+                        <div>
+                            <a href = "/distribution-overview"><p>Overview</p></a>
+                        </div>
+                    </div>
+                </details>
+                <details class = "accordion-item">
+                    <summary>FINANCE</summary>
+                    <div>
+                        <div>
+                            <a href = "/finance-overview"><p>Overview</p></a>
+                        </div>
+                    </div>
+                </details>
+                <details class = "accordion-item">
+                    <summary>HUMAN RESOURCES</summary>
+                    <div>
+                        <div>
+                            <a href = "/human-resources-overview"><p>Overview</p></a>
+                        </div>
+                    </div>
+                </details>
+                <details class = "accordion-item">
+                    <summary>PROCUREMENT</summary>
+                    <div>
+                        <div>
+                            <a href = "/procurement-overview"><p>Overview</p></a>
+                        </div>
+                    </div>
+                </details>
+                <details class = "accordion-item">
+                    <summary>PRODUCTION</summary>
+                    <div>
+                        <div>
+                            <a href = "/production-overview"><p>Overview</p></a>
+                        </div>
+                    </div>
+                </details>
+                <details class = "accordion-item">
+                    <summary>SALES</summary>
+                    <div>
+                        <a href = "/sales-overview"><p>Overview</p></a>
+                    </div>
+                </details>
+                
             </div>
-            <div class="accordion-item">
-              <div class="accordion-title">
-                <div class="title">ASSETS</div>
-                <img class="img-2" src="img/chevron-down.svg" />
-              </div>
+            <div class="sales-overview">
+                <section class="top-content">
+                    <div class="page-title">
+                        <div class = "module-title">DASHBOARD</div>
+                    </div>
+                    <div class = "user-details">
+                        <div class = "user-info">USERNAME</div>
+                        <img class = "user-display-image" src = "{{url_for('static', filename = 'images/display picture.jpg')}}" alt = "user-display-image" />
+                    </div>
+                </section>
+                <section id = "dashboard-main-content">
+                  <div id = "sales-analytics-dashboard-summary"></div>
+                  <div id="customer-dashboard-summary"></div>        
+                </section>
             </div>
-            <div class="accordion-item">
-              <div class="accordion-title">
-                <div class="title">CUSTOMERS</div>
-                <img class="img-2" src="img/chevron-down.svg" />
-              </div>
-            </div>
-            <div class="accordion-item">
-              <div class="accordion-title">
-                <div class="title">FINANCE</div>
-                <img class="img-2" src="img/chevron-up.svg" />
-              </div>
-            </div>
-            <div class="accordion-item">
-              <div class="accordion-title">
-                <div class="title">HUMAN RESOURCES</div>
-                <img class="img-2" src="img/chevron-down.svg" />
-              </div>
-            </div>
-            <div class="accordion-item">
-              <div class="accordion-title">
-                <div class="title">PROCUREMENT</div>
-                <img class="img-2" src="img/chevron-down.svg" />
-              </div>
-            </div>
-            <div class="accordion-item">
-              <div class="accordion-title">
-                <div class="title">PRODUCTION</div>
-                <img class="img-2" src="img/chevron-down.svg" />
-              </div>
-            </div>
-            <div class="accordion-item-2">
-              <div class="accordion-title-2">
-                <div class="title">SALES</div>
-                <img class="img-2" src="img/chevron-up.svg" />
-              </div>
-              <div class="accordion-content"><div class="body-2"><a href = "/sales-overview">Overview</a></div></div>
-            </div>
-          </div>
-        </div>
-        <img class="ellipse-2" src="img/ellipse-2.png" />
-        <div class="overlap-3"><div class="text-wrapper-8">USERNAME</div></div>
-        <div class="group-2"><div class="text-wrapper-9">DASHBOARD</div></div>
-        <div class="text-wrapper-10">ORDERS</div>
-        <div class="text-wrapper-11">EARNINGS</div>
-      </div>
     </div>
+
+    <footer id = "footer">
+      <img class = "footer-logo" src = "{{ url_for ('static', filename = 'images/logo.jpg')}}" />
+      <div class="about">
+        <p>Copyright 2025</p>
+      </div>
+    </footer>
+    
+    <script>
+      var salesTrendGraph = {{ sales_trend_graph | tojson}};
+      var customerGraph = {{ customers | tojson}};
+
+      Plotly.newPlot('sales-analytics-dashboard-summary', salesTrendGraph.data, salesTrendGraph.layout);
+      Plotly.newPlot('customer-dashboard-summary', customerGraph.data, customerGraph.layout);
+    </script>
   </body>
 </html>

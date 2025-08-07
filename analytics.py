@@ -1,5 +1,10 @@
 import plotly.graph_objects as go
 import pandas as pd
+from statsmodels.tsa.stattools import adfuller
+from statsmodels.tsa.arima.model import ARIMA
+import matplotlib.pyplot as plt
+import pmdarima as pm
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 
 extracted_data = pd.read_csv("./spreadsheet_datasets/sales_data_sample.csv", encoding="cp1252")
 
@@ -21,6 +26,65 @@ def generate_sales_trend():
                     xaxis_title = 'Month-Year',
                     yaxis_title = 'Sales (1 = 1000 Kwacha)')
     
+    
+    
+    """
+    extracted_data["SALES"] = pd.to_numeric(extracted_data["SALES"], errors="coerce")
+
+    sales_data = extracted_data["SALES"]
+
+    sales_data = sales_data.dropna()
+
+    #sales_data = sales_data[(sales_data.index < len(sales_data) - 2000)]
+    
+    msk = (sales_data.index < len(sales_data) - 200)
+    train_set = sales_data[msk].copy()
+    test_set = sales_data[~msk].copy()
+
+    sales_series = train_set.diff().dropna()
+
+    plot_pacf(train_set)
+    plt.show()
+
+    #sales_series = train_set.diff().dropna()
+    
+    if len(sales_series) > 0 and sales_series.nunique() > 1:
+        adf_test = adfuller(sales_series)
+        print(f'p-value: {adf_test[1]}')
+
+        if adf_test[1] > 0.05:
+            print("The data is not stationary")
+        else:
+            print("The data is stationary")
+
+    else:
+        print("ADF test cannot run: not enough data or series is constant
+    
+    model = ARIMA(train_set, order=[0, 1, 5])
+    model_fit = model.fit()
+
+    
+    residuals = model_fit.resid[1:]
+    fig, ax = plt.subplots(1,2)
+    residuals.plot(title = "Residuals", ax=ax[0])
+    residuals.plot(title = "Density", kind = "kde", ax=ax[1])
+    plt.show
+
+    auto_arima = pm.auto_arima(train_set, stepwise='false', seasonal='false')
+    print(auto_arima
+
+    forecast_test = model_fit.forecast(len(test_set))
+    #sales_data["forecast_manual"] = [None] * len(train_set) + list(forecast_test)
+    
+    plot_df = pd.DataFrame({
+        "actual": sales_data,
+        "forecast_manual": [None] * len(train_set) + list(forecast_test)
+    })
+
+    plot_df.plot()
+    plt.show()
+    """
+
     return fig.to_plotly_json()
 
 def generate_goods_performance_pchart():
@@ -46,3 +110,5 @@ def generate_customer_expenditure_distribution_pchart():
     fig.update_layout(title = "Customer By Expenditure")
 
     return fig.to_plotly_json()
+
+generate_sales_trend()
