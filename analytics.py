@@ -1,10 +1,8 @@
 import plotly.graph_objects as go
 import pandas as pd
-from statsmodels.tsa.stattools import adfuller
-from statsmodels.tsa.arima.model import ARIMA
 import matplotlib.pyplot as plt
-import pmdarima as pm
-from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+from prophet import Prophet
+from prophet.plot import plot_plotly
 
 extracted_data = pd.read_csv("./spreadsheet_datasets/sales_data_sample.csv", encoding="cp1252")
 
@@ -35,10 +33,6 @@ def generate_sales_trend():
                              y = (yearly_sales["SALES"]/1000).to_list(), 
                              mode = 'lines + markers',
                              visible = False))
-    
-    """fig.update_layout(title = 'Monthly Sales Trend Over the Years', 
-                    xaxis_title = 'Month-Year',
-                    yaxis_title = 'Sales (1 = 1000 Kwacha)')"""
     
     fig.update_layout(
         updatemenus=[
@@ -88,4 +82,44 @@ def generate_customer_expenditure_distribution_pchart():
 
     return fig.to_plotly_json()
 
-generate_sales_trend()
+async def generate_sales_forecast():
+
+    extracted_data["ORDERDATE"] = pd.to_datetime(extracted_data["ORDERDATE"], errors = "coerce")
+
+    extracted_data["Year"] = extracted_data["ORDERDATE"].dt.to_period("M")
+
+    # Grouping data by Year-Month and calculating total sales
+    monthly_sales = extracted_data.groupby("Year")["SALES"].sum().reset_index()
+
+    monthly_sales.columns = ["ds", "y"]
+    monthly_sales["ds"] = monthly_sales["ds"].to_list()
+    monthly_sales["y"] = monthly_sales["y"].to_list()
+
+
+    monthly_sales["ds"] = monthly_sales["ds"].dt.to_timestamp()
+
+    model = Prophet(
+        interval_width = 0.95,
+        growth = 'linear',
+        daily_seasonality = True,
+        weekly_seasonality = True,
+        yearly_seasonality = True,
+        seasonality_mode = 'multiplicative'
+    )
+
+    model.fit(monthly_sales)
+
+    future_pd = model.make_future_dataframe(
+        periods = 7,
+        freq ='ME',
+        include_history = True
+    )
+
+    # predict over the dataset
+    forecast_pd = model.predict(future_pd)
+
+    #fig = model.plot(forecast_pd, xlabel='date', ylabel='sales')
+    
+    fig = plot_plotly(model, forecast_pd)
+
+    return fig.to_plotly_json()

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Sales Overview</title>
+        <title>Detailed Sales Analytics</title>
         <script src = "https://cdn.plot.ly/plotly-latest.min.js"></script>
         <link rel = "stylesheet" href = "{{ url_for ('static', filename = 'css/styles.css')}}" />
     </head>
@@ -81,7 +81,6 @@
                     <summary>SALES</summary>
                     <div>
                         <a href = "/sales-overview"><p>Overview</p></a>
-                        <a href = "/detailed-sales-analytics"><p>Detailed Sales Analytics</p></a>
                     </div>
                 </details>
                 
@@ -90,58 +89,15 @@
                 <section class="top-content">
                     <div class="page-title">
                         <div class = "module-title">SALES</div>
-                        <div class = "submodule-title">Overview</div>
+                        <div class = "submodule-title">Detailed Sales Analytics</div>
                     </div>
                     <div class = "user-details">
                         <div class = "user-info">USERNAME</div>
                         <img class = "user-display-image" src = "{{url_for('static', filename = 'images/display picture.jpg')}}" alt = "user-display-image" />
                     </div>
-                </section>
+                </section id = "finance-main-content">
+                    <div id="sales-forecast"></div>
                 <section>
-                    <div>
-                        <div id = "sales-trend-graph"></div>
-                    </div>
-                    <div id = "pie-charts">
-                        <div id = "goods-performance-pie-chart"></div>
-                        <div id = "customers-by-expenditure-pie-chart"></div>
-                    </div>
-                    <div id = "quick-access-links">
-
-                        <div id="quick-access-links-title">Quick Access Links</div>
-
-                        <div id="quick-access-links-body">
-                            <div class = "quick-access-link-item">
-                                <a href = "#sales-page">
-                                    <p>Detailed Sales Analytics</p>
-                                    <img src = "{{ url_for ('static', filename = 'images/arrow1.svg')}}" alt = "link-arrow"/>
-                                </a>
-                            </div>
-                            <div class = "quick-access-link-item">
-                                <a href = "#sales-page">
-                                    <p>Goods and Services Payment Status</p>
-                                    <img src = "{{ url_for ('static', filename = 'images/arrow1.svg')}}" alt = "link-arrow"/>
-                                </a>
-                            </div>
-                            <div class = "quick-access-link-item">
-                                <a href = "#sales-page">
-                                    <p>Customers</p>
-                                    <img src = "{{ url_for ('static', filename = 'images/arrow1.svg')}}" alt = "link-arrow"/>
-                                </a>
-                            </div>
-                            <div class = "quick-access-link-item">
-                                <a href = "#sales-page">
-                                    <p>Sales Orders</p>
-                                    <img src = "{{ url_for ('static', filename = 'images/arrow1.svg')}}" alt = "link-arrow"/>
-                                </a>
-                            </div>
-                            <div class = "quick-access-link-item">
-                                <a href = "#sales-page">
-                                    <p>Purchase Orders</p>
-                                    <img src = "{{ url_for ('static', filename = 'images/arrow1.svg')}}" alt = "link-arrow"/>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
                 </section>
             </div>
         </div>
@@ -153,13 +109,8 @@
         </footer>
         
         <script>
-            var salesTrendGraph = {{ sales_trend_graph | tojson }};
-            var goodsPerformancePieChart = {{ goods_performance_pie_chart | tojson }};
-            var customerExpenditurePieChart = {{ customer_expenditure_pie_chart | tojson }};
+            var salesForecastGraph = {{ sales_forecast | tojson()}};
 
-            Plotly.newPlot('sales-trend-graph', salesTrendGraph.data, salesTrendGraph.layout);
-            Plotly.newPlot('goods-performance-pie-chart', goodsPerformancePieChart.data, goodsPerformancePieChart.layout);
-            Plotly.newPlot('customers-by-expenditure-pie-chart', customerExpenditurePieChart.data, customerExpenditurePieChart.layout);
+            Plotly.newPlot('sales-forecast', salesForecastGraph.data, salesForecastGraph.layout)
         </script>
     </body>
-</html>

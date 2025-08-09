@@ -7,6 +7,14 @@ sales_trend_graph = analytics.generate_sales_trend()
 goods_performance_pie_chart = analytics.generate_goods_performance_pchart()
 customer_expenditure_pie_chart = analytics.generate_customer_expenditure_distribution_pchart()
 
+async def load_sales_forecast():
+    forecast = await analytics.generate_sales_forecast()
+    return forecast
+
+sales_forecast = load_sales_forecast()
+
+
+
 @app.route('/')
 def index():
     return render_template('index.html', sales_trend_graph=sales_trend_graph, customers=customer_expenditure_pie_chart)
@@ -50,6 +58,11 @@ def sales_overview():
                            sales_trend_graph = sales_trend_graph, 
                            goods_performance_pie_chart = goods_performance_pie_chart,
                            customer_expenditure_pie_chart = customer_expenditure_pie_chart)
+
+@app.route('/detailed-sales-analytics')
+def detailed_sales_analytics():
+
+    return render_template('detailed-sales-analytics.html', sales_forecast = sales_forecast)
 
 if __name__ == '__main__':
     app.run(debug=True)
