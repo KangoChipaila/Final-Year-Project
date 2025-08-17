@@ -1,11 +1,12 @@
-from pyspark.sql import SparkSession
+import glob
+import pandas as pd
 
-spark = SparkSession.builder.appName("PySparkTest").getOrCreate()
+directory = "./spreadsheet_datasets"
 
-data = [("Alice", 1), ("Bob", 2), ("Charlie", 3)]
-columns = ["Name", "ID"]
-df = spark.createDataFrame(data, columns)
+files = glob.glob(directory + "/*.csv")
 
-df.show()
+df = [pd.read_csv(filename, encoding = "cp1252") for filename in files]
 
-spark.stop()
+aggregate_df = pd.concat(df, ignore_index = True)
+
+print(aggregate_df.head())

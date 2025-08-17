@@ -35,9 +35,15 @@ def generate_sales_trend():
                              visible = False))
     
     fig.update_layout(
+        title = "Daily Sales Trend",
+        yaxis_title = "1 = K1000"
+    )
+    
+    fig.update_layout(
         updatemenus=[
             dict(
                 active=0,
+                yanchor = "top",
                 buttons=list([
                     dict(label="Daily",
                         method="update",
