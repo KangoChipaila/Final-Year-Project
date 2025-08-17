@@ -86,7 +86,7 @@ async def generate_sales_forecast():
 
     extracted_data["ORDERDATE"] = pd.to_datetime(extracted_data["ORDERDATE"], errors = "coerce")
 
-    extracted_data["Year"] = extracted_data["ORDERDATE"].dt.to_period("M")
+    extracted_data["Year"] = extracted_data["ORDERDATE"].dt.to_period("D")
 
     # Grouping data by Year-Month and calculating total sales
     monthly_sales = extracted_data.groupby("Year")["SALES"].sum().reset_index()
@@ -110,8 +110,8 @@ async def generate_sales_forecast():
     model.fit(monthly_sales)
 
     future_pd = model.make_future_dataframe(
-        periods = 7,
-        freq ='ME',
+        periods = 90,
+        freq ='D',
         include_history = True
     )
 
@@ -122,4 +122,4 @@ async def generate_sales_forecast():
     
     fig = plot_plotly(model, forecast_pd)
 
-    return fig.to_plotly_json()
+    return fig.to_html(full_html = False)

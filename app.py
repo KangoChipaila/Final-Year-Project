@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, jsonify
 import analytics
 
 app = Flask(__name__)
@@ -7,13 +7,11 @@ sales_trend_graph = analytics.generate_sales_trend()
 goods_performance_pie_chart = analytics.generate_goods_performance_pchart()
 customer_expenditure_pie_chart = analytics.generate_customer_expenditure_distribution_pchart()
 
-async def load_sales_forecast():
+"""async def load_sales_forecast():
     forecast = await analytics.generate_sales_forecast()
-    return forecast
+    return forecast"""
 
-sales_forecast = load_sales_forecast()
-
-
+#Add await logic for load_sales_forecast
 
 @app.route('/')
 def index():
@@ -60,8 +58,9 @@ def sales_overview():
                            customer_expenditure_pie_chart = customer_expenditure_pie_chart)
 
 @app.route('/detailed-sales-analytics')
-def detailed_sales_analytics():
+async def detailed_sales_analytics():
 
+    sales_forecast = await analytics.generate_sales_forecast()
     return render_template('detailed-sales-analytics.html', sales_forecast = sales_forecast)
 
 if __name__ == '__main__':

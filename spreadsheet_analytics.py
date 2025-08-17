@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 from prophet import Prophet
+from prophet.plot import plot_plotly
 
 # Extracting data from a CSV file
 extracted_data = pd.read_csv("./spreadsheet_datasets/sales_data_sample.csv", encoding = "cp1252")
@@ -38,9 +39,11 @@ future_pd = model.make_future_dataframe(
 # predict over the dataset
 forecast_pd = model.predict(future_pd)
 
-predict_fig = model.plot(forecast_pd, xlabel='date', ylabel='sales')
+#predict_fig = model.plot(forecast_pd, xlabel='date', ylabel='sales')
+fig = plot_plotly(model, forecast_pd)
+fig.to_dict()
 
-plt.show()
+fig.show()
 #display(predict_fig)
 
 """

@@ -227,3 +227,12 @@ body{
     box-shadow: 0px 4px 4px #00000040;
     width: 45%;
 }
+
+#sales-forecast{
+     width: 80%;
+    height: 100%;
+    margin: 0 auto 0 auto;
+    box-shadow: 0px 4px 4px #00000040;
+    border-radius: 1%;
+    margin-bottom: 5%;
+}
