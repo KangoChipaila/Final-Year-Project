@@ -1,10 +1,19 @@
 import plotly.graph_objects as go
 import pandas as pd
+import glob
 import matplotlib.pyplot as plt
 from prophet import Prophet
 from prophet.plot import plot_plotly
 
-extracted_data = pd.read_csv("./spreadsheet_datasets/sales_data_sample.csv", encoding="cp1252")
+#extracted_data = pd.read_csv("./spreadsheet_datasets/sales_data_sample.csv", encoding="cp1252")
+
+directory = "./spreadsheet_datasets"
+
+files = glob.glob(directory + "/*.csv")
+
+df = [pd.read_csv(filename, encoding = "cp1252") for filename in files]
+
+extracted_data = pd.concat(df, ignore_index = True)
 
 def generate_sales_trend():
 
