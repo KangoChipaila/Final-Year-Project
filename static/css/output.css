@@ -198,9 +198,6 @@
   .static {
     position: static;
   }
-  .m-1 {
-    margin: calc(var(--spacing) * 1);
-  }
   .mx-auto {
     margin-inline: auto;
   }
@@ -210,50 +207,38 @@
   .ms-1\.5 {
     margin-inline-start: calc(var(--spacing) * 1.5);
   }
-  .mt-1 {
-    margin-top: calc(var(--spacing) * 1);
-  }
-  .mt-4 {
-    margin-top: calc(var(--spacing) * 4);
-  }
   .flex {
     display: flex;
   }
   .table {
     display: table;
   }
+  .h-1 {
+    height: calc(var(--spacing) * 1);
+  }
+  .h-1\/2 {
+    height: calc(1/2 * 100%);
+  }
   .h-3 {
     height: calc(var(--spacing) * 3);
   }
-  .w-1 {
-    width: calc(var(--spacing) * 1);
+  .h-48 {
+    height: calc(var(--spacing) * 48);
   }
-  .w-1\/2 {
-    width: calc(1/2 * 100%);
+  .h-60 {
+    height: calc(var(--spacing) * 60);
   }
-  .w-1\/4 {
-    width: calc(1/4 * 100%);
+  .h-80 {
+    height: calc(var(--spacing) * 80);
   }
   .w-3 {
     width: calc(var(--spacing) * 3);
-  }
-  .w-3\/4 {
-    width: calc(3/4 * 100%);
   }
   .w-4 {
     width: calc(var(--spacing) * 4);
   }
   .w-4\/5 {
     width: calc(4/5 * 100%);
-  }
-  .w-9 {
-    width: calc(var(--spacing) * 9);
-  }
-  .w-80 {
-    width: calc(var(--spacing) * 80);
-  }
-  .w-96 {
-    width: calc(var(--spacing) * 96);
   }
   .w-full {
     width: 100%;
@@ -266,6 +251,9 @@
   }
   .items-center {
     align-items: center;
+  }
+  .overflow-auto {
+    overflow: auto;
   }
   .overflow-x-auto {
     overflow-x: auto;
@@ -283,9 +271,6 @@
   }
   .bg-black {
     background-color: var(--color-black);
-  }
-  .bg-gray-50 {
-    background-color: var(--color-gray-50);
   }
   .bg-white {
     background-color: var(--color-white);
@@ -326,15 +311,6 @@
   .text-blue-600 {
     color: var(--color-blue-600);
   }
-  .text-gray-500 {
-    color: var(--color-gray-500);
-  }
-  .text-gray-700 {
-    color: var(--color-gray-700);
-  }
-  .text-gray-900 {
-    color: var(--color-gray-900);
-  }
   .text-white {
     color: var(--color-white);
   }
@@ -369,34 +345,9 @@
       text-align: right;
     }
   }
-  .dark\:border-gray-700 {
-    @media (prefers-color-scheme: dark) {
-      border-color: var(--color-gray-700);
-    }
-  }
-  .dark\:bg-gray-700 {
-    @media (prefers-color-scheme: dark) {
-      background-color: var(--color-gray-700);
-    }
-  }
-  .dark\:bg-gray-800 {
-    @media (prefers-color-scheme: dark) {
-      background-color: var(--color-gray-800);
-    }
-  }
   .dark\:text-blue-500 {
     @media (prefers-color-scheme: dark) {
       color: var(--color-blue-500);
-    }
-  }
-  .dark\:text-gray-400 {
-    @media (prefers-color-scheme: dark) {
-      color: var(--color-gray-400);
-    }
-  }
-  .dark\:text-white {
-    @media (prefers-color-scheme: dark) {
-      color: var(--color-white);
     }
   }
 }
