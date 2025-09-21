@@ -1,57 +1,202 @@
 [
-    {"asset_name": "Printer", "colour": "Black", 
-    "category": "Stationary", "current_valuation": "K10000", 
-    "barcode_number": ""},
-
-    {"asset_name": "Printer", "colour": "Black", 
-    "category": "Stationary", "current_valuation": "K10000", 
-    "barcode_number": ""},
-
-    {"asset_name": "Printer", "colour": "Black", 
-    "category": "Stationary", "current_valuation": "K10000", 
-    "barcode_number": ""},
-
-    {"asset_name": "Printer", "colour": "Black", 
-    "category": "Stationary", "current_valuation": "K10000", 
-    "barcode_number": ""},
-    
-    {"asset_name": "Printer", "colour": "Black", 
-    "category": "Stationary", "current_valuation": "K10000", 
-    "barcode_number": ""},
-    
-    {"asset_name": "Printer", "colour": "Black", 
-    "category": "Stationary", "current_valuation": "K10000", 
-    "barcode_number": ""},
-    
-    {"asset_name": "Printer", "colour": "Black", 
-    "category": "Stationary", "current_valuation": "K10000", 
-    "barcode_number": ""},
-    
-    {"asset_name": "Printer", "colour": "Black", 
-    "category": "Stationary", "current_valuation": "K10000", 
-    "barcode_number": ""},
-    
-    {"asset_name": "Printer", "colour": "Black", 
-    "category": "Stationary", "current_valuation": "K10000", 
-    "barcode_number": ""},
-    
-    {"asset_name": "Printer", "colour": "Black", 
-    "category": "Stationary", "current_valuation": "K10000", 
-    "barcode_number": ""},
-    
-    {"asset_name": "Printer", "colour": "Black", 
-    "category": "Stationary", "current_valuation": "K10000", 
-    "barcode_number": ""},
-    
-    {"asset_name": "Printer", "colour": "Black", 
-    "category": "Stationary", "current_valuation": "K10000", 
-    "barcode_number": ""},
-    
-    {"asset_name": "Printer", "colour": "Black", 
-    "category": "Stationary", "current_valuation": "K10000", 
-    "barcode_number": ""},
-    
-    {"asset_name": "Printer", "colour": "Black", 
-    "category": "Stationary", "current_valuation": "K10000", 
-    "barcode_number": ""}
+  {
+    "asset_name": "Laptop A",
+    "category": "Electronics",
+    "current_valuation": 1200,
+    "barcode_number": "",
+    "current_condition": "Good",
+    "assigned_department": "IT",
+    "last_serviced": "2025-03-15",
+    "use_status": "In Use"
+  },
+  {
+    "asset_name": "Office Chair B",
+    "category": "Furniture",
+    "current_valuation": 150,
+    "barcode_number": "DEF234567",
+    "current_condition": "Good",
+    "assigned_department": "HR",
+    "last_serviced": "2025-01-10",
+    "use_status": "In Use"
+  },
+  {
+    "asset_name": "Printer C",
+    "category": "Electronics",
+    "current_valuation": 400,
+    "barcode_number": "GHI345678",
+    "current_condition": "Needs Repair",
+    "assigned_department": "Admin",
+    "last_serviced": "2025-02-20",
+    "use_status": "Out of Service"
+  },
+  {
+    "asset_name": "Projector D",
+    "category": "Electronics",
+    "current_valuation": 800,
+    "barcode_number": "JKL456789",
+    "current_condition": "Good",
+    "assigned_department": "Sales",
+    "last_serviced": "2025-03-01",
+    "use_status": "In Use"
+  },
+  {
+    "asset_name": "Desk E",
+    "category": "Furniture",
+    "current_valuation": 250,
+    "barcode_number": "MNO567890",
+    "current_condition": "Good",
+    "assigned_department": "Finance",
+    "last_serviced": "2024-12-15",
+    "use_status": "In Use"
+  },
+  {
+    "asset_name": "Monitor F",
+    "category": "Electronics",
+    "current_valuation": 300,
+    "barcode_number": "PQR678901",
+    "current_condition": "Good",
+    "assigned_department": "IT",
+    "last_serviced": "2025-03-10",
+    "use_status": "In Use"
+  },
+  {
+    "asset_name": "Filing Cabinet G",
+    "category": "Furniture",
+    "current_valuation": 180,
+    "barcode_number": "STU789012",
+    "current_condition": "Good",
+    "assigned_department": "Admin",
+    "last_serviced": "2025-01-25",
+    "use_status": "In Use"
+  },
+  {
+    "asset_name": "Tablet H",
+    "category": "Electronics",
+    "current_valuation": 600,
+    "barcode_number": "VWX890123",
+    "current_condition": "Good",
+    "assigned_department": "Sales",
+    "last_serviced": "2025-02-28",
+    "use_status": "In Use"
+  },
+  {
+    "asset_name": "Scanner I",
+    "category": "Electronics",
+    "current_valuation": 350,
+    "barcode_number": "YZA901234",
+    "current_condition": "Needs Repair",
+    "assigned_department": "Finance",
+    "last_serviced": "2025-01-30",
+    "use_status": "Out of Service"
+  },
+  {
+    "asset_name": "Conference Table J",
+    "category": "Furniture",
+    "current_valuation": 900,
+    "barcode_number": "BCD012345",
+    "current_condition": "Good",
+    "assigned_department": "Admin",
+    "last_serviced": "2025-03-05",
+    "use_status": "In Use"
+  },
+  {
+    "asset_name": "Desktop K",
+    "category": "Electronics",
+    "current_valuation": 1000,
+    "barcode_number": "EFG123456",
+    "current_condition": "Good",
+    "assigned_department": "IT",
+    "last_serviced": "2025-03-12",
+    "use_status": "In Use"
+  },
+  {
+    "asset_name": "Whiteboard L",
+    "category": "Office Supplies",
+    "current_valuation": 120,
+    "barcode_number": "HIJ234567",
+    "current_condition": "Good",
+    "assigned_department": "Sales",
+    "last_serviced": "2025-02-18",
+    "use_status": "In Use"
+  },
+  {
+    "asset_name": "Router M",
+    "category": "Electronics",
+    "current_valuation": 200,
+    "barcode_number": "KLM345678",
+    "current_condition": "Good",
+    "assigned_department": "IT",
+    "last_serviced": "2025-03-08",
+    "use_status": "In Use"
+  },
+  {
+    "asset_name": "Air Conditioner N",
+    "category": "Electronics",
+    "current_valuation": 1500,
+    "barcode_number": "NOP456789",
+    "current_condition": "Needs Repair",
+    "assigned_department": "Admin",
+    "last_serviced": "2025-01-20",
+    "use_status": "Out of Service"
+  },
+  {
+    "asset_name": "Server O",
+    "category": "Electronics",
+    "current_valuation": 5000,
+    "barcode_number": "QRS567890",
+    "current_condition": "Good",
+    "assigned_department": "IT",
+    "last_serviced": "2025-03-14",
+    "use_status": "In Use"
+  },
+  {
+    "asset_name": "Coffee Machine P",
+    "category": "Appliances",
+    "current_valuation": 250,
+    "barcode_number": "TUV678901",
+    "current_condition": "Good",
+    "assigned_department": "HR",
+    "last_serviced": "2025-02-25",
+    "use_status": "In Use"
+  },
+  {
+    "asset_name": "Shredder Q",
+    "category": "Electronics",
+    "current_valuation": 180,
+    "barcode_number": "WXY789012",
+    "current_condition": "Good",
+    "assigned_department": "Finance",
+    "last_serviced": "2025-03-02",
+    "use_status": "In Use"
+  },
+  {
+    "asset_name": "Reception Desk R",
+    "category": "Furniture",
+    "current_valuation": 700,
+    "barcode_number": "ZAB890123",
+    "current_condition": "Good",
+    "assigned_department": "Admin",
+    "last_serviced": "2025-02-10",
+    "use_status": "In Use"
+  },
+  {
+    "asset_name": "Smartphone S",
+    "category": "Electronics",
+    "current_valuation": 900,
+    "barcode_number": "CDE901234",
+    "current_condition": "Good",
+    "assigned_department": "Sales",
+    "last_serviced": "2025-03-11",
+    "use_status": "In Use"
+  },
+  {
+    "asset_name": "Water Dispenser T",
+    "category": "Appliances",
+    "current_valuation": 300,
+    "barcode_number": "FGH012345",
+    "current_condition": "Good",
+    "assigned_department": "HR",
+    "last_serviced": "2025-02-22",
+    "use_status": "In Use"
+  }
 ]

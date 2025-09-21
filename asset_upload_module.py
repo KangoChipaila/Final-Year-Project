@@ -1,5 +1,6 @@
 import cv2
 from pyzbar.pyzbar import decode
+from flask import redirect, url_for
 
 def barcode_scanner():
 
@@ -34,7 +35,11 @@ def barcode_scanner():
 
             if (barcode_data != "" and barcode_type != ""):
 
-                print(info)    
+                print(info) 
+
+                camera_capture.release()
+                cv2.destroyAllWindows() 
+                  
                 exit()
 
         cv2.imshow("Live Camera Feed (NOTE: Press 'q' to Quit)", frame)
@@ -44,5 +49,3 @@ def barcode_scanner():
 
     camera_capture.release()
     cv2.destroyAllWindows()
-
-barcode_scanner()
