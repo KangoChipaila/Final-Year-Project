@@ -3,89 +3,14 @@
     <head>
         <title>Customer Overview</title>
         <script src = "https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <script src="{{ url_for('static', filename='js/load_customer_data.js')}}" defer></script>
+        <link rel = "stylesheet" href = "{{ url_for('static', filename = 'css/output.css')}}" />
         <link rel = "stylesheet" href = "{{ url_for ('static', filename = 'css/styles.css')}}" />
     </head>
 
     <body>
         <div id = "sales-page">
-            <div class = "drawer">
-                <a class = "home-logo" href = "/"><img class = "logo" src = "{{ url_for ('static', filename = 'images/logo.jpg')}}" alt = "Company Logo Here" /></a>
-                <div class="dashboard">
-                    <a href = "/"><p>DASHBOARD</p></a>
-                </div>
-                <details class = "accordion-item">
-                    <summary>ACCOUNTING</summary>
-                    <div>
-                        <div>
-                            <a href = "/accounting-overview"><p>Overview</p></a>
-                        </div>
-                    </div>
-                </details>
-                <details class = "accordion-item">
-                    <summary>ASSETS</summary>
-                    <div>
-                        <div>
-                            <a href = "/assets-overview"><p>Overview</p></a>
-                        </div>
-                    </div>
-                </details>
-                <details class = "accordion-item">
-                    <summary>CUSTOMERS</summary>
-                    <div>
-                        <div>
-                            <a href = "/customer-overview"><p>Overview</p></a>
-                        </div>
-                    </div>
-                </details>
-                <details class = "accordion-item">
-                    <summary>DISTRIBUTION</summary>
-                    <div>
-                        <div>
-                            <a href = "/distribution-overview"><p>Overview</p></a>
-                        </div>
-                    </div>
-                </details>
-                <details class = "accordion-item">
-                    <summary>FINANCE</summary>
-                    <div>
-                        <div>
-                            <a href = "/finance-overview"><p>Overview</p></a>
-                        </div>
-                    </div>
-                </details>
-                <details class = "accordion-item">
-                    <summary>HUMAN RESOURCES</summary>
-                    <div>
-                        <div>
-                            <a href = "/human-resources-overview"><p>Overview</p></a>
-                        </div>
-                    </div>
-                </details>
-                <details class = "accordion-item">
-                    <summary>PROCUREMENT</summary>
-                    <div>
-                        <div>
-                            <a href = "/procurement-overview"><p>Overview</p></a>
-                        </div>
-                    </div>
-                </details>
-                <details class = "accordion-item">
-                    <summary>PRODUCTION</summary>
-                    <div>
-                        <div>
-                            <a href = "/production-overview"><p>Overview</p></a>
-                        </div>
-                    </div>
-                </details>
-                <details class = "accordion-item">
-                    <summary>SALES</summary>
-                    <div>
-                        <a href = "/sales-overview"><p>Overview</p></a>
-                        <a href = "/detailed-sales-analytics"><p>Detailed Sales Analytics</p></a>
-                    </div>
-                </details>
-                
-            </div>
+            {% include 'partials/drawer.html' %}
             <div class="sales-overview">
                 <section class="top-content">
                     <div class="page-title">
@@ -96,8 +21,9 @@
                         <div class = "user-info">USERNAME</div>
                         <img class = "user-display-image" src = "{{url_for('static', filename = 'images/display picture.jpg')}}" alt = "user-display-image" />
                     </div>
-                </section id = "customers-main-content">
-                <section>
+                </section>
+                <section class = "" id = "customers-main-content">
+                
                 </section>
             </div>
         </div>
