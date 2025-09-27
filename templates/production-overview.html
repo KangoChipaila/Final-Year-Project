@@ -2,33 +2,150 @@
 <html>
     <head>
         <title>Production Overview</title>
-        <script src = "https://cdn.plot.ly/plotly-latest.min.js"></script>
-        <link rel = "stylesheet" href = "{{ url_for ('static', filename = 'css/styles.css')}}" />
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css')}}" />
+        <link rel = "stylesheet" href = "{{ url_for ('static', filename = 'css/output.css')}}" />
     </head>
-
     <body>
-        <div id = "sales-page">
+        <div id="sales-page">
             {% include 'partials/drawer.html' %}
             <div class="sales-overview">
                 <section class="top-content">
                     <div class="page-title">
-                        <div class = "module-title">PRODUCTION</div>
-                        <div class = "submodule-title">Overview</div>
+                        <div class="module-title">PRODUCTION</div>
+                        <div class="submodule-title">Overview</div>
                     </div>
-                    <div class = "user-details">
-                        <div class = "user-info">USERNAME</div>
-                        <img class = "user-display-image" src = "{{url_for('static', filename = 'images/display picture.jpg')}}" alt = "user-display-image" />
+                    <div class="user-details">
+                        <div class="user-info">USERNAME</div>
+                        <img class="user-display-image" src="{{url_for('static', filename='images/display picture.jpg')}}" alt="user-display-image" />
                     </div>
-                </section id = "production-main-content">
-                <section>
+                </section>
+                <section id="production-main-content" class="w-4/5 mx-auto p-6">
+
+                    <!-- Production Orders Table -->
+                    <div class="mb-8 bg-white shadow-md rounded p-4">
+                        <h2 class="text-lg font-bold mb-2">Production Orders</h2>
+                        <table class="w-full text-sm text-left text-black">
+                            <thead class="text-xs uppercase text-white bg-black">
+                                <tr>
+                                    <th class="px-4 py-2">Order #</th>
+                                    <th class="px-4 py-2">Product</th>
+                                    <th class="px-4 py-2">Quantity</th>
+                                    <th class="px-4 py-2">Start Date</th>
+                                    <th class="px-4 py-2">End Date</th>
+                                    <th class="px-4 py-2">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="px-4 py-2">PO-3001</td>
+                                    <td class="px-4 py-2">Widget A</td>
+                                    <td class="px-4 py-2">500</td>
+                                    <td class="px-4 py-2">2025-09-20</td>
+                                    <td class="px-4 py-2">2025-09-27</td>
+                                    <td class="px-4 py-2 text-yellow-600">In Progress</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-2">PO-3002</td>
+                                    <td class="px-4 py-2">Widget B</td>
+                                    <td class="px-4 py-2">200</td>
+                                    <td class="px-4 py-2">2025-09-22</td>
+                                    <td class="px-4 py-2">2025-09-28</td>
+                                    <td class="px-4 py-2 text-green-600">Completed</td>
+                                </tr>
+                                <!-- More rows as needed -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Bill of Materials Table -->
+                    <div class="mb-8 bg-white shadow-md rounded p-4">
+                        <h2 class="text-lg font-bold mb-2">Bill of Materials</h2>
+                        <table class="w-full text-sm text-left text-black">
+                            <thead class="text-xs uppercase text-white bg-black">
+                                <tr>
+                                    <th class="px-4 py-2">Product</th>
+                                    <th class="px-4 py-2">Component</th>
+                                    <th class="px-4 py-2">Quantity Required</th>
+                                    <th class="px-4 py-2">Unit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="px-4 py-2">Widget A</td>
+                                    <td class="px-4 py-2">Screw</td>
+                                    <td class="px-4 py-2">4</td>
+                                    <td class="px-4 py-2">pcs</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-2">Widget A</td>
+                                    <td class="px-4 py-2">Panel</td>
+                                    <td class="px-4 py-2">1</td>
+                                    <td class="px-4 py-2">pcs</td>
+                                </tr>
+                                <!-- More rows as needed -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Work Center Status Table -->
+                    <div class="mb-8 bg-white shadow-md rounded p-4">
+                        <h2 class="text-lg font-bold mb-2">Work Center Status</h2>
+                        <table class="w-full text-sm text-left text-black">
+                            <thead class="text-xs uppercase text-white bg-black">
+                                <tr>
+                                    <th class="px-4 py-2">Work Center</th>
+                                    <th class="px-4 py-2">Current Task</th>
+                                    <th class="px-4 py-2">Status</th>
+                                    <th class="px-4 py-2">Operator</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="px-4 py-2">Assembly Line 1</td>
+                                    <td class="px-4 py-2">Widget A Assembly</td>
+                                    <td class="px-4 py-2 text-yellow-600">Running</td>
+                                    <td class="px-4 py-2">Jane Doe</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-2">Assembly Line 2</td>
+                                    <td class="px-4 py-2">Widget B Packaging</td>
+                                    <td class="px-4 py-2 text-green-600">Idle</td>
+                                    <td class="px-4 py-2">John Smith</td>
+                                </tr>
+                                <!-- More rows as needed -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Quick Actions Table -->
+                    <div class="mb-8 bg-white shadow-md rounded p-4">
+                        <h2 class="text-lg font-bold mb-2">Quick Actions</h2>
+                        <table class="w-full text-sm text-left text-black">
+                            <tbody>
+                                <tr>
+                                    <td class="px-4 py-2">
+                                        <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-800">Add Production Order</button>
+                                    </td>
+                                    <td class="px-4 py-2">
+                                        <button class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-800">Add BOM</button>
+                                    </td>
+                                    <td class="px-4 py-2">
+                                        <button class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-800">Update Work Center</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
                 </section>
             </div>
         </div>
-        <footer id = "footer">
-            <img class = "footer-logo" src = "{{ url_for ('static', filename = 'images/logo.jpg')}}" />
+        <footer id="footer">
+            <img class="footer-logo" src="{{ url_for('static', filename='images/logo.jpg')}}" />
             <div class="about">
                 <p>Copyright 2025</p>
             </div>
         </footer>
-        
     </body>
+</html>

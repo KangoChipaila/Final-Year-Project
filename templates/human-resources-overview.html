@@ -2,33 +2,192 @@
 <html>
     <head>
         <title>Human Resources Overview</title>
-        <script src = "https://cdn.plot.ly/plotly-latest.min.js"></script>
-        <link rel = "stylesheet" href = "{{ url_for ('static', filename = 'css/styles.css')}}" />
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css')}}" />
+        <link rel = "stylesheet" href = "{{ url_for ('static', filename = 'css/output.css')}}" />
     </head>
-
     <body>
-        <div id = "sales-page">
+        <div id="sales-page">
             {% include 'partials/drawer.html' %}
             <div class="sales-overview">
                 <section class="top-content">
                     <div class="page-title">
-                        <div class = "module-title">HUMAN RESOURCES</div>
-                        <div class = "submodule-title">Overview</div>
+                        <div class="module-title">HUMAN RESOURCES</div>
+                        <div class="submodule-title">Overview</div>
                     </div>
-                    <div class = "user-details">
-                        <div class = "user-info">USERNAME</div>
-                        <img class = "user-display-image" src = "{{url_for('static', filename = 'images/display picture.jpg')}}" alt = "user-display-image" />
+                    <div class="user-details">
+                        <div class="user-info">USERNAME</div>
+                        <img class="user-display-image" src="{{url_for('static', filename='images/display picture.jpg')}}" alt="user-display-image" />
                     </div>
-                </section id = "human-resources-overview-main-content">
-                <section>
+                </section>
+                <section id="human-resources-main-content" class="w-4/5 mx-auto p-6">
+
+                    <!-- Employee Directory Table -->
+                    <div class="mb-8 bg-white shadow-md rounded p-4">
+                        <h2 class="text-lg font-bold mb-2">Employee Directory</h2>
+                        <table class="w-full text-sm text-left text-black">
+                            <thead class="text-xs uppercase text-white bg-black">
+                                <tr>
+                                    <th class="px-4 py-2">Employee ID</th>
+                                    <th class="px-4 py-2">Name</th>
+                                    <th class="px-4 py-2">Department</th>
+                                    <th class="px-4 py-2">Position</th>
+                                    <th class="px-4 py-2">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="px-4 py-2">EMP-001</td>
+                                    <td class="px-4 py-2">Jane Doe</td>
+                                    <td class="px-4 py-2">Finance</td>
+                                    <td class="px-4 py-2">Accountant</td>
+                                    <td class="px-4 py-2 text-green-600">Active</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-2">EMP-002</td>
+                                    <td class="px-4 py-2">John Smith</td>
+                                    <td class="px-4 py-2">HR</td>
+                                    <td class="px-4 py-2">HR Manager</td>
+                                    <td class="px-4 py-2 text-yellow-600">On Leave</td>
+                                </tr>
+                                <!-- More rows as needed -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Attendance Table -->
+                    <div class="mb-8 bg-white shadow-md rounded p-4">
+                        <h2 class="text-lg font-bold mb-2">Recent Attendance</h2>
+                        <table class="w-full text-sm text-left text-black">
+                            <thead class="text-xs uppercase text-white bg-black">
+                                <tr>
+                                    <th class="px-4 py-2">Date</th>
+                                    <th class="px-4 py-2">Employee</th>
+                                    <th class="px-4 py-2">Check-In</th>
+                                    <th class="px-4 py-2">Check-Out</th>
+                                    <th class="px-4 py-2">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="px-4 py-2">2025-09-25</td>
+                                    <td class="px-4 py-2">Jane Doe</td>
+                                    <td class="px-4 py-2">08:00</td>
+                                    <td class="px-4 py-2">17:00</td>
+                                    <td class="px-4 py-2 text-green-600">Present</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-2">2025-09-25</td>
+                                    <td class="px-4 py-2">John Smith</td>
+                                    <td class="px-4 py-2">-</td>
+                                    <td class="px-4 py-2">-</td>
+                                    <td class="px-4 py-2 text-yellow-600">On Leave</td>
+                                </tr>
+                                <!-- More rows as needed -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Leave Requests Table -->
+                    <div class="mb-8 bg-white shadow-md rounded p-4">
+                        <h2 class="text-lg font-bold mb-2">Leave Requests</h2>
+                        <table class="w-full text-sm text-left text-black">
+                            <thead class="text-xs uppercase text-white bg-black">
+                                <tr>
+                                    <th class="px-4 py-2">Request #</th>
+                                    <th class="px-4 py-2">Employee</th>
+                                    <th class="px-4 py-2">Type</th>
+                                    <th class="px-4 py-2">From</th>
+                                    <th class="px-4 py-2">To</th>
+                                    <th class="px-4 py-2">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="px-4 py-2">LR-1001</td>
+                                    <td class="px-4 py-2">John Smith</td>
+                                    <td class="px-4 py-2">Annual</td>
+                                    <td class="px-4 py-2">2025-09-25</td>
+                                    <td class="px-4 py-2">2025-09-30</td>
+                                    <td class="px-4 py-2 text-yellow-600">Pending</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-2">LR-1002</td>
+                                    <td class="px-4 py-2">Jane Doe</td>
+                                    <td class="px-4 py-2">Sick</td>
+                                    <td class="px-4 py-2">2025-09-20</td>
+                                    <td class="px-4 py-2">2025-09-22</td>
+                                    <td class="px-4 py-2 text-green-600">Approved</td>
+                                </tr>
+                                <!-- More rows as needed -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Payroll Summary Table -->
+                    <div class="mb-8 bg-white shadow-md rounded p-4">
+                        <h2 class="text-lg font-bold mb-2">Payroll Summary</h2>
+                        <table class="w-full text-sm text-left text-black">
+                            <thead class="text-xs uppercase text-white bg-black">
+                                <tr>
+                                    <th class="px-4 py-2">Employee</th>
+                                    <th class="px-4 py-2">Month</th>
+                                    <th class="px-4 py-2">Gross Pay</th>
+                                    <th class="px-4 py-2">Deductions</th>
+                                    <th class="px-4 py-2">Net Pay</th>
+                                    <th class="px-4 py-2">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="px-4 py-2">Jane Doe</td>
+                                    <td class="px-4 py-2">September 2025</td>
+                                    <td class="px-4 py-2">$2,000.00</td>
+                                    <td class="px-4 py-2">$200.00</td>
+                                    <td class="px-4 py-2">$1,800.00</td>
+                                    <td class="px-4 py-2 text-green-600">Paid</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-2">John Smith</td>
+                                    <td class="px-4 py-2">September 2025</td>
+                                    <td class="px-4 py-2">$2,500.00</td>
+                                    <td class="px-4 py-2">$250.00</td>
+                                    <td class="px-4 py-2">$2,250.00</td>
+                                    <td class="px-4 py-2 text-yellow-600">Pending</td>
+                                </tr>
+                                <!-- More rows as needed -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Quick Actions Table -->
+                    <div class="mb-8 bg-white shadow-md rounded p-4">
+                        <h2 class="text-lg font-bold mb-2">Quick Actions</h2>
+                        <table class="w-full text-sm text-left text-black">
+                            <tbody>
+                                <tr>
+                                    <td class="px-4 py-2">
+                                        <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-800">Add Employee</button>
+                                    </td>
+                                    <td class="px-4 py-2">
+                                        <button class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-800">Record Attendance</button>
+                                    </td>
+                                    <td class="px-4 py-2">
+                                        <button class="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-800">Process Payroll</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
                 </section>
             </div>
         </div>
-        <footer id = "footer">
-            <img class = "footer-logo" src = "{{ url_for ('static', filename = 'images/logo.jpg')}}" />
+        <footer id="footer">
+            <img class="footer-logo" src="{{ url_for('static', filename='images/logo.jpg')}}" />
             <div class="about">
                 <p>Copyright 2025</p>
             </div>
         </footer>
-        
     </body>
+</html>

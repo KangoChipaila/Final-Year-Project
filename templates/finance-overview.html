@@ -2,33 +2,164 @@
 <html>
     <head>
         <title>Finance Overview</title>
-        <script src = "https://cdn.plot.ly/plotly-latest.min.js"></script>
-        <link rel = "stylesheet" href = "{{ url_for ('static', filename = 'css/styles.css')}}" />
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css')}}" />
+        <link rel = "stylesheet" href = "{{ url_for ('static', filename = 'css/output.css')}}" />
     </head>
-
     <body>
-        <div id = "sales-page">
+        <div id="sales-page">
             {% include 'partials/drawer.html' %}
             <div class="sales-overview">
                 <section class="top-content">
                     <div class="page-title">
-                        <div class = "module-title">FINANCE</div>
-                        <div class = "submodule-title">Overview</div>
+                        <div class="module-title">FINANCE</div>
+                        <div class="submodule-title">Overview</div>
                     </div>
-                    <div class = "user-details">
-                        <div class = "user-info">USERNAME</div>
-                        <img class = "user-display-image" src = "{{url_for('static', filename = 'images/display picture.jpg')}}" alt = "user-display-image" />
+                    <div class="user-details">
+                        <div class="user-info">USERNAME</div>
+                        <img class="user-display-image" src="{{url_for('static', filename='images/display picture.jpg')}}" alt="user-display-image" />
                     </div>
-                </section id = "finance-main-content">
-                <section>
+                </section>
+                <section id="finance-main-content" class="w-4/5 mx-auto p-6">
+
+                    <!-- Financial Summary Table -->
+                    <div class="mb-8 bg-white shadow-md rounded p-4">
+                        <h2 class="text-lg font-bold mb-2">Financial Summary</h2>
+                        <table class="w-full text-sm text-left text-black">
+                            <thead class="text-xs uppercase text-white bg-black">
+                                <tr>
+                                    <th class="px-4 py-2">Total Assets</th>
+                                    <th class="px-4 py-2">Total Liabilities</th>
+                                    <th class="px-4 py-2">Equity</th>
+                                    <th class="px-4 py-2">Cash on Hand</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="px-4 py-2">$50,000.00</td>
+                                    <td class="px-4 py-2">$20,000.00</td>
+                                    <td class="px-4 py-2">$30,000.00</td>
+                                    <td class="px-4 py-2">$10,000.00</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Income Statement Table -->
+                    <div class="mb-8 bg-white shadow-md rounded p-4">
+                        <h2 class="text-lg font-bold mb-2">Income Statement (This Month)</h2>
+                        <table class="w-full text-sm text-left text-black">
+                            <thead class="text-xs uppercase text-white bg-black">
+                                <tr>
+                                    <th class="px-4 py-2">Revenue</th>
+                                    <th class="px-4 py-2">Expenses</th>
+                                    <th class="px-4 py-2">Net Income</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="px-4 py-2">$15,000.00</td>
+                                    <td class="px-4 py-2">$7,000.00</td>
+                                    <td class="px-4 py-2">$8,000.00</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Cash Flow Table -->
+                    <div class="mb-8 bg-white shadow-md rounded p-4">
+                        <h2 class="text-lg font-bold mb-2">Cash Flow (This Month)</h2>
+                        <table class="w-full text-sm text-left text-black">
+                            <thead class="text-xs uppercase text-white bg-black">
+                                <tr>
+                                    <th class="px-4 py-2">Date</th>
+                                    <th class="px-4 py-2">Description</th>
+                                    <th class="px-4 py-2">Inflow</th>
+                                    <th class="px-4 py-2">Outflow</th>
+                                    <th class="px-4 py-2">Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="px-4 py-2">2025-09-25</td>
+                                    <td class="px-4 py-2">Customer Payment</td>
+                                    <td class="px-4 py-2">$2,000.00</td>
+                                    <td class="px-4 py-2">-</td>
+                                    <td class="px-4 py-2">$10,000.00</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-2">2025-09-24</td>
+                                    <td class="px-4 py-2">Office Rent</td>
+                                    <td class="px-4 py-2">-</td>
+                                    <td class="px-4 py-2">$1,000.00</td>
+                                    <td class="px-4 py-2">$8,000.00</td>
+                                </tr>
+                                <!-- More rows as needed -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Outstanding Payments Table -->
+                    <div class="mb-8 bg-white shadow-md rounded p-4">
+                        <h2 class="text-lg font-bold mb-2">Outstanding Payments</h2>
+                        <table class="w-full text-sm text-left text-black">
+                            <thead class="text-xs uppercase text-white bg-black">
+                                <tr>
+                                    <th class="px-4 py-2">Payment #</th>
+                                    <th class="px-4 py-2">Vendor/Customer</th>
+                                    <th class="px-4 py-2">Due Date</th>
+                                    <th class="px-4 py-2">Amount</th>
+                                    <th class="px-4 py-2">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="px-4 py-2">PAY-1001</td>
+                                    <td class="px-4 py-2">Zesco</td>
+                                    <td class="px-4 py-2">2025-09-30</td>
+                                    <td class="px-4 py-2">$500.00</td>
+                                    <td class="px-4 py-2 text-yellow-600">Pending</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-2">PAY-1002</td>
+                                    <td class="px-4 py-2">Acme Corp</td>
+                                    <td class="px-4 py-2">2025-10-05</td>
+                                    <td class="px-4 py-2">$1,200.00</td>
+                                    <td class="px-4 py-2 text-green-600">Received</td>
+                                </tr>
+                                <!-- More rows as needed -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Quick Actions Table -->
+                    <div class="mb-8 bg-white shadow-md rounded p-4">
+                        <h2 class="text-lg font-bold mb-2">Quick Actions</h2>
+                        <table class="w-full text-sm text-left text-black">
+                            <tbody>
+                                <tr>
+                                    <td class="px-4 py-2">
+                                        <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-800">Add Payment</button>
+                                    </td>
+                                    <td class="px-4 py-2">
+                                        <button class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-800">Add Receipt</button>
+                                    </td>
+                                    <td class="px-4 py-2">
+                                        <button class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-800">Generate Report</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
                 </section>
             </div>
         </div>
-        <footer id = "footer">
-            <img class = "footer-logo" src = "{{ url_for ('static', filename = 'images/logo.jpg')}}" />
+        <footer id="footer">
+            <img class="footer-logo" src="{{ url_for('static', filename='images/logo.jpg')}}" />
             <div class="about">
                 <p>Copyright 2025</p>
             </div>
         </footer>
-        
     </body>
+</html>

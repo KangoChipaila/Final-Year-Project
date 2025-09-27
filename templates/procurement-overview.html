@@ -2,33 +2,162 @@
 <html>
     <head>
         <title>Procurement Overview</title>
-        <script src = "https://cdn.plot.ly/plotly-latest.min.js"></script>
-        <link rel = "stylesheet" href = "{{ url_for ('static', filename = 'css/styles.css')}}" />
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css')}}" />
+        <link rel = "stylesheet" href = "{{ url_for ('static', filename = 'css/output.css')}}" />
     </head>
-
     <body>
-        <div id = "sales-page">
+        <div id="sales-page">
             {% include 'partials/drawer.html' %}
             <div class="sales-overview">
                 <section class="top-content">
                     <div class="page-title">
-                        <div class = "module-title">PROCUREMENT</div>
-                        <div class = "submodule-title">Overview</div>
+                        <div class="module-title">PROCUREMENT</div>
+                        <div class="submodule-title">Overview</div>
                     </div>
-                    <div class = "user-details">
-                        <div class = "user-info">USERNAME</div>
-                        <img class = "user-display-image" src = "{{url_for('static', filename = 'images/display picture.jpg')}}" alt = "user-display-image" />
+                    <div class="user-details">
+                        <div class="user-info">USERNAME</div>
+                        <img class="user-display-image" src="{{url_for('static', filename='images/display picture.jpg')}}" alt="user-display-image" />
                     </div>
-                </section id = "procurement-main-content">
-                <section>
+                </section>
+                <section id="procurement-main-content" class="w-4/5 mx-auto p-6">
+
+                    <!-- Purchase Requests Table -->
+                    <div class="mb-8 bg-white shadow-md rounded p-4">
+                        <h2 class="text-lg font-bold mb-2">Purchase Requests</h2>
+                        <table class="w-full text-sm text-left text-black">
+                            <thead class="text-xs uppercase text-white bg-black">
+                                <tr>
+                                    <th class="px-4 py-2">Request #</th>
+                                    <th class="px-4 py-2">Requested By</th>
+                                    <th class="px-4 py-2">Date</th>
+                                    <th class="px-4 py-2">Item</th>
+                                    <th class="px-4 py-2">Quantity</th>
+                                    <th class="px-4 py-2">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="px-4 py-2">PR-1001</td>
+                                    <td class="px-4 py-2">Jane Doe</td>
+                                    <td class="px-4 py-2">2025-09-25</td>
+                                    <td class="px-4 py-2">Laptops</td>
+                                    <td class="px-4 py-2">5</td>
+                                    <td class="px-4 py-2 text-yellow-600">Pending</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-2">PR-1002</td>
+                                    <td class="px-4 py-2">John Smith</td>
+                                    <td class="px-4 py-2">2025-09-24</td>
+                                    <td class="px-4 py-2">Office Chairs</td>
+                                    <td class="px-4 py-2">10</td>
+                                    <td class="px-4 py-2 text-green-600">Approved</td>
+                                </tr>
+                                <!-- More rows as needed -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Purchase Orders Table -->
+                    <div class="mb-8 bg-white shadow-md rounded p-4">
+                        <h2 class="text-lg font-bold mb-2">Purchase Orders</h2>
+                        <table class="w-full text-sm text-left text-black">
+                            <thead class="text-xs uppercase text-white bg-black">
+                                <tr>
+                                    <th class="px-4 py-2">Order #</th>
+                                    <th class="px-4 py-2">Vendor</th>
+                                    <th class="px-4 py-2">Date</th>
+                                    <th class="px-4 py-2">Item</th>
+                                    <th class="px-4 py-2">Quantity</th>
+                                    <th class="px-4 py-2">Amount</th>
+                                    <th class="px-4 py-2">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="px-4 py-2">PO-2001</td>
+                                    <td class="px-4 py-2">Tech Supplies Ltd</td>
+                                    <td class="px-4 py-2">2025-09-26</td>
+                                    <td class="px-4 py-2">Laptops</td>
+                                    <td class="px-4 py-2">5</td>
+                                    <td class="px-4 py-2">$5,000.00</td>
+                                    <td class="px-4 py-2 text-yellow-600">Ordered</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-2">PO-2002</td>
+                                    <td class="px-4 py-2">OfficeMart</td>
+                                    <td class="px-4 py-2">2025-09-25</td>
+                                    <td class="px-4 py-2">Office Chairs</td>
+                                    <td class="px-4 py-2">10</td>
+                                    <td class="px-4 py-2">$1,000.00</td>
+                                    <td class="px-4 py-2 text-green-600">Received</td>
+                                </tr>
+                                <!-- More rows as needed -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Supplier List Table -->
+                    <div class="mb-8 bg-white shadow-md rounded p-4">
+                        <h2 class="text-lg font-bold mb-2">Suppliers</h2>
+                        <table class="w-full text-sm text-left text-black">
+                            <thead class="text-xs uppercase text-white bg-black">
+                                <tr>
+                                    <th class="px-4 py-2">Supplier Name</th>
+                                    <th class="px-4 py-2">Contact Person</th>
+                                    <th class="px-4 py-2">Email</th>
+                                    <th class="px-4 py-2">Phone</th>
+                                    <th class="px-4 py-2">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="px-4 py-2">Tech Supplies Ltd</td>
+                                    <td class="px-4 py-2">Alice Brown</td>
+                                    <td class="px-4 py-2"><a href="mailto:alice@techsupplies.com" class="hover:text-blue-500">alice@techsupplies.com</a></td>
+                                    <td class="px-4 py-2">123-456-7890</td>
+                                    <td class="px-4 py-2 text-green-600">Active</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-2">OfficeMart</td>
+                                    <td class="px-4 py-2">Bob Green</td>
+                                    <td class="px-4 py-2"><a href="mailto:bob@officemart.com" class="hover:text-blue-500">bob@officemart.com</a></td>
+                                    <td class="px-4 py-2">987-654-3210</td>
+                                    <td class="px-4 py-2 text-yellow-600">Pending</td>
+                                </tr>
+                                <!-- More rows as needed -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Quick Actions Table -->
+                    <div class="mb-8 bg-white shadow-md rounded p-4">
+                        <h2 class="text-lg font-bold mb-2">Quick Actions</h2>
+                        <table class="w-full text-sm text-left text-black">
+                            <tbody>
+                                <tr>
+                                    <td class="px-4 py-2">
+                                        <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-800">Add Purchase Request</button>
+                                    </td>
+                                    <td class="px-4 py-2">
+                                        <button class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-800">Add Purchase Order</button>
+                                    </td>
+                                    <td class="px-4 py-2">
+                                        <button class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-800">Add Supplier</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
                 </section>
             </div>
         </div>
-        <footer id = "footer">
-            <img class = "footer-logo" src = "{{ url_for ('static', filename = 'images/logo.jpg')}}" />
+        <footer id="footer">
+            <img class="footer-logo" src="{{ url_for('static', filename='images/logo.jpg')}}" />
             <div class="about">
                 <p>Copyright 2025</p>
             </div>
         </footer>
-        
     </body>
+</html>
