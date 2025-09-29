@@ -37,17 +37,20 @@ body{
 }
 
 .dashboard{
+    display: flex;
     border-radius: 10px;
-    padding: 2% 0% 2% 5%;
     margin: 15% 0% 18% 0%;
+    padding: 7% 0% 7% 0%;
     width: 70%;
     color: black;
     background-color: white;
 }
 
 .dashboard a{
+    margin: auto;
     text-decoration: none;
     color: #000000;
+    width: 70%;
 }
 
 .dashboard a:hover{
@@ -230,7 +233,7 @@ body{
 
 #sales-forecast{
     width: 80%;
-    height:fit-content;
+    height: fit-content;
     margin: 0 auto 0 auto;
     box-shadow: 0px 4px 4px #00000040;
     border-radius: 1%;

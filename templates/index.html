@@ -4,10 +4,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta charset="utf-8" />
     <link rel="stylesheet" href = "{{ url_for ('static', filename = 'css/styles.css')}}" />
+    <link rel = "stylesheet" href = "{{ url_for ('static', filename = 'css/output.css')}}" />
     <script src = "https://cdn.plot.ly/plotly-latest.min.js"></script>
   </head>
   <body>
-    <div id = "dashboard">
+    <div id = "sales-page">
             {% include 'partials/drawer.html' %}
             <div class="sales-overview">
                 <section class="top-content">
