@@ -1,5 +1,6 @@
 [
   {
+    "id": 1,
     "asset_name": "Laptop A",
     "category": "Electronics",
     "current_valuation": 1200,
@@ -10,6 +11,7 @@
     "use_status": "In Use"
   },
   {
+    "id": 2,
     "asset_name": "Office Chair B",
     "category": "Furniture",
     "current_valuation": 150,
@@ -20,6 +22,7 @@
     "use_status": "In Use"
   },
   {
+    "id": 3,
     "asset_name": "Printer C",
     "category": "Electronics",
     "current_valuation": 400,
@@ -30,6 +33,7 @@
     "use_status": "Out of Service"
   },
   {
+    "id": 4,
     "asset_name": "Projector D",
     "category": "Electronics",
     "current_valuation": 800,
@@ -40,6 +44,7 @@
     "use_status": "In Use"
   },
   {
+    "id": 5,
     "asset_name": "Desk E",
     "category": "Furniture",
     "current_valuation": 250,
@@ -50,6 +55,7 @@
     "use_status": "In Use"
   },
   {
+    "id": 6,
     "asset_name": "Monitor F",
     "category": "Electronics",
     "current_valuation": 300,
@@ -60,6 +66,7 @@
     "use_status": "In Use"
   },
   {
+    "id": 7,
     "asset_name": "Filing Cabinet G",
     "category": "Furniture",
     "current_valuation": 180,
@@ -70,6 +77,7 @@
     "use_status": "In Use"
   },
   {
+    "id": 8,
     "asset_name": "Tablet H",
     "category": "Electronics",
     "current_valuation": 600,
@@ -80,6 +88,7 @@
     "use_status": "In Use"
   },
   {
+    "id": 9,
     "asset_name": "Scanner I",
     "category": "Electronics",
     "current_valuation": 350,
@@ -90,6 +99,7 @@
     "use_status": "Out of Service"
   },
   {
+    "id": 10,
     "asset_name": "Conference Table J",
     "category": "Furniture",
     "current_valuation": 900,
@@ -100,6 +110,7 @@
     "use_status": "In Use"
   },
   {
+    "id": 11,
     "asset_name": "Desktop K",
     "category": "Electronics",
     "current_valuation": 1000,
@@ -110,6 +121,7 @@
     "use_status": "In Use"
   },
   {
+    "id": 12,
     "asset_name": "Whiteboard L",
     "category": "Office Supplies",
     "current_valuation": 120,
@@ -120,6 +132,7 @@
     "use_status": "In Use"
   },
   {
+    "id": 13,
     "asset_name": "Router M",
     "category": "Electronics",
     "current_valuation": 200,
@@ -130,6 +143,7 @@
     "use_status": "In Use"
   },
   {
+    "id": 14,
     "asset_name": "Air Conditioner N",
     "category": "Electronics",
     "current_valuation": 1500,
@@ -140,6 +154,7 @@
     "use_status": "Out of Service"
   },
   {
+    "id": 15,
     "asset_name": "Server O",
     "category": "Electronics",
     "current_valuation": 5000,
@@ -150,6 +165,7 @@
     "use_status": "In Use"
   },
   {
+    "id": 16,
     "asset_name": "Coffee Machine P",
     "category": "Appliances",
     "current_valuation": 250,
@@ -160,6 +176,7 @@
     "use_status": "In Use"
   },
   {
+    "id": 17,
     "asset_name": "Shredder Q",
     "category": "Electronics",
     "current_valuation": 180,
@@ -170,6 +187,7 @@
     "use_status": "In Use"
   },
   {
+    "id": 18,
     "asset_name": "Reception Desk R",
     "category": "Furniture",
     "current_valuation": 700,
@@ -180,6 +198,7 @@
     "use_status": "In Use"
   },
   {
+    "id": 19,
     "asset_name": "Smartphone S",
     "category": "Electronics",
     "current_valuation": 900,
@@ -190,6 +209,7 @@
     "use_status": "In Use"
   },
   {
+    "id": 20,
     "asset_name": "Water Dispenser T",
     "category": "Appliances",
     "current_valuation": 300,

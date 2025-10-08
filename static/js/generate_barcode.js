@@ -1,25 +1,30 @@
-function generateBarcodeNumber(assetName) {
-    // Use asset name initials + timestamp for uniqueness
+function generateBarcodeNumber(assetName, id) {
     const initials = assetName
         .split(' ')
         .map(word => word[0])
         .join('')
         .toUpperCase();
-    const timestamp = Date.now().toString().slice(-6); // last 6 digits of timestamp
-    //console.log(initials + timestamp);
+    const timestamp = Date.now().toString().slice(-6);
 
-    const fs = require('fs')
-    
-    const filePath = './test_asset_data.json'
+    const fs = require('fs');
+    const filePath = './test_asset_data.json';
 
     let rawData = fs.readFileSync(filePath);
-
     let jsonData = JSON.parse(rawData);
 
-    jsonData.barcode_number = initials + timestamp;
+    // If jsonData is an array of assets
+    let found = false;
+    jsonData.forEach(asset => {
+        if (asset.id === id) {
+            asset.barcode_number = initials + timestamp;
+            found = true;
+        }
+    });
+
+    if (!found) {
+        console.log('Asset not found:', id);
+    }
 
     let updatedJsonData = JSON.stringify(jsonData, null, 2);
-
     fs.writeFileSync(filePath, updatedJsonData);
-
 }
