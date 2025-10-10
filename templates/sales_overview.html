@@ -21,6 +21,15 @@
                         <img class = "user-display-image" src = "{{url_for('static', filename = 'images/display picture.jpg')}}" alt = "user-display-image" />
                     </div>
                 </section>
+                <section id = "sales-top-controls" class = "border border-black w-3/4 mx-auto">
+                    <div>
+                        <form action = /sales-data-upload-to-hadoop method = "POST" enctype="multipart/form-data">
+                            <input id = "sales-data-input" class = "border border-black" type="file" name = "sales-data-file">
+                            
+                            <button class ="upload-button border border-black" type="submit">Upload File</button>
+                        </form>
+                    </div>
+                </section>
                 <section>
                     <div>
                         <div id = "sales-trend-graph"></div>

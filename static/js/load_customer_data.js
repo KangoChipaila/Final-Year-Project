@@ -19,7 +19,7 @@ function renderCustomerSection(customers) {
             <td class="px-4 py-2">${c.phone}</td>
             <td class="px-4 py-2">${c.status}</td>
             <td class="px-4 py-2">
-                <button type="button" onclick="showCustomerDetails('${c.id}')" class="font-medium rounded-lg text-xs px-5 py-2.5 text-center me-2 mb-2 border border-black hover:text-white hover:bg-black focus:ring-black">View Details</button>
+                <button type="button" onclick="showCustomerDetails('${c.id}', '${c.name}', '${c.contact_person}')" class="font-medium rounded-lg text-xs px-5 py-2.5 text-center me-2 mb-2 border border-black hover:text-white hover:bg-black focus:ring-black">View Details</button>
             </td>
             <td class="px-4 py-2">
                 <button type="button" onclick="editCustomerDetails('${c.id}')" class="font-medium rounded-lg text-xs px-5 py-2.5 text-center me-2 mb-2 border border-black hover:text-white hover:bg-black focus:ring-black">Edit Details</button>
@@ -47,22 +47,18 @@ function renderCustomerSection(customers) {
                 </tbody>
             </table>
         </div>
-        <div id="customer-details"></div>
+        <div id="customer-details" class = "mx-auto w-1/2" ></div>
     `;
 }
 
-function showCustomerDetails(customerId) {
+function showCustomerDetails(customerId, customerName, customerContactPerson) {
     document.getElementById('customer-details').innerHTML = `
-        <div class="mb-8">
+        <div class="mb-8 mx-auto w-full border border-black">
             <h2 class="text-lg font-bold mb-2">Customer Details</h2>
             <div class="bg-white p-4 rounded shadow">
-                <p><strong>Name:</strong> Example Name</p>
-                <p><strong>Contact Person:</strong> Example Contact</p>
+                <p><strong>Name:</strong> ${customerName}</p>
+                <p><strong>Contact Person:</strong> ${customerContactPerson}</p>
                 <p><strong>Email:</strong> example@email.com</p>
-                <p><strong>Phone:</strong> 123-456789</p>
-                <p><strong>Address:</strong> 123 Main St, City</p>
-                <p><strong>Status:</strong> Active</p>
-                <p><strong>Notes:</strong> Example notes here.</p>
             </div>
         </div>
         <!-- Add dynamic interaction log, opportunities, tasks here -->

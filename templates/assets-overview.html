@@ -31,6 +31,10 @@
                             <div>Number of Assets in Good Condition</div>
                             <div>Number of Assets in Bad Condition</div>
                             <div>Current Total Asset Valuation </div>
+                            <form action = "/upload" method = "POST" enctype="multipart/form-data">
+                                <input class = "border border-black" name = "file" type="file">
+                                <button class ="border border-black p-2" id="submit-file" type="submit">Upload CSV</button>
+                            </form>
                         </div>
                     </div>
                     <div class="w-4/5 h-80 mx-auto overflow-auto shadow-md sm:rounded-lg">
