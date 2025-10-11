@@ -19,8 +19,8 @@
 <body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col">
 
     <!-- Navbar -->
-    <header class="bg-blue-700 text-white shadow p-4 flex justify-between items-center">
-        <div class="text-2xl font-bold">Data-Driven ERP System</div>
+    <header class="bg-black text-white shadow p-4 flex justify-between items-center">
+        <div class="text-2xl font-bold"><a href = "{{ url_for('index')}}">Data-Driven ERP System</a></div>
         <div class="flex items-center space-x-3">
             {% if current_user.is_authenticated %}
                 <span class="font-medium">{{ current_user.username }}</span>
@@ -80,7 +80,7 @@
     </div>
 
     <!-- Footer -->
-    <footer class="bg-blue-800 text-white text-center py-2 text-sm">
+    <footer class="bg-black text-white text-center py-2 text-sm">
         &copy; {{ current_year if current_year else "2025" }} Data-Driven ERP System. All rights reserved.
     </footer>
 

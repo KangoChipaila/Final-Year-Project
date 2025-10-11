@@ -234,43 +234,36 @@ def add_asset():
     # If GET: render the form
     return render_template("add-asset.html")
 
-@app.route("/assets-overview")
+@app.route("/assets-overview", methods=["GET"])
 @login_required
 def asset_overview():
-    # Example data (replace with DB query later)
-    assets = [
-        {"id": 1, "name": "Office Computer", "category": "IT Equipment", "purchase_date": "2023-03-12", "value": 1500, "depreciation_rate": 20, "status": "Active"},
-        {"id": 2, "name": "Company Car", "category": "Vehicles", "purchase_date": "2021-07-22", "value": 25000, "depreciation_rate": 15, "status": "Active"},
-        {"id": 3, "name": "Printer", "category": "Office Equipment", "purchase_date": "2020-02-10", "value": 600, "depreciation_rate": 30, "status": "Retired"}
-    ]
+    # Get search and filter parameters from URL
+    query = request.args.get("query", "").lower()
+    category = request.args.get("category", "")
+    status = request.args.get("status", "")
 
-    asset_summary = [
-        {"label": "Total Assets", "value": len(assets)},
-        {"label": "Active Assets", "value": sum(1 for a in assets if a['status'] == "Active")},
-        {"label": "Total Value", "value": f"${sum(a['value'] for a in assets):,.2f}"},
-        {"label": "Avg. Depreciation", "value": f"{sum(a['depreciation_rate'] for a in assets)/len(assets):.1f}%"}
-    ]
+    # Filter the assets based on user input
+    filtered_assets = assets_data
 
-    # Pie chart example for Plotly
-    category_counts = {}
-    for a in assets:
-        category_counts[a["category"]] = category_counts.get(a["category"], 0) + 1
+    if query:
+        filtered_assets = [a for a in filtered_assets if query in a["name"].lower()]
 
-    asset_chart_data = json.dumps({
-        "data": [{
-            "type": "pie",
-            "labels": list(category_counts.keys()),
-            "values": list(category_counts.values()),
-            "hole": 0.4
-        }],
-        "layout": {"title": "Assets by Category"}
-    })
+    if category:
+        filtered_assets = [a for a in filtered_assets if a["category"] == category]
+
+    if status:
+        filtered_assets = [a for a in filtered_assets if a["status"] == status]
+
+    # Build unique category list for the dropdown filter
+    categories = sorted(list(set([a["category"] for a in assets_data])))
 
     return render_template(
         "assets-overview.html",
-        assets=assets,
-        asset_summary=asset_summary,
-        asset_chart_data=asset_chart_data
+        assets=filtered_assets,
+        categories=categories,
+        query=query,
+        selected_category=category,
+        selected_status=status
     )
 
 @app.route('/detailed-assets-analysis')
