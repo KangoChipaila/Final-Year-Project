@@ -1,129 +1,94 @@
-<!DOCTYPE html>
-<html>
-    <head>
-        <title>Assets Overview</title>
-        <script src = "https://cdn.plot.ly/plotly-latest.min.js"></script>
-        <link rel = "stylesheet" href = "{{ url_for ('static', filename = 'css/styles.css')}}" />
-        <link rel = "stylesheet" href = "{{ url_for ('static', filename = 'css/output.css')}}" />
-        <script src = "{{ url_for ('static', filename = 'js/load_asset_data.js')}}" defer></script>
-        <script src = "{{ url_for('static', filename = 'js/generate_barcode.js')}}"></script>
-    </head>
+{% extends "base.html" %}
+{% block title %}Asset Overview{% endblock %}
 
-    <body>
-        <div id = "sales-page">
-            {% include 'partials/drawer.html' %}
-            <div class="sales-overview">
-                <section class="top-content">
-                    <div class="page-title">
-                        <div class = "module-title">ASSETS</div>
-                        <div class = "submodule-title">Overview</div>
-                    </div>
-                    <div class = "user-details">
-                        <div class = "user-info">USERNAME</div>
-                        <img class = "user-display-image" src = "{{url_for('static', filename = 'images/display picture.jpg')}}" alt = "user-display-image" />
-                    </div>
-                </section>
-                <section class = "w-full flex flex-col" id = "assets-main-content">
-                    <div class = "w-4/5 mx-auto mb-10 bg-white shadow-md p-3" id = "asset-summary">
-                        <p>Asset Summary</p>
-                        <div class = "flex mb-5">
-                            <div>Total Asset Count</div>
-                            <div>Number of Assets in Good Condition</div>
-                            <div>Number of Assets in Bad Condition</div>
-                            <div>Current Total Asset Valuation </div>
-                            <form action = "/upload" method = "POST" enctype="multipart/form-data">
-                                <input class = "border border-black" name = "file" type="file">
-                                <button class ="border border-black p-2" id="submit-file" type="submit">Upload CSV</button>
-                            </form>
-                        </div>
-                    </div>
-                    <div class="w-4/5 h-80 mx-auto overflow-auto shadow-md sm:rounded-lg">
-                        <table class="w-full text-sm text-left rtl:text-right text-black" id = "asset-table">
-                            <thead class="text-xs uppercase text-white bg-black">
-                                <tr>
-                                    <th scope="col" class="px-6 py-3">
-                                        Asset name
-                                    </th>
-                                    <th scope="col" class="px-6 py-3">
-                                        <div class="flex items-center">
-                                            Category
-                                            <a href="#">
-                                            <svg class="w-3 h-3 ms-1.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
-                                                <path d="M8.574 11.024h6.852a2.075 2.075 0 0 0 1.847-1.086 1.9 1.9 0 0 0-.11-1.986L13.736 2.9a2.122 2.122 0 0 0-3.472 0L6.837 7.952a1.9 1.9 0 0 0-.11 1.986 2.074 2.074 0 0 0 1.847 1.086Zm6.852 1.952H8.574a2.072 2.072 0 0 0-1.847 1.087 1.9 1.9 0 0 0 .11 1.985l3.426 5.05a2.123 2.123 0 0 0 3.472 0l3.427-5.05a1.9 1.9 0 0 0 .11-1.985 2.074 2.074 0 0 0-1.846-1.087Z"/>
-                                            </svg></a>
-                                        </div>
-                                    </th>
-                                    <th scope="col" class="px-6 py-3">
-                                        <div class="flex items-center">
-                                            Current Valuation
-                                            <a href="#">
-                                            <svg class="w-3 h-3 ms-1.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M8.574 11.024h6.852a2.075 2.075 0 0 0 1.847-1.086 1.9 1.9 0 0 0-.11-1.986L13.736 2.9a2.122 2.122 0 0 0-3.472 0L6.837 7.952a1.9 1.9 0 0 0-.11 1.986 2.074 2.074 0 0 0 1.847 1.086Zm6.852 1.952H8.574a2.072 2.072 0 0 0-1.847 1.087 1.9 1.9 0 0 0 .11 1.985l3.426 5.05a2.123 2.123 0 0 0 3.472 0l3.427-5.05a1.9 1.9 0 0 0 .11-1.985 2.074 2.074 0 0 0-1.846-1.087Z"/>
-                                            </svg></a>
-                                        </div>
-                                    </th>
-                                    <th scope="col" class="px-6 py-3">
-                                        <div class="flex items-center">
-                                            Barcode Number
-                                            <a href="#">
-                                            <svg class="w-3 h-3 ms-1.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M8.574 11.024h6.852a2.075 2.075 0 0 0 1.847-1.086 1.9 1.9 0 0 0-.11-1.986L13.736 2.9a2.122 2.122 0 0 0-3.472 0L6.837 7.952a1.9 1.9 0 0 0-.11 1.986 2.074 2.074 0 0 0 1.847 1.086Zm6.852 1.952H8.574a2.072 2.072 0 0 0-1.847 1.087 1.9 1.9 0 0 0 .11 1.985l3.426 5.05a2.123 2.123 0 0 0 3.472 0l3.427-5.05a1.9 1.9 0 0 0 .11-1.985 2.074 2.074 0 0 0-1.846-1.087Z"/>
-                                            </svg></a>
-                                        </div>
-                                    </th>
-                                    <th scope="col" class="px-6 py-3">
-                                        <div class="flex items-center">
-                                            Current Condition
-                                            <a href="#">
-                                            <svg class="w-3 h-3 ms-1.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M8.574 11.024h6.852a2.075 2.075 0 0 0 1.847-1.086 1.9 1.9 0 0 0-.11-1.986L13.736 2.9a2.122 2.122 0 0 0-3.472 0L6.837 7.952a1.9 1.9 0 0 0-.11 1.986 2.074 2.074 0 0 0 1.847 1.086Zm6.852 1.952H8.574a2.072 2.072 0 0 0-1.847 1.087 1.9 1.9 0 0 0 .11 1.985l3.426 5.05a2.123 2.123 0 0 0 3.472 0l3.427-5.05a1.9 1.9 0 0 0 .11-1.985 2.074 2.074 0 0 0-1.846-1.087Z"/>
-                                            </svg></a>
-                                        </div>
-                                    </th>
-                                    <th scope="col" class="px-6 py-3">
-                                        <div class="flex items-center">
-                                            Assigned Department
-                                            <a href="#">
-                                            <svg class="w-3 h-3 ms-1.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M8.574 11.024h6.852a2.075 2.075 0 0 0 1.847-1.086 1.9 1.9 0 0 0-.11-1.986L13.736 2.9a2.122 2.122 0 0 0-3.472 0L6.837 7.952a1.9 1.9 0 0 0-.11 1.986 2.074 2.074 0 0 0 1.847 1.086Zm6.852 1.952H8.574a2.072 2.072 0 0 0-1.847 1.087 1.9 1.9 0 0 0 .11 1.985l3.426 5.05a2.123 2.123 0 0 0 3.472 0l3.427-5.05a1.9 1.9 0 0 0 .11-1.985 2.074 2.074 0 0 0-1.846-1.087Z"/>
-                                            </svg></a>
-                                        </div>
-                                    </th>
-                                    <th scope="col" class="px-6 py-3">
-                                        <div class="flex items-center">
-                                            Last Serviced
-                                            <a href="#">
-                                            <svg class="w-3 h-3 ms-1.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M8.574 11.024h6.852a2.075 2.075 0 0 0 1.847-1.086 1.9 1.9 0 0 0-.11-1.986L13.736 2.9a2.122 2.122 0 0 0-3.472 0L6.837 7.952a1.9 1.9 0 0 0-.11 1.986 2.074 2.074 0 0 0 1.847 1.086Zm6.852 1.952H8.574a2.072 2.072 0 0 0-1.847 1.087 1.9 1.9 0 0 0 .11 1.985l3.426 5.05a2.123 2.123 0 0 0 3.472 0l3.427-5.05a1.9 1.9 0 0 0 .11-1.985 2.074 2.074 0 0 0-1.846-1.087Z"/>
-                                            </svg></a>
-                                        </div>
-                                    </th>
-                                    <th scope="col" class="px-6 py-3">
-                                        <div class="flex items-center">
-                                            Use Status
-                                            <a href="#">
-                                            <svg class="w-3 h-3 ms-1.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M8.574 11.024h6.852a2.075 2.075 0 0 0 1.847-1.086 1.9 1.9 0 0 0-.11-1.986L13.736 2.9a2.122 2.122 0 0 0-3.472 0L6.837 7.952a1.9 1.9 0 0 0-.11 1.986 2.074 2.074 0 0 0 1.847 1.086Zm6.852 1.952H8.574a2.072 2.072 0 0 0-1.847 1.087 1.9 1.9 0 0 0 .11 1.985l3.426 5.05a2.123 2.123 0 0 0 3.472 0l3.427-5.05a1.9 1.9 0 0 0 .11-1.985 2.074 2.074 0 0 0-1.846-1.087Z"/>
-                                            </svg></a>
-                                        </div>
-                                    </th>
-                                    <th scope="col" class="px-6 py-3">
-                                        <span class="sr-only">Edit</span>
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody id = "asset-table-body">
-                                
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-            </div>
-        </div>
-        <footer id = "footer">
-            <img class = "footer-logo" src = "{{ url_for ('static', filename = 'images/logo.jpg')}}" />
-            <div class="about">
-                <p>Copyright 2025</p>
-            </div>
-        </footer>
-    </body>
+{% block content %}
+<section class="flex justify-between items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800">Asset Overview</h1>
+        <p class="text-gray-500">Track and manage all company assets</p>
+    </div>
+    <a href="{{ url_for('add_asset') }}"
+       class="bg-blue-700 text-white px-4 py-2 rounded-lg hover:bg-blue-800 transition">
+        + Add Asset
+    </a>
+</section>
+
+<!-- Asset Summary Cards -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    {% for stat in asset_summary %}
+    <div class="bg-white shadow-md rounded-lg p-4 text-center">
+        <h2 class="text-gray-600 text-sm uppercase">{{ stat.label }}</h2>
+        <p class="text-2xl font-semibold text-blue-700">{{ stat.value }}</p>
+    </div>
+    {% endfor %}
+</section>
+
+<!-- Assets Table -->
+<section class="bg-white rounded-lg shadow-md p-6 overflow-x-auto">
+    <h2 class="text-lg font-semibold mb-4">Asset List</h2>
+    <table class="min-w-full border border-gray-200 rounded-lg">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-4 py-2 text-left text-gray-600 font-semibold text-sm">Asset Name</th>
+                <th class="px-4 py-2 text-left text-gray-600 font-semibold text-sm">Category</th>
+                <th class="px-4 py-2 text-left text-gray-600 font-semibold text-sm">Purchase Date</th>
+                <th class="px-4 py-2 text-left text-gray-600 font-semibold text-sm">Value (USD)</th>
+                <th class="px-4 py-2 text-left text-gray-600 font-semibold text-sm">Depreciation (%)</th>
+                <th class="px-4 py-2 text-left text-gray-600 font-semibold text-sm">Status</th>
+                <th class="px-4 py-2"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for asset in assets %}
+            <tr class="border-t hover:bg-gray-50 transition">
+                <td class="px-4 py-2">{{ asset.name }}</td>
+                <td class="px-4 py-2">{{ asset.category }}</td>
+                <td class="px-4 py-2">{{ asset.purchase_date }}</td>
+                <td class="px-4 py-2">${{ "%.2f"|format(asset.value) }}</td>
+                <td class="px-4 py-2">{{ asset.depreciation_rate }}%</td>
+                <td class="px-4 py-2">
+                    {% if asset.status == 'Active' %}
+                        <span class="text-green-700 font-medium">Active</span>
+                    {% else %}
+                        <span class="text-red-600 font-medium">Retired</span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-2 text-right">
+                    <a href="{{ url_for('edit_asset', asset_id=asset.id) }}" 
+                       class="text-blue-700 hover:underline">Edit</a>
+                
+                    <!-- Delete Button -->
+                    <form action="{{ url_for('delete_asset', asset_id=asset.id) }}" method="POST" onsubmit="return confirmDelete('{{ asset.name }}');">
+                        <button type="submit" class="text-red-600 hover:underline">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="text-center text-gray-500 py-4">
+                    No assets found.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+<!-- Asset Distribution Chart -->
+<section class="bg-white rounded-lg shadow-md p-6 mt-8">
+    <h2 class="text-lg font-semibold mb-4">Asset Category Distribution</h2>
+    <div id="asset-distribution-chart" style="height:400px;"></div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const chartData = {{ asset_chart_data | safe }};
+    Plotly.newPlot('asset-distribution-chart', chartData.data, chartData.layout);
+</script>
+<script>
+    function confirmDelete(assetName) {
+        return confirm(`Are you sure you want to delete "${assetName}"? This action cannot be undone.`);
+    }
+</script>
+{% endblock %}

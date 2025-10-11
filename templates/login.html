@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - Data-Driven ERP System</title>
+
+    <!-- Tailwind CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+    <div class="bg-white shadow-lg rounded-2xl w-full max-w-md p-8">
+        <div class="text-center mb-6">
+            <h1 class="text-2xl font-bold text-blue-700">Data-Driven ERP System</h1>
+            <p class="text-gray-500 text-sm">Sign in to continue</p>
+        </div>
+
+        {% if error %}
+        <div class="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm text-center">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form action="{{ url_for('login') }}" method="POST" class="space-y-4">
+            <div>
+                <label class="block text-gray-700 font-medium mb-1" for="username">Username</label>
+                <input type="text" name="username" id="username" required
+                       class="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring focus:ring-blue-300">
+            </div>
+
+            <div>
+                <label class="block text-gray-700 font-medium mb-1" for="password">Password</label>
+                <input type="password" name="password" id="password" required
+                       class="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring focus:ring-blue-300">
+            </div>
+
+            <button type="submit"
+                    class="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2 rounded-lg transition">
+                Log In
+            </button>
+        </form>
+
+        <p class="text-center text-gray-500 text-sm mt-6">
+            &copy; {{ current_year if current_year else "2025" }} Data-Driven ERP System
+        </p>
+    </div>
+</body>
+</html>

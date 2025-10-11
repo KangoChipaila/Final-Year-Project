@@ -1,170 +1,42 @@
-<!DOCTYPE html>
-<html>
-    <head>
-        <title>Accounting Overview</title>
-        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-        <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css')}}" />
-        <link rel = "stylesheet" href = "{{ url_for ('static', filename = 'css/output.css')}}" />
-    </head>
-    <body>
-        <div id="sales-page">
-            {% include 'partials/drawer.html' %}
-            <div class="sales-overview">
-                <section class="top-content">
-                    <div class="page-title">
-                        <div class="module-title">ACCOUNTING</div>
-                        <div class="submodule-title">Overview</div>
-                    </div>
-                    <div class="user-details">
-                        <div class="user-info">USERNAME</div>
-                        <img class="user-display-image" src="{{url_for('static', filename='images/display picture.jpg')}}" alt="user-display-image" />
-                    </div>
-                </section>
-                <section id="accounting-main-content" class="w-4/5 mx-auto p-6">
+{% extends "base.html" %}
+{% block title %}Accounting Overview{% endblock %}
 
-                    <!-- Account Summary Table -->
-                    <div class="mb-8 bg-white shadow-md rounded p-4">
-                        <h2 class="text-lg font-bold mb-2">Account Summary</h2>
-                        <table class="w-full text-sm text-left text-black">
-                            <thead class="text-xs uppercase text-white bg-black">
-                                <tr>
-                                    <th class="px-4 py-2">Total Balance</th>
-                                    <th class="px-4 py-2">Receivables</th>
-                                    <th class="px-4 py-2">Payables</th>
-                                    <th class="px-4 py-2">Net Income (YTD)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="px-4 py-2">$12,500.00</td>
-                                    <td class="px-4 py-2">$3,200.00</td>
-                                    <td class="px-4 py-2">$1,800.00</td>
-                                    <td class="px-4 py-2">$8,000.00</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+{% block content %}
+<section class="flex justify-between items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800">Accounting Overview</h1>
+        <p class="text-gray-500">Financial summary and insights for your organization</p>
+    </div>
+    <div class="flex items-center space-x-2">
+        {% if current_user.is_authenticated %}
+            <span class="font-medium">{{ current_user.username }}</span>
+            <img src="{{ url_for('static', filename='images/display picture.jpg') }}" 
+                 alt="User Avatar" class="h-10 w-10 rounded-full border">
+        {% endif %}
+    </div>
+</section>
 
-                    <!-- Recent Transactions Table -->
-                    <div class="mb-8 bg-white shadow-md rounded p-4">
-                        <h2 class="text-lg font-bold mb-2">Recent Transactions</h2>
-                        <table class="w-full text-sm text-left text-black">
-                            <thead class="text-xs uppercase text-white bg-black">
-                                <tr>
-                                    <th class="px-4 py-2">Date</th>
-                                    <th class="px-4 py-2">Type</th>
-                                    <th class="px-4 py-2">Account</th>
-                                    <th class="px-4 py-2">Description</th>
-                                    <th class="px-4 py-2">Amount</th>
-                                    <th class="px-4 py-2">Balance</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="px-4 py-2">2025-09-25</td>
-                                    <td class="px-4 py-2">Invoice</td>
-                                    <td class="px-4 py-2">Sales</td>
-                                    <td class="px-4 py-2">Invoice #1005</td>
-                                    <td class="px-4 py-2 text-green-600">+ $1,200.00</td>
-                                    <td class="px-4 py-2">$12,500.00</td>
-                                </tr>
-                                <tr>
-                                    <td class="px-4 py-2">2025-09-24</td>
-                                    <td class="px-4 py-2">Bill</td>
-                                    <td class="px-4 py-2">Utilities</td>
-                                    <td class="px-4 py-2">Electricity Bill</td>
-                                    <td class="px-4 py-2 text-red-600">- $300.00</td>
-                                    <td class="px-4 py-2">$11,300.00</td>
-                                </tr>
-                                <!-- More rows as needed -->
-                            </tbody>
-                        </table>
-                    </div>
+<!-- Summary Metrics -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    {% for stat in summary %}
+    <div class="bg-white shadow-md rounded-lg p-4 text-center">
+        <h2 class="text-gray-600 text-sm uppercase">{{ stat.label }}</h2>
+        <p class="text-2xl font-semibold text-blue-700">{{ stat.value }}</p>
+    </div>
+    {% endfor %}
+</section>
 
-                    <!-- Open Invoices Table -->
-                    <div class="mb-8 bg-white shadow-md rounded p-4">
-                        <h2 class="text-lg font-bold mb-2">Open Invoices</h2>
-                        <table class="w-full text-sm text-left text-black">
-                            <thead class="text-xs uppercase text-white bg-black">
-                                <tr>
-                                    <th class="px-4 py-2">Invoice #</th>
-                                    <th class="px-4 py-2">Customer</th>
-                                    <th class="px-4 py-2">Date</th>
-                                    <th class="px-4 py-2">Due Date</th>
-                                    <th class="px-4 py-2">Amount</th>
-                                    <th class="px-4 py-2">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="px-4 py-2">1005</td>
-                                    <td class="px-4 py-2">Acme Corp</td>
-                                    <td class="px-4 py-2">2025-09-25</td>
-                                    <td class="px-4 py-2">2025-10-10</td>
-                                    <td class="px-4 py-2">$1,200.00</td>
-                                    <td class="px-4 py-2 text-yellow-600">Unpaid</td>
-                                </tr>
-                                <!-- More rows as needed -->
-                            </tbody>
-                        </table>
-                    </div>
+<!-- Cashflow Chart -->
+<section class="bg-white rounded-lg shadow-md p-6">
+    <h2 class="text-lg font-semibold mb-4">Monthly Cash Flow</h2>
+    <div id="cashflow-chart" style="height:400px;"></div>
+</section>
+{% endblock %}
 
-                    <!-- Outstanding Bills Table -->
-                    <div class="mb-8 bg-white shadow-md rounded p-4">
-                        <h2 class="text-lg font-bold mb-2">Outstanding Bills</h2>
-                        <table class="w-full text-sm text-left text-black">
-                            <thead class="text-xs uppercase text-white bg-black">
-                                <tr>
-                                    <th class="px-4 py-2">Bill #</th>
-                                    <th class="px-4 py-2">Vendor</th>
-                                    <th class="px-4 py-2">Date</th>
-                                    <th class="px-4 py-2">Due Date</th>
-                                    <th class="px-4 py-2">Amount</th>
-                                    <th class="px-4 py-2">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="px-4 py-2">2002</td>
-                                    <td class="px-4 py-2">Zesco</td>
-                                    <td class="px-4 py-2">2025-09-24</td>
-                                    <td class="px-4 py-2">2025-10-05</td>
-                                    <td class="px-4 py-2">$300.00</td>
-                                    <td class="px-4 py-2 text-yellow-600">Unpaid</td>
-                                </tr>
-                                <!-- More rows as needed -->
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Quick Actions Table -->
-                    <div class="mb-8 bg-white shadow-md rounded p-4">
-                        <h2 class="text-lg font-bold mb-2">Quick Actions</h2>
-                        <table class="w-full text-sm text-left text-black">
-                            <tbody>
-                                <tr>
-                                    <td class="px-4 py-2">
-                                        <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-800">Add Invoice</button>
-                                    </td>
-                                    <td class="px-4 py-2">
-                                        <button class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-800">Add Bill</button>
-                                    </td>
-                                    <td class="px-4 py-2">
-                                        <button class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-800">Record Payment</button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                </section>
-            </div>
-        </div>
-        <footer id="footer">
-            <img class="footer-logo" src="{{ url_for('static', filename='images/logo.jpg')}}" />
-            <div class="about">
-                <p>Copyright 2025</p>
-            </div>
-        </footer>
-    </body>
-</html>
+{% block scripts %}
+<script>
+    // Render Plotly chart
+    const data = {{ cashflow_data | safe }};
+    Plotly.newPlot('cashflow-chart', data.data, data.layout);
+</script>
+{% endblock %}

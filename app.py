@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, Response, send_file, request, redirect, url_for
+from flask import Flask, render_template, jsonify, Response, send_file, request, redirect, url_for, json, flash
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
 from werkzeug.utils import secure_filename
@@ -9,8 +9,68 @@ import barcode
 from barcode.writer import ImageWriter
 import os
 import subprocess
+from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user, login_required
+from datetime import datetime
 
 app = Flask(__name__)
+app.secret_key = "supersecretkey"  # Replace with a real secret key
+
+# ------------------- Login Manager Setup -------------------
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = "login"
+
+# ------------------- Mock Database -------------------
+USERS = {
+    "admin": {"password": "admin123"},
+    "kango": {"password": "erp2025"}
+}
+
+class User(UserMixin):
+    def __init__(self, id, username):
+        self.id = id
+        self.username = username
+
+@login_manager.user_loader
+def load_user(user_id):
+    # In a real app, query your users table here
+    for username in USERS:
+        if username == user_id:
+            return User(user_id, username)
+    return None
+
+# ------------------- Context Processor (for base.html) -------------------
+@app.context_processor
+def inject_globals():
+    return {
+        "current_user": current_user,
+        "current_year": datetime.now().year,
+        "system_name": "Data-Driven ERP System",
+        "version": "1.0.0"
+    }
+
+# ------------------- Login Route -------------------
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+
+        user = USERS.get(username)
+        if user and user["password"] == password:
+            login_user(User(id=username, username=username))
+            return redirect(url_for("index"))
+        else:
+            return render_template("login.html", error="Invalid username or password")
+
+    return render_template("login.html")
+
+# ------------------- Logout Route -------------------
+@app.route("/logout", methods=["POST"])
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for("login"))
 
 UPLOAD_FOLDER = 'uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -24,18 +84,194 @@ customer_expenditure_pie_chart = analytics.generate_customer_expenditure_distrib
 
 spark = SparkSession.builder.appName("CSVUpload").getOrCreate()
 
+# In-memory asset list (for demo; later replaced by DB)
+assets_data = [
+    {"id": 1, "name": "Office Computer", "category": "IT Equipment", "purchase_date": "2023-03-12", "value": 1500, "depreciation_rate": 20, "status": "Active"},
+    {"id": 2, "name": "Company Car", "category": "Vehicles", "purchase_date": "2021-07-22", "value": 25000, "depreciation_rate": 15, "status": "Active"},
+    {"id": 3, "name": "Office Printer", "category": "Office Equipment", "purchase_date": "2020-02-10", "value": 600, "depreciation_rate": 30, "status": "Retired"}
+]
+
 @app.route('/')
 def index():
     return render_template('index.html', sales_trend_graph=sales_trend_graph, customers=customer_expenditure_pie_chart)
 
-@app.route('/accounting-overview')
+# Example mock data (replace with database queries)
+def get_accounting_summary():
+    return [
+        {"label": "Total Balance", "value": "$250,000"},
+        {"label": "Receivables", "value": "$85,000"},
+        {"label": "Payables", "value": "$40,000"},
+        {"label": "Net Income (YTD)", "value": "$195,000"}
+    ]
+
+def get_cashflow_data():
+    # Example data for Plotly
+    return {
+        "data": [
+            {
+                "x": ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+                "y": [12000, 15000, 13000, 18000, 20000, 22000],
+                "type": "bar",
+                "name": "Cash Inflow"
+            },
+            {
+                "x": ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+                "y": [8000, 9000, 10000, 9500, 12000, 11000],
+                "type": "bar",
+                "name": "Cash Outflow"
+            }
+        ],
+        "layout": {
+            "title": "Monthly Cash Flow",
+            "barmode": "group"
+        }
+    }
+
+@app.route("/accounting-overview")
 def accounting_overview():
-    return render_template('accounting-overview.html')
+    summary = get_accounting_summary()
+    cashflow_data = json.dumps(get_cashflow_data())  # serialize for Plotly
+    return render_template(
+        "accounting-overview.html",
+        summary=summary,
+        cashflow_data=cashflow_data
+    )
 
-@app.route('/assets-overview')
-def assets_overview():
+@app.route("/assets/edit/<int:asset_id>", methods=["GET", "POST"])
+@login_required
+def edit_asset(asset_id):
+    """
+    Edit an existing asset entry.
+    Retrieves asset from the in-memory list (later replaced by DB query).
+    """
+    asset = next((a for a in assets_data if a["id"] == asset_id), None)
+    if not asset:
+        flash("Asset not found.", "error")
+        return redirect(url_for("asset_overview"))
 
-    return render_template('assets-overview.html')
+    if request.method == "POST":
+        name = request.form.get("name")
+        category = request.form.get("category")
+        purchase_date = request.form.get("purchase_date")
+        value = request.form.get("value")
+        depreciation_rate = request.form.get("depreciation_rate")
+        status = request.form.get("status")
+
+        if not name or not category or not purchase_date or not value:
+            flash("Please fill in all required fields.", "error")
+            return redirect(url_for("edit_asset", asset_id=asset_id))
+
+        # Update the asset data
+        asset["name"] = name
+        asset["category"] = category
+        asset["purchase_date"] = purchase_date
+        asset["value"] = float(value)
+        asset["depreciation_rate"] = float(depreciation_rate or 0)
+        asset["status"] = status
+
+        flash(f"Asset '{name}' updated successfully!", "success")
+        return redirect(url_for("asset_overview"))
+
+    return render_template("edit-asset.html", asset=asset)
+
+@app.route("/assets/delete/<int:asset_id>", methods=["POST"])
+@login_required
+def delete_asset(asset_id):
+    """
+    Deletes an asset from the in-memory list (temporary storage).
+    In production, this would delete from the database.
+    """
+    global assets_data
+
+    # Find asset by ID
+    asset = next((a for a in assets_data if a["id"] == asset_id), None)
+
+    if not asset:
+        flash("Asset not found.", "error")
+        return redirect(url_for("asset_overview"))
+
+    # Remove the asset
+    assets_data = [a for a in assets_data if a["id"] != asset_id]
+
+    flash(f"Asset '{asset['name']}' deleted successfully!", "success")
+    return redirect(url_for("asset_overview"))
+
+@app.route("/assets/add", methods=["GET", "POST"])
+@login_required
+def add_asset():
+    """
+    Displays and handles the Add Asset form.
+    Currently stores data in memory (replace with DB insert later).
+    """
+    if request.method == "POST":
+        name = request.form.get("name")
+        category = request.form.get("category")
+        purchase_date = request.form.get("purchase_date")
+        value = request.form.get("value")
+        depreciation_rate = request.form.get("depreciation_rate")
+        status = request.form.get("status")
+
+        # Basic validation
+        if not name or not category or not purchase_date or not value:
+            flash("Please fill in all required fields.", "error")
+            return redirect(url_for("add_asset"))
+
+        # Simulate database insert
+        new_asset = {
+            "id": len(assets_data) + 1,
+            "name": name,
+            "category": category,
+            "purchase_date": purchase_date,
+            "value": float(value),
+            "depreciation_rate": float(depreciation_rate or 0),
+            "status": status or "Active"
+        }
+
+        assets_data.append(new_asset)
+        flash(f"Asset '{name}' added successfully!", "success")
+        return redirect(url_for("asset_overview"))
+
+    # If GET: render the form
+    return render_template("add-asset.html")
+
+@app.route("/assets-overview")
+@login_required
+def asset_overview():
+    # Example data (replace with DB query later)
+    assets = [
+        {"id": 1, "name": "Office Computer", "category": "IT Equipment", "purchase_date": "2023-03-12", "value": 1500, "depreciation_rate": 20, "status": "Active"},
+        {"id": 2, "name": "Company Car", "category": "Vehicles", "purchase_date": "2021-07-22", "value": 25000, "depreciation_rate": 15, "status": "Active"},
+        {"id": 3, "name": "Printer", "category": "Office Equipment", "purchase_date": "2020-02-10", "value": 600, "depreciation_rate": 30, "status": "Retired"}
+    ]
+
+    asset_summary = [
+        {"label": "Total Assets", "value": len(assets)},
+        {"label": "Active Assets", "value": sum(1 for a in assets if a['status'] == "Active")},
+        {"label": "Total Value", "value": f"${sum(a['value'] for a in assets):,.2f}"},
+        {"label": "Avg. Depreciation", "value": f"{sum(a['depreciation_rate'] for a in assets)/len(assets):.1f}%"}
+    ]
+
+    # Pie chart example for Plotly
+    category_counts = {}
+    for a in assets:
+        category_counts[a["category"]] = category_counts.get(a["category"], 0) + 1
+
+    asset_chart_data = json.dumps({
+        "data": [{
+            "type": "pie",
+            "labels": list(category_counts.keys()),
+            "values": list(category_counts.values()),
+            "hole": 0.4
+        }],
+        "layout": {"title": "Assets by Category"}
+    })
+
+    return render_template(
+        "assets-overview.html",
+        assets=assets,
+        asset_summary=asset_summary,
+        asset_chart_data=asset_chart_data
+    )
 
 @app.route('/detailed-assets-analysis')
 def detailed_sales_analysis():
@@ -146,14 +382,14 @@ def upload_to_hadoop():
         # Format the local path for the hadoop command, replacing backslashes with forward slashes
         posix_local_path = temp_local_path.replace(os.sep, '/')
         
-        try:
+        """try:
             subprocess.run([hadoop_bin_path, 'fs', '-mkdir', '-p', hdfs_upload_dir], check=True)
             subprocess.run([hadoop_bin_path, 'fs', '-put', '-f', posix_local_path, hdfs_upload_path], check=True)
 
         except subprocess.CalledProcessError as e:
             return f"Failed to upload file to HDFS: {e}"
         except FileNotFoundError:
-            return f"Hadoop executable not found at '{hadoop_bin_path}'. Please check your path."
+            return f"Hadoop executable not found at '{hadoop_bin_path}'. Please check your path."""
         
         sales_dataframe = spark.read.csv(hdfs_upload_path, header=True, inferSchema=True, encoding='cp1252')
 

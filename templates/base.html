@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}ERP System{% endblock %}</title>
+
+    <!-- Tailwind CSS (output.css) & Custom Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+
+    <!-- Plotly for Charts (Optional Global Include) -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+    <!-- Allow Pages to Add Extra Head Scripts -->
+    {% block head_scripts %}{% endblock %}
+</head>
+
+<body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col">
+
+    <!-- Navbar -->
+    <header class="bg-blue-700 text-white shadow p-4 flex justify-between items-center">
+        <div class="text-2xl font-bold">Data-Driven ERP System</div>
+        <div class="flex items-center space-x-3">
+            {% if current_user.is_authenticated %}
+                <span class="font-medium">{{ current_user.username }}</span>
+                <form action="{{ url_for('logout') }}" method="POST" style="display:inline;">
+                    <button class="bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-sm" type="submit">
+                        Logout
+                    </button>
+                </form>
+            {% else %}
+                <a href="{{ url_for('login') }}" class="bg-green-500 hover:bg-green-600 px-3 py-1 rounded text-sm">
+                    Login
+                </a>
+            {% endif %}
+        </div>
+    </header>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="max-w-4xl mx-auto mt-4">
+            {% for category, message in messages %}
+            <div class="mb-3 p-3 rounded text-sm 
+                        {% if category == 'error' %}bg-red-100 text-red-700
+                        {% elif category == 'success' %}bg-green-100 text-green-700
+                        {% else %}bg-gray-100 text-gray-700{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+
+    <!-- Main Layout -->
+    <div class="flex flex-1">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white border-r shadow-md hidden md:block">
+            <div class="p-4 font-semibold border-b">Navigation</div>
+            <nav class="p-4 space-y-2 text-sm">
+                <a href="{{ url_for('index') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if request.path == '/' %}bg-blue-100{% endif %}">🏠 Dashboard</a>
+                <a href="{{ url_for('asset_overview') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if '/assets' in request.path %}bg-blue-100{% endif %}">💼 Assets</a>
+                <a href="{{ url_for('accounting_overview') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if '/accounting' in request.path %}bg-blue-100{% endif %}">📊 Accounting</a>
+                <a href="{{ url_for('sales_overview') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if '/sales' in request.path %}bg-blue-100{% endif %}">📈 Sales</a>
+                <a href="{{ url_for('customer_overview') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if '/customer' in request.path %}bg-blue-100{% endif %}">👥 Customers</a>
+                <a href="{{ url_for('finance_overview') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if '/finance' in request.path %}bg-blue-100{% endif %}">💰 Finance</a>
+                <a href="{{ url_for('human_resources_overview') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if '/human-resources' in request.path %}bg-blue-100{% endif %}">🧑‍💼 HR</a>
+                <a href="{{ url_for('procurement_overview') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if '/procurement' in request.path %}bg-blue-100{% endif %}">📦 Procurement</a>
+                <a href="{{ url_for('production_overview') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if '/production' in request.path %}bg-blue-100{% endif %}">🏭 Production</a>
+                <a href="{{ url_for('distribution_overview') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if '/distribution' in request.path %}bg-blue-100{% endif %}">🚚 Distribution</a>
+            </nav>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 p-6 overflow-y-auto">
+            {% block content %}
+            <!-- Page content will be injected here -->
+            {% endblock %}
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-blue-800 text-white text-center py-2 text-sm">
+        &copy; {{ current_year if current_year else "2025" }} Data-Driven ERP System. All rights reserved.
+    </footer>
+
+    <!-- Global Scripts -->
+    {% block scripts %}{% endblock %}
+</body>
+</html>
