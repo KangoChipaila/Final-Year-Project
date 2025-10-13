@@ -103,18 +103,18 @@ def load_dashboard_data():
 @app.route('/')
 def index():
     data = load_dashboard_data()
-    kpi = data.get('kpi', {
-        'total_sales': 0,
-        'total_customers': 0,
-        'inventory_value': 0,
-        'outstanding_orders': 0
-    })
+    kpi = data.get('kpi', {})
     alerts = data.get('alerts', [])
     recent_activity = data.get('recent_activity', [])
     top_customers = data.get('top_customers', [])
     recent_orders = data.get('recent_orders', [])
     sales_trend_graph = data.get('sales_trend_graph', {'data': [], 'layout': {}})
     customers = data.get('customers_graph', {'data': [], 'layout': {}})
+    product_performance_graph = data.get('product_performance_graph', {'data': [], 'layout': {}})
+    inventory_status_graph = data.get('inventory_status_graph', {'data': [], 'layout': {}})
+    order_status_graph = data.get('order_status_graph', {'data': [], 'layout': {}})
+    revenue_expenses_graph = data.get('revenue_expenses_graph', {'data': [], 'layout': {}})
+    employee_status_graph = data.get('employee_status_graph', {'data': [], 'layout': {}})
     current_user = data.get('current_user', {'username': 'USERNAME'})
     return render_template(
         'index.html',
@@ -125,49 +125,132 @@ def index():
         recent_orders=recent_orders,
         sales_trend_graph=sales_trend_graph,
         customers=customers,
+        product_performance_graph=product_performance_graph,
+        inventory_status_graph=inventory_status_graph,
+        order_status_graph=order_status_graph,
+        revenue_expenses_graph=revenue_expenses_graph,
+        employee_status_graph=employee_status_graph,
         current_user=current_user
     )
 
 # Example mock data (replace with database queries)
+def get_accounting_alerts():
+    return [
+        "Invoice INV-1002 is overdue.",
+        "Low balance in main account.",
+        "Pending approval for payment to Beta Ltd."
+    ]
+
+def get_accounting_recent_activity():
+    return [
+        "Payment of $5,000 made to Acme Corp.",
+        "Invoice INV-1003 received from Gamma Inc.",
+        "Expense report submitted by Alice Banda."
+    ]
+
 def get_accounting_summary():
     return [
-        {"label": "Total Balance", "value": "$250,000"},
-        {"label": "Receivables", "value": "$85,000"},
-        {"label": "Payables", "value": "$40,000"},
-        {"label": "Net Income (YTD)", "value": "$195,000"}
+        {"label": "Total Revenue", "value": "$120,000"},
+        {"label": "Total Expenses", "value": "$85,000"},
+        {"label": "Net Profit", "value": "$35,000"},
+        {"label": "Outstanding Invoices", "value": "$9,700"}
     ]
 
 def get_cashflow_data():
-    # Example data for Plotly
     return {
         "data": [
             {
-                "x": ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-                "y": [12000, 15000, 13000, 18000, 20000, 22000],
-                "type": "bar",
-                "name": "Cash Inflow"
-            },
-            {
-                "x": ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-                "y": [8000, 9000, 10000, 9500, 12000, 11000],
-                "type": "bar",
-                "name": "Cash Outflow"
+                "x": ["2025-06", "2025-07", "2025-08", "2025-09", "2025-10"],
+                "y": [12000, 15000, 11000, 17000, 16000],
+                "type": "scatter",
+                "mode": "lines+markers",
+                "name": "Cash Flow"
             }
         ],
         "layout": {
             "title": "Monthly Cash Flow",
-            "barmode": "group"
+            "xaxis": {"title": "Month"},
+            "yaxis": {"title": "Amount (USD)"}
         }
     }
 
+def get_top_vendors():
+    return [
+        {"name": "Acme Corp", "total_paid": 32000},
+        {"name": "Beta Ltd", "total_paid": 21000},
+        {"name": "Gamma Inc", "total_paid": 18000}
+    ]
+
+def get_recent_transactions():
+    return [
+        {"date": "2025-10-10", "description": "Payment to Acme Corp", "amount": 5000, "type": "Debit"},
+        {"date": "2025-10-09", "description": "Invoice from Gamma Inc", "amount": 3500, "type": "Credit"},
+        {"date": "2025-10-08", "description": "Salary Payment", "amount": 12000, "type": "Debit"}
+    ]
+
+def get_expense_breakdown_data():
+    return {
+        "data": [
+            {
+                "labels": ["Salaries", "Supplies", "Utilities", "Travel"],
+                "values": [12000, 4000, 2000, 1500],
+                "type": "pie",
+                "name": "Expenses"
+            }
+        ],
+        "layout": {"title": "Expense Breakdown"}
+    }
+
+def get_revenue_sources_data():
+    return {
+        "data": [
+            {
+                "labels": ["Product Sales", "Services", "Investments"],
+                "values": [18000, 7000, 3000],
+                "type": "pie",
+                "name": "Revenue"
+            }
+        ],
+        "layout": {"title": "Revenue Sources"}
+    }
+
+def get_outstanding_invoices_data():
+    return {
+        "data": [
+            {
+                "x": ["INV-1001", "INV-1002", "INV-1003"],
+                "y": [3500, 5000, 4200],
+                "type": "bar",
+                "name": "Outstanding"
+            }
+        ],
+        "layout": {"title": "Outstanding Invoices"}
+    }
+
 @app.route("/accounting-overview")
+@login_required
 def accounting_overview():
     summary = get_accounting_summary()
-    cashflow_data = json.dumps(get_cashflow_data())  # serialize for Plotly
+    alerts = get_accounting_alerts()
+    recent_activity = get_accounting_recent_activity()
+    top_vendors = get_top_vendors()
+    recent_transactions = get_recent_transactions()
+    cashflow_data = get_cashflow_data()
+    expense_breakdown_data = get_expense_breakdown_data()
+    revenue_sources_data = get_revenue_sources_data()
+    outstanding_invoices_data = get_outstanding_invoices_data()
     return render_template(
         "accounting-overview.html",
         summary=summary,
-        cashflow_data=cashflow_data
+        alerts=alerts,
+        recent_activity=recent_activity,
+        top_vendors=top_vendors,
+        recent_transactions=recent_transactions,
+        cashflow_data=cashflow_data,
+        expense_breakdown_data=expense_breakdown_data,
+        revenue_sources_data=revenue_sources_data,
+        outstanding_invoices_data=outstanding_invoices_data,
+        current_user=current_user
     )
 
 @app.route("/assets/edit/<int:asset_id>", methods=["GET", "POST"])
@@ -587,6 +670,8 @@ def generate_report():
         outstanding_payments=outstanding_payments
     )
 
+# ...existing imports and setup...
+
 HR_DATA_FILE = 'static/js/test_hr_data.json'
 
 def load_hr_data():
@@ -596,41 +681,6 @@ def load_hr_data():
 def save_hr_data(data):
     with open(HR_DATA_FILE, 'w') as f:
         json.dump(data, f, indent=2)
-
-@app.route('/human_resources_overview')
-def human_resources_overview():
-    data = load_hr_data()
-    employees = data.get('employees', [])
-    attendance = data.get('attendance', [])
-    leave_requests = data.get('leave_requests', [])
-    payroll = data.get('payroll', [])
-    hr_summary = [
-        {'label': 'Total Employees', 'value': len(employees)},
-        {'label': 'Active', 'value': sum(1 for e in employees if e['status'] == 'Active')},
-        {'label': 'On Leave', 'value': sum(1 for e in employees if e['status'] == 'On Leave')},
-        {'label': 'Pending Payroll', 'value': sum(1 for p in payroll if p['status'] == 'Pending')}
-    ]
-    departments = sorted(set(e['department'] for e in employees))
-    query = request.args.get('query', '')
-    selected_department = request.args.get('department', '')
-    filtered_employees = [
-        e for e in employees
-        if (query.lower() in e['name'].lower()) and
-           (selected_department == '' or e['department'] == selected_department)
-    ]
-    hr_chart_data = {}  # Add chart data as needed
-    return render_template(
-        'human-resources-overview.html',
-        employees=filtered_employees,
-        attendance=attendance,
-        leave_requests=leave_requests,
-        payroll=payroll,
-        hr_summary=hr_summary,
-        departments=departments,
-        query=query,
-        selected_department=selected_department,
-        hr_chart_data=hr_chart_data
-    )
 
 @app.route('/add_employee', methods=['GET', 'POST'])
 def add_employee():
@@ -684,50 +734,101 @@ def delete_employee(employee_id):
     flash('Employee deleted successfully!', 'success')
     return redirect(url_for('human_resources_overview'))
 
-@app.route('/record_attendance', methods=['GET', 'POST'])
-def record_attendance():
-    if request.method == 'POST':
-        data = load_hr_data()
-        attendance = data.get('attendance', [])
-        new_record = {
-            'date': request.form['date'],
-            'employee': request.form['employee'],
-            'check_in': request.form['check_in'],
-            'check_out': request.form['check_out'],
-            'status': request.form['status']
-        }
-        attendance.append(new_record)
-        data['attendance'] = attendance
-        save_hr_data(data)
-        flash('Attendance recorded!', 'success')
-        return redirect(url_for('human_resources_overview'))
+@app.route('/departments_overview')
+def departments_overview():
     data = load_hr_data()
     employees = data.get('employees', [])
-    return render_template('record_attendance.html', employees=employees)
+    departments = sorted(set(e['department'] for e in employees))
+    department_stats = [
+        {'name': dept, 'employees': sum(1 for e in employees if e['department'] == dept)}
+        for dept in departments
+    ]
+    return render_template('departments_overview.html', departments=department_stats)
 
-@app.route('/process_payroll', methods=['GET', 'POST'])
-def process_payroll():
-    if request.method == 'POST':
-        data = load_hr_data()
-        payroll = data.get('payroll', [])
-        new_payroll = {
-            'employee': request.form['employee'],
-            'month': request.form['month'],
-            'gross_pay': request.form['gross_pay'],
-            'deductions': request.form['deductions'],
-            'net_pay': request.form['net_pay'],
-            'status': request.form['status']
-        }
-        payroll.append(new_payroll)
-        data['payroll'] = payroll
-        save_hr_data(data)
-        flash('Payroll processed!', 'success')
-        return redirect(url_for('human_resources_overview'))
+@app.route('/attendance_overview')
+def attendance_overview():
+    data = load_hr_data()
+    attendance_records = data.get('attendance', [])
+    return render_template('attendance_overview.html', attendance_records=attendance_records)
+
+@app.route('/payroll_overview')
+def payroll_overview():
+    data = load_hr_data()
+    payroll = data.get('payroll', [])
+    return render_template('payroll_overview.html', payroll=payroll)
+
+@app.route('/leave_overview')
+def leave_overview():
+    data = load_hr_data()
+    leave_requests = data.get('leave_requests', [])
+    return render_template('leave_overview.html', leave_requests=leave_requests)
+
+@app.route('/hr_reports')
+def hr_reports():
+    data = load_hr_data()
+    reports = data.get('reports', [
+        {"title": "Headcount Report", "date": "2025-10-01"},
+        {"title": "Attendance Summary", "date": "2025-10-10"}
+    ])
+    return render_template('hr_reports.html', reports=reports)
+
+@app.route('/human_resources_overview')
+def human_resources_overview():
     data = load_hr_data()
     employees = data.get('employees', [])
-    return render_template('process_payroll.html', employees=employees)
-
-# Add similar routes for leave requests if needed
+    alerts = data.get('alerts', [
+        "Employee contract expiring soon: John Banda.",
+        "Pending leave approval for Alice Mwansa.",
+        "New employee onboarding: Peter Zulu."
+    ])
+    recent_activity = data.get('recent_activity', [
+        "Alice Mwansa requested leave for 5 days.",
+        "Peter Zulu added to IT department.",
+        "John Banda completed annual review."
+    ])  
+    hr_summary = [
+        {'label': 'Total Employees', 'value': len(employees)},
+        {'label': 'Active', 'value': sum(1 for e in employees if e['status'] == 'Active')},
+        {'label': 'On Leave', 'value': sum(1 for e in employees if e['status'] == 'On Leave')},
+        {'label': 'Inactive', 'value': sum(1 for e in employees if e['status'] == 'Inactive')}
+    ]
+    departments = sorted(set(e['department'] for e in employees))
+    query = request.args.get('query', '')
+    selected_department = request.args.get('department', '')
+    selected_status = request.args.get('status', '')
+    filtered_employees = [
+        e for e in employees
+        if (query.lower() in e['name'].lower())
+        and (selected_department == '' or e['department'] == selected_department)
+        and (selected_status == '' or e['status'] == selected_status)
+    ]
+    hr_chart_data = {
+        "data": [
+            {
+                "labels": ["Active", "On Leave", "Inactive"],
+                "values": [
+                    sum(1 for e in employees if e['status'] == 'Active'),
+                    sum(1 for e in employees if e['status'] == 'On Leave'),
+                    sum(1 for e in employees if e['status'] == 'Inactive')
+                ],
+                "type": "pie",
+                "name": "Employee Status"
+            }
+        ],
+        "layout": {"title": "Employee Status Distribution"}
+    }
+    return render_template(
+        'human-resources-overview.html',
+        alerts=alerts,
+        hr_summary=hr_summary,
+        departments=departments,
+        selected_department=selected_department,
+        selected_status=selected_status,
+        query=query,
+        employees=filtered_employees,
+        recent_activity=recent_activity,
+        hr_chart_data=hr_chart_data
+    )
 
 PROCUREMENT_DATA_FILE = 'static/js/test_procurement_data.json'
 

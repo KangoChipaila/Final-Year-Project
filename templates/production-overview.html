@@ -2,41 +2,69 @@
 {% block title %}Production Overview{% endblock %}
 
 {% block content %}
-<section class="top-content flex justify-between items-center mb-6">
-    <div class="page-title">
-        <div class="module-title">PRODUCTION</div>
-        <div class="submodule-title">Overview</div>
-    </div>
-    <div class="user-details flex items-center space-x-2">
-        <div class="user-info">USERNAME</div>
-        <img class="user-display-image" src="{{ url_for('static', filename='images/display picture.jpg') }}" alt="user-display-image" />
-    </div>
-</section>
-<section id="production-main-content" class="w-4/5 mx-auto p-6">
+<div class="container mx-auto max-w-7xl px-4 py-8 bg-gray-50">
+    <!-- Header -->
+    <section class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-blue-700 tracking-tight">Production Overview</h1>
+            <p class="text-gray-500 mt-2">Monitor production orders, BOMs, and work centers</p>
+        </div>
+        <div class="flex gap-4">
+            <a href="{{ url_for('add_production_order') }}" class="bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-blue-800 transition">+ Production Order</a>
+            <a href="{{ url_for('add_bom') }}" class="bg-green-700 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-green-800 transition">+ BOM</a>
+            <a href="{{ url_for('update_work_center') }}" class="bg-gray-700 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-gray-800 transition">Update Work Center</a>
+        </div>
+    </section>
+
+    <!-- KPI Cards -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
+            <div class="text-gray-500 text-sm mb-2">Total Orders</div>
+            <div class="text-3xl font-bold text-blue-700">{{ production_orders|length }}</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
+            <div class="text-gray-500 text-sm mb-2">Active Work Centers</div>
+            <div class="text-3xl font-bold text-green-700">{{ work_centers|selectattr('status', 'equalto', 'Running')|list|length }}</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
+            <div class="text-gray-500 text-sm mb-2">Total BOMs</div>
+            <div class="text-3xl font-bold text-yellow-700">{{ bill_of_materials|length }}</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
+            <div class="text-gray-500 text-sm mb-2">Orders In Progress</div>
+            <div class="text-3xl font-bold text-red-700">{{ production_orders|selectattr('status', 'equalto', 'In Progress')|list|length }}</div>
+        </div>
+    </section>
 
     <!-- Production Orders Table -->
-    <div class="mb-8 bg-white shadow-md rounded p-4">
-        <h2 class="text-lg font-bold mb-2">Production Orders</h2>
-        <table class="w-full text-sm text-left text-black">
-            <thead class="text-xs uppercase text-white bg-black">
-                <tr>
-                    <th class="px-4 py-2">Order #</th>
-                    <th class="px-4 py-2">Product</th>
-                    <th class="px-4 py-2">Quantity</th>
-                    <th class="px-4 py-2">Start Date</th>
-                    <th class="px-4 py-2">End Date</th>
-                    <th class="px-4 py-2">Status</th>
+    <div class="mb-8 bg-white shadow-md rounded-xl border border-gray-200 p-6">
+        <h2 class="text-xl font-semibold mb-4 text-gray-700">Production Orders</h2>
+        <table class="min-w-full bg-white rounded-lg">
+            <thead>
+                <tr class="bg-black text-white text-left">
+                    <th class="py-3 px-4 rounded-tl-lg">Order #</th>
+                    <th class="py-3 px-4">Product</th>
+                    <th class="py-3 px-4">Quantity</th>
+                    <th class="py-3 px-4">Start Date</th>
+                    <th class="py-3 px-4">End Date</th>
+                    <th class="py-3 px-4 rounded-tr-lg">Status</th>
                 </tr>
             </thead>
             <tbody>
                 {% for order in production_orders %}
-                <tr>
-                    <td class="px-4 py-2">{{ order.order_id }}</td>
-                    <td class="px-4 py-2">{{ order.product }}</td>
-                    <td class="px-4 py-2">{{ order.quantity }}</td>
-                    <td class="px-4 py-2">{{ order.start_date }}</td>
-                    <td class="px-4 py-2">{{ order.end_date }}</td>
-                    <td class="px-4 py-2 {% if order.status == 'In Progress' %}text-yellow-600{% else %}text-green-600{% endif %}">{{ order.status }}</td>
+                <tr class="border-b hover:bg-gray-50 transition">
+                    <td class="py-2 px-4 font-medium text-gray-700">{{ order.order_id }}</td>
+                    <td class="py-2 px-4">{{ order.product }}</td>
+                    <td class="py-2 px-4">{{ order.quantity }}</td>
+                    <td class="py-2 px-4">{{ order.start_date }}</td>
+                    <td class="py-2 px-4">{{ order.end_date }}</td>
+                    <td class="py-2 px-4">
+                        {% if order.status == 'In Progress' %}
+                            <span class="inline-block px-2 py-1 rounded bg-yellow-100 text-yellow-700 font-semibold text-xs">{{ order.status }}</span>
+                        {% else %}
+                            <span class="inline-block px-2 py-1 rounded bg-green-100 text-green-700 font-semibold text-xs">{{ order.status }}</span>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% else %}
                 <tr>
@@ -48,24 +76,24 @@
     </div>
 
     <!-- Bill of Materials Table -->
-    <div class="mb-8 bg-white shadow-md rounded p-4">
-        <h2 class="text-lg font-bold mb-2">Bill of Materials</h2>
-        <table class="w-full text-sm text-left text-black">
-            <thead class="text-xs uppercase text-white bg-black">
-                <tr>
-                    <th class="px-4 py-2">Product</th>
-                    <th class="px-4 py-2">Component</th>
-                    <th class="px-4 py-2">Quantity Required</th>
-                    <th class="px-4 py-2">Unit</th>
+    <div class="mb-8 bg-white shadow-md rounded-xl border border-gray-200 p-6">
+        <h2 class="text-xl font-semibold mb-4 text-gray-700">Bill of Materials</h2>
+        <table class="min-w-full bg-white rounded-lg">
+            <thead>
+                <tr class="bg-black text-white text-left">
+                    <th class="py-3 px-4 rounded-tl-lg">Product</th>
+                    <th class="py-3 px-4">Component</th>
+                    <th class="py-3 px-4">Quantity Required</th>
+                    <th class="py-3 px-4 rounded-tr-lg">Unit</th>
                 </tr>
             </thead>
             <tbody>
                 {% for bom in bill_of_materials %}
-                <tr>
-                    <td class="px-4 py-2">{{ bom.product }}</td>
-                    <td class="px-4 py-2">{{ bom.component }}</td>
-                    <td class="px-4 py-2">{{ bom.quantity_required }}</td>
-                    <td class="px-4 py-2">{{ bom.unit }}</td>
+                <tr class="border-b hover:bg-gray-50 transition">
+                    <td class="py-2 px-4">{{ bom.product }}</td>
+                    <td class="py-2 px-4">{{ bom.component }}</td>
+                    <td class="py-2 px-4">{{ bom.quantity_required }}</td>
+                    <td class="py-2 px-4">{{ bom.unit }}</td>
                 </tr>
                 {% else %}
                 <tr>
@@ -77,24 +105,30 @@
     </div>
 
     <!-- Work Center Status Table -->
-    <div class="mb-8 bg-white shadow-md rounded p-4">
-        <h2 class="text-lg font-bold mb-2">Work Center Status</h2>
-        <table class="w-full text-sm text-left text-black">
-            <thead class="text-xs uppercase text-white bg-black">
-                <tr>
-                    <th class="px-4 py-2">Work Center</th>
-                    <th class="px-4 py-2">Current Task</th>
-                    <th class="px-4 py-2">Status</th>
-                    <th class="px-4 py-2">Operator</th>
+    <div class="mb-8 bg-white shadow-md rounded-xl border border-gray-200 p-6">
+        <h2 class="text-xl font-semibold mb-4 text-gray-700">Work Center Status</h2>
+        <table class="min-w-full bg-white rounded-lg">
+            <thead>
+                <tr class="bg-black text-white text-left">
+                    <th class="py-3 px-4 rounded-tl-lg">Work Center</th>
+                    <th class="py-3 px-4">Current Task</th>
+                    <th class="py-3 px-4">Status</th>
+                    <th class="py-3 px-4 rounded-tr-lg">Operator</th>
                 </tr>
             </thead>
             <tbody>
                 {% for wc in work_centers %}
-                <tr>
-                    <td class="px-4 py-2">{{ wc.name }}</td>
-                    <td class="px-4 py-2">{{ wc.current_task }}</td>
-                    <td class="px-4 py-2 {% if wc.status == 'Running' %}text-yellow-600{% else %}text-green-600{% endif %}">{{ wc.status }}</td>
-                    <td class="px-4 py-2">{{ wc.operator }}</td>
+                <tr class="border-b hover:bg-gray-50 transition">
+                    <td class="py-2 px-4">{{ wc.name }}</td>
+                    <td class="py-2 px-4">{{ wc.current_task }}</td>
+                    <td class="py-2 px-4">
+                        {% if wc.status == 'Running' %}
+                            <span class="inline-block px-2 py-1 rounded bg-yellow-100 text-yellow-700 font-semibold text-xs">{{ wc.status }}</span>
+                        {% else %}
+                            <span class="inline-block px-2 py-1 rounded bg-green-100 text-green-700 font-semibold text-xs">{{ wc.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-2 px-4">{{ wc.operator }}</td>
                 </tr>
                 {% else %}
                 <tr>
@@ -105,32 +139,19 @@
         </table>
     </div>
 
-    <!-- Quick Actions Table -->
-    <div class="mb-8 bg-white shadow-md rounded p-4">
-        <h2 class="text-lg font-bold mb-2">Quick Actions</h2>
-        <table class="w-full text-sm text-left text-black">
-            <tbody>
-                <tr>
-                    <td class="px-4 py-2">
-                        <a href="{{ url_for('add_production_order') }}">
-                            <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-800">Add Production Order</button>
-                        </a>
-                    </td>
-                    <td class="px-4 py-2">
-                        <a href="{{ url_for('add_bom') }}">
-                            <button class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-800">Add BOM</button>
-                        </a>
-                    </td>
-                    <td class="px-4 py-2">
-                        <a href="{{ url_for('update_work_center') }}">
-                            <button class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-800">Update Work Center</button>
-                        </a>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+    <!-- Quick Actions -->
+    <div class="mb-8 bg-white shadow-md rounded-xl border border-gray-200 p-6 flex gap-4">
+        <a href="{{ url_for('add_production_order') }}">
+            <button class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-blue-800 transition">Add Production Order</button>
+        </a>
+        <a href="{{ url_for('add_bom') }}">
+            <button class="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-green-800 transition">Add BOM</button>
+        </a>
+        <a href="{{ url_for('update_work_center') }}">
+            <button class="bg-gray-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-gray-800 transition">Update Work Center</button>
+        </a>
     </div>
-</section>
+</div>
 {% endblock %}
 
 {% block scripts %}

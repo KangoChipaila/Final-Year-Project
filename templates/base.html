@@ -5,40 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{% block title %}ERP System{% endblock %}</title>
 
-    <!-- Tailwind CSS (output.css) & Custom Styles -->
+    <!-- Tailwind CSS & Custom Styles -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 
-    <!-- Plotly for Charts (Optional Global Include) -->
+    <!-- Plotly for Charts -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-
-    <!-- Allow Pages to Add Extra Head Scripts -->
     {% block head_scripts %}{% endblock %}
 </head>
 
-<body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col">
+<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col font-sans">
 
-    <!-- Navbar -->
-    <header class="bg-black text-white shadow p-4 flex justify-between items-center">
-        <div class="text-2xl font-bold"><a href = "{{ url_for('index')}}">Data-Driven ERP System</a></div>
+    <!-- Navbar (sticky to top, does not scroll with page) -->
+    <header class="bg-white shadow-sm border-b flex justify-between items-center px-6 py-4 fixed top-0 left-0 w-full z-40">
+        <div class="flex items-center gap-3">
+            <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="Logo" class="h-8 w-8 rounded-full border border-gray-300">
+            <a href="{{ url_for('index') }}" class="text-2xl font-bold text-blue-700 tracking-tight hover:text-blue-900 transition">Data-Driven ERP System</a>
+        </div>
         <div class="flex items-center space-x-3">
             {% if current_user.is_authenticated %}
-                <span class="font-medium">{{ current_user.username }}</span>
+                <span class="font-medium text-gray-700">{{ current_user.username }}</span>
                 <form action="{{ url_for('logout') }}" method="POST" style="display:inline;">
-                    <button class="bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-sm" type="submit">
+                    <button class="bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-sm text-white transition" type="submit">
                         Logout
                     </button>
                 </form>
             {% else %}
-                <a href="{{ url_for('login') }}" class="bg-green-500 hover:bg-green-600 px-3 py-1 rounded text-sm">
+                <a href="{{ url_for('login') }}" class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm text-white transition">
                     Login
                 </a>
             {% endif %}
         </div>
     </header>
+
+    <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-            <div class="max-w-4xl mx-auto mt-4">
+            <div class="max-w-4xl mx-auto mt-24">
             {% for category, message in messages %}
             <div class="mb-3 p-3 rounded text-sm 
                         {% if category == 'error' %}bg-red-100 text-red-700
@@ -51,28 +54,54 @@
         {% endif %}
     {% endwith %}
 
-
-    <!-- Main Layout -->
-    <div class="flex flex-1">
+    <div class="flex flex-1 pt-20">
         <!-- Sidebar -->
-        <aside class="w-64 bg-white border-r shadow-md hidden md:block">
-            <div class="p-4 font-semibold border-b">Navigation</div>
-            <nav class="p-4 space-y-2 text-sm">
-                <a href="{{ url_for('index') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if request.path == '/' %}bg-blue-100{% endif %}">🏠 Dashboard</a>
-                <a href="{{ url_for('asset_overview') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if '/assets-overview' in request.path %}bg-blue-100{% endif %}">💼 Assets</a>
-                <a href="{{ url_for('accounting_overview') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if '/accounting' in request.path %}bg-blue-100{% endif %}">📊 Accounting</a>
-                <a href="{{ url_for('sales_overview') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if '/sales-overview' in request.path %}bg-blue-100{% endif %}">📈 Sales</a>
-                <a href="{{ url_for('customer_overview') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if '/customer' in request.path %}bg-blue-100{% endif %}">👥 Customers</a>
-                <a href="{{ url_for('finance_overview') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if '/finance' in request.path %}bg-blue-100{% endif %}">💰 Finance</a>
-                <a href="{{ url_for('human_resources_overview') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if '/human-resources' in request.path %}bg-blue-100{% endif %}">🧑‍💼 HR</a>
-                <a href="{{ url_for('procurement_overview') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if '/procurement' in request.path %}bg-blue-100{% endif %}">📦 Procurement</a>
-                <a href="{{ url_for('production_overview') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if '/production' in request.path %}bg-blue-100{% endif %}">🏭 Production</a>
-                <a href="{{ url_for('distribution_overview') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if '/distribution' in request.path %}bg-blue-100{% endif %}">🚚 Distribution</a>
+        <aside class="w-64 bg-white border-r shadow-md hidden md:flex flex-col fixed left-0 z-30" style="top:4.5rem; height:calc(100vh - 4.5rem);">
+            <div class="p-4 font-bold border-b text-blue-700 text-lg tracking-tight">ERP Navigation</div>
+            <nav class="p-4 space-y-6 text-sm">
+                <!-- Core Section -->
+                <div>
+                    <div class="text-xs uppercase text-gray-400 mb-2 pl-2">Core</div>
+                    <a href="{{ url_for('index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if request.path == '/' %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                        <span>🏠</span> <span>Dashboard</span>
+                    </a>
+                    <a href="{{ url_for('asset_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/assets-overview' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                        <span>💼</span> <span>Assets</span>
+                    </a>
+                    <a href="{{ url_for('accounting_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/accounting' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                        <span>📊</span> <span>Accounting</span>
+                    </a>
+                    <a href="{{ url_for('finance_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/finance' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                        <span>💰</span> <span>Finance</span>
+                    </a>
+                </div>
+                <!-- Operations Section -->
+                <div>
+                    <div class="text-xs uppercase text-gray-400 mb-2 pl-2">Operations</div>
+                    <a href="{{ url_for('sales_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/sales-overview' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                        <span>📈</span> <span>Sales</span>
+                    </a>
+                    <a href="{{ url_for('customer_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/customer' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                        <span>👥</span> <span>Customers</span>
+                    </a>
+                    <a href="{{ url_for('human_resources_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/human-resources' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                        <span>🧑‍💼</span> <span>HR</span>
+                    </a>
+                    <a href="{{ url_for('procurement_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/procurement' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                        <span>📦</span> <span>Procurement</span>
+                    </a>
+                    <a href="{{ url_for('production_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/production' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                        <span>🏭</span> <span>Production</span>
+                    </a>
+                    <a href="{{ url_for('distribution_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/distribution' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                        <span>🚚</span> <span>Distribution</span>
+                    </a>
+                </div>
             </nav>
         </aside>
 
         <!-- Main Content Area -->
-        <main class="flex-1 p-6 overflow-y-auto">
+        <main class="flex-1 p-6 overflow-y-auto bg-gray-50 rounded-lg ml-0 md:ml-64">
             {% block content %}
             <!-- Page content will be injected here -->
             {% endblock %}
@@ -80,11 +109,10 @@
     </div>
 
     <!-- Footer -->
-    <footer class="bg-black text-white text-center py-2 text-sm">
+    <footer class="bg-white border-t text-gray-500 text-center py-3 text-sm mt-8 shadow-sm">
         &copy; {{ current_year if current_year else "2025" }} Data-Driven ERP System. All rights reserved.
     </footer>
 
-    <!-- Global Scripts -->
     {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -2,22 +2,110 @@
 {% block title %}Finance Overview{% endblock %}
 
 {% block content %}
-<section class="top-content flex justify-between items-center mb-6">
-    <div class="page-title">
-        <div class="module-title">FINANCE</div>
-        <div class="submodule-title">Overview</div>
-    </div>
-    <div class="user-details flex items-center space-x-2">
-        <div class="user-info">USERNAME</div>
-        <img class="user-display-image" src="{{ url_for('static', filename='images/display picture.jpg') }}" alt="user-display-image" />
-    </div>
-</section>
-<section id="finance-main-content" class="w-4/5 mx-auto p-6">
+<div class="container mx-auto max-w-7xl px-4 py-8 bg-gray-50">
+    <!-- Header -->
+    <section class="flex justify-between items-center mb-10">
+        <div>
+            <h1 class="text-3xl font-bold text-blue-700 tracking-tight">Finance Overview</h1>
+            <p class="text-gray-500 mt-2">Your financial health at a glance</p>
+        </div>
+        <div class="flex items-center gap-4">
+            <span class="text-gray-700 font-semibold">{{ current_user.username if current_user else "USERNAME" }}</span>
+            <img class="rounded-full w-10 h-10 border border-gray-300" src="{{ url_for('static', filename='images/display picture.jpg') }}" alt="user-display-image" />
+        </div>
+    </section>
+
+    <!-- KPI Cards -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
+            <div class="text-gray-500 text-sm mb-2">Total Assets</div>
+            <div class="text-3xl font-bold text-blue-700">${{ financial_summary.assets }}</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
+            <div class="text-gray-500 text-sm mb-2">Total Liabilities</div>
+            <div class="text-3xl font-bold text-red-700">${{ financial_summary.liabilities }}</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
+            <div class="text-gray-500 text-sm mb-2">Equity</div>
+            <div class="text-3xl font-bold text-green-700">${{ financial_summary.equity }}</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
+            <div class="text-gray-500 text-sm mb-2">Cash on Hand</div>
+            <div class="text-3xl font-bold text-yellow-700">${{ financial_summary.cash }}</div>
+        </div>
+    </section>
+
+    <!-- Quick Navigation Links -->
+    <section class="mb-10">
+        <div class="text-xl font-semibold mb-4 text-gray-700">Quick Access</div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            <a href="{{ url_for('sales_overview') }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-blue-800 transition">Sales</a>
+            <a href="{{ url_for('customer_overview') }}" class="bg-green-600 text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-green-800 transition">Customers</a>
+            <a href="{{ url_for('distribution_overview') }}" class="bg-yellow-600 text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-yellow-700 transition">Inventory</a>
+            <a href="{{ url_for('procurement_overview') }}" class="bg-purple-600 text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-purple-800 transition">Procurement</a>
+            <a href="{{ url_for('human_resources_overview') }}" class="bg-pink-600 text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-pink-800 transition">HR</a>
+            <a href="{{ url_for('finance_overview') }}" class="bg-gray-700 text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-gray-800 transition">Finance</a>
+        </div>
+    </section>
+
+    <!-- Alerts & Notifications and Recent Activity -->
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+        <!-- Alerts & Notifications -->
+        {% if alerts %}
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+            <div class="font-bold mb-4 text-red-700 text-lg flex items-center gap-2">
+                <svg class="w-6 h-6 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>
+                </svg>
+                Alerts & Notifications
+            </div>
+            <ul class="space-y-2">
+                {% for alert in alerts %}
+                <li class="bg-red-50 border-l-4 border-red-700 text-red-900 px-4 py-2 rounded shadow-sm flex items-center gap-2">
+                    <svg class="w-4 h-4 text-red-700" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10A8 8 0 11 2 10a8 8 0 0116 0zm-8 4a1 1 0 100-2 1 1 0 000 2zm-.707-7.707a1 1 0 011.414 0l.293.293.293-.293a1 1 0 111.414 1.414l-1 1a1 1 0 01-1.414 0l-1-1a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>{{ alert }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- Recent Activity Feed -->
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+            <div class="font-bold mb-4 text-blue-700 text-lg flex items-center gap-2">
+                <svg class="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M5 13l4 4L19 7" />
+                </svg>
+                Recent Activity
+            </div>
+            <ul class="space-y-2">
+                {% for activity in recent_activity %}
+                <li class="bg-blue-50 border-l-4 border-blue-700 text-blue-900 px-4 py-2 rounded shadow-sm flex items-center gap-2">
+                    <svg class="w-4 h-4 text-blue-700" fill="currentColor" viewBox="0 0 20 20">
+                        <circle cx="10" cy="10" r="8" fill="currentColor"/>
+                    </svg>
+                    <span>{{ activity }}</span>
+                </li>
+                {% else %}
+                <li class="bg-gray-50 border-l-4 border-gray-400 text-gray-700 px-4 py-2 rounded shadow-sm flex items-center gap-2">
+                    <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <circle cx="10" cy="10" r="8" fill="currentColor"/>
+                    </svg>
+                    <span>No recent activity.</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </section>
 
     <!-- Financial Summary Table -->
-    <div class="mb-8 bg-white shadow-md rounded p-4">
-        <h2 class="text-lg font-bold mb-2">Financial Summary</h2>
-        <table class="w-full text-sm text-left text-black">
+    <div class="mb-8 bg-white shadow-md rounded-xl p-6 border border-gray-200">
+        <h2 class="text-lg font-bold mb-2 text-gray-700">Financial Summary</h2>
+        <table class="w-full text-sm text-left text-gray-800">
             <thead class="text-xs uppercase text-white bg-black">
                 <tr>
                     <th class="px-4 py-2">Total Assets</th>
@@ -38,9 +126,9 @@
     </div>
 
     <!-- Income Statement Table -->
-    <div class="mb-8 bg-white shadow-md rounded p-4">
-        <h2 class="text-lg font-bold mb-2">Income Statement (This Month)</h2>
-        <table class="w-full text-sm text-left text-black">
+    <div class="mb-8 bg-white shadow-md rounded-xl p-6 border border-gray-200">
+        <h2 class="text-lg font-bold mb-2 text-gray-700">Income Statement (This Month)</h2>
+        <table class="w-full text-sm text-left text-gray-800">
             <thead class="text-xs uppercase text-white bg-black">
                 <tr>
                     <th class="px-4 py-2">Revenue</th>
@@ -59,9 +147,9 @@
     </div>
 
     <!-- Cash Flow Table -->
-    <div class="mb-8 bg-white shadow-md rounded p-4">
-        <h2 class="text-lg font-bold mb-2">Cash Flow (This Month)</h2>
-        <table class="w-full text-sm text-left text-black">
+    <div class="mb-8 bg-white shadow-md rounded-xl p-6 border border-gray-200">
+        <h2 class="text-lg font-bold mb-2 text-gray-700">Cash Flow (This Month)</h2>
+        <table class="w-full text-sm text-left text-gray-800">
             <thead class="text-xs uppercase text-white bg-black">
                 <tr>
                     <th class="px-4 py-2">Date</th>
@@ -90,9 +178,9 @@
     </div>
 
     <!-- Outstanding Payments Table -->
-    <div class="mb-8 bg-white shadow-md rounded p-4">
-        <h2 class="text-lg font-bold mb-2">Outstanding Payments</h2>
-        <table class="w-full text-sm text-left text-black">
+    <div class="mb-8 bg-white shadow-md rounded-xl p-6 border border-gray-200">
+        <h2 class="text-lg font-bold mb-2 text-gray-700">Outstanding Payments</h2>
+        <table class="w-full text-sm text-left text-gray-800">
             <thead class="text-xs uppercase text-white bg-black">
                 <tr>
                     <th class="px-4 py-2">Payment #</th>
@@ -121,43 +209,32 @@
     </div>
 
     <!-- Quick Actions Table -->
-    <div class="mb-8 bg-white shadow-md rounded p-4">
-        <h2 class="text-lg font-bold mb-2">Quick Actions</h2>
-        <table class="w-full text-sm text-left text-black">
-            <tbody>
-                <tr>
-                    <td class="px-4 py-2">
-                        <a href="{{ url_for('add_payment') }}">
-                            <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-800">Add Payment</button>
-                        </a>
-                    </td>
-                    <td class="px-4 py-2">
-                        <a href="{{ url_for('add_receipt') }}">
-                            <button class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-800">Add Receipt</button>
-                        </a>
-                    </td>
-                    <td class="px-4 py-2">
-                        <a href="{{ url_for('generate_report') }}">
-                            <button class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-800">Generate Report</button>
-                        </a>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+    <div class="mb-8 bg-white shadow-md rounded-xl p-6 border border-gray-200">
+        <h2 class="text-lg font-bold mb-2 text-gray-700">Quick Actions</h2>
+        <div class="flex flex-wrap gap-4">
+            <a href="{{ url_for('add_payment') }}">
+                <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-800 transition">Add Payment</button>
+            </a>
+            <a href="{{ url_for('add_receipt') }}">
+                <button class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-800 transition">Add Receipt</button>
+            </a>
+            <a href="{{ url_for('generate_report') }}">
+                <button class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition">Generate Report</button>
+            </a>
+        </div>
     </div>
 
     <!-- Finance Analytics Chart -->
-    <section class="bg-white rounded-lg shadow-md p-6 mt-8">
-        <h2 class="text-lg font-semibold mb-4">Finance Analytics</h2>
+    <section class="bg-white rounded-xl shadow-lg p-6 mt-8 border border-gray-200">
+        <h2 class="text-lg font-semibold mb-4 text-gray-700">Finance Analytics</h2>
         <div id="finance-analytics-chart" style="height:400px;"></div>
     </section>
-</section>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
-    // Example: Render Plotly chart
     const chartData = {{ finance_chart_data | safe }};
     Plotly.newPlot('finance-analytics-chart', chartData.data, chartData.layout);
 </script>

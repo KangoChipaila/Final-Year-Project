@@ -59,5 +59,78 @@
   },
   "current_user": {
     "username": "admin"
+  },
+  "product_performance_graph": {
+  "data": [
+    {
+      "x": ["Widget A", "Gadget B", "Device C"],
+      "y": [12000, 9000, 7000],
+      "type": "bar",
+      "name": "Product Sales"
+    }
+  ],
+  "layout": {
+    "title": "Product Performance"
   }
+},
+"inventory_status_graph": {
+  "data": [
+    {
+      "x": ["Widget A", "Gadget B", "Device C"],
+      "y": [120, 30, 50],
+      "type": "bar",
+      "name": "Inventory"
+    }
+  ],
+  "layout": {
+    "title": "Inventory Status"
+  }
+},
+"order_status_graph": {
+  "data": [
+    {
+      "labels": ["Pending", "Shipped", "Delivered"],
+      "values": [3, 5, 7],
+      "type": "pie",
+      "name": "Order Status"
+    }
+  ],
+  "layout": {
+    "title": "Outstanding Orders Status"
+  }
+},
+"revenue_expenses_graph": {
+  "data": [
+    {
+      "x": ["2025-10-01", "2025-10-02", "2025-10-03", "2025-10-04", "2025-10-05"],
+      "y": [5000, 7000, 6500, 8000, 9000],
+      "type": "scatter",
+      "mode": "lines+markers",
+      "name": "Revenue"
+    },
+    {
+      "x": ["2025-10-01", "2025-10-02", "2025-10-03", "2025-10-04", "2025-10-05"],
+      "y": [3000, 4000, 3500, 5000, 6000],
+      "type": "scatter",
+      "mode": "lines+markers",
+      "name": "Expenses"
+    }
+  ],
+  "layout": {
+    "title": "Revenue vs Expenses"
+  }
+},
+"employee_status_graph": {
+  "data": [
+    {
+      "labels": ["Active", "On Leave", "Inactive"],
+      "values": [30, 5, 2],
+      "type": "pie",
+      "name": "Employee Status"
+    }
+  ],
+  "layout": {
+    "title": "Employee Status Distribution"
+  }
+}
 }

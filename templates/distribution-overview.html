@@ -2,41 +2,70 @@
 {% block title %}Distribution Overview{% endblock %}
 
 {% block content %}
-<section class="top-content flex justify-between items-center mb-6">
-    <div class="page-title">
-        <div class="module-title">DISTRIBUTION</div>
-        <div class="submodule-title">Overview</div>
-    </div>
-    <div class="user-details flex items-center space-x-2">
-        <div class="user-info">USERNAME</div>
-        <img class="user-display-image" src="{{ url_for('static', filename='images/display picture.jpg') }}" alt="user-display-image" />
-    </div>
-</section>
-<section id="distribution-main-content" class="w-4/5 mx-auto p-6">
+<div class="container mx-auto max-w-7xl px-4 py-8 bg-gray-50">
+    <!-- Header -->
+    <section class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-blue-700 tracking-tight">Distribution Overview</h1>
+            <p class="text-gray-500 mt-2">Track inventory, shipments, and orders across your network</p>
+        </div>
+        <div class="flex items-center gap-4">
+            <span class="font-semibold text-gray-700">{{ current_user.username if current_user else "USERNAME" }}</span>
+            <img class="rounded-full w-10 h-10 border border-gray-300" src="{{ url_for('static', filename='images/display picture.jpg') }}" alt="user-display-image" />
+        </div>
+    </section>
+
+    <!-- KPI Cards -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
+            <div class="text-gray-500 text-sm mb-2">Total Inventory Items</div>
+            <div class="text-3xl font-bold text-blue-700">{{ inventory|length }}</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
+            <div class="text-gray-500 text-sm mb-2">Recent Shipments</div>
+            <div class="text-3xl font-bold text-green-700">{{ shipments|length }}</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
+            <div class="text-gray-500 text-sm mb-2">Outstanding Orders</div>
+            <div class="text-3xl font-bold text-yellow-700">{{ orders|length }}</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
+            <div class="text-gray-500 text-sm mb-2">Low Stock Items</div>
+            <div class="text-3xl font-bold text-red-700">
+                {{ inventory|selectattr('quantity', 'lt', 10)|list|length }}
+            </div>
+        </div>
+    </section>
 
     <!-- Inventory Summary Table -->
-    <div class="mb-8 bg-white shadow-md rounded p-4">
-        <h2 class="text-lg font-bold mb-2">Inventory Summary</h2>
-        <table class="w-full text-sm text-left text-black">
-            <thead class="text-xs uppercase text-white bg-black">
-                <tr>
-                    <th class="px-4 py-2">Product</th>
+    <div class="mb-8 bg-white shadow-md rounded-xl border border-gray-200 p-6">
+        <h2 class="text-xl font-semibold mb-4 text-gray-700">Inventory Summary</h2>
+        <table class="min-w-full bg-white rounded-lg">
+            <thead>
+                <tr class="bg-black text-white text-left">
+                    <th class="px-4 py-2 rounded-tl-lg">Product</th>
                     <th class="px-4 py-2">SKU</th>
                     <th class="px-4 py-2">Warehouse</th>
                     <th class="px-4 py-2">Quantity</th>
                     <th class="px-4 py-2">Reorder Level</th>
-                    <th class="px-4 py-2">Status</th>
+                    <th class="px-4 py-2 rounded-tr-lg">Status</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in inventory %}
-                <tr>
+                <tr class="border-b hover:bg-gray-50 transition">
                     <td class="px-4 py-2">{{ item.product }}</td>
                     <td class="px-4 py-2">{{ item.sku }}</td>
                     <td class="px-4 py-2">{{ item.warehouse }}</td>
                     <td class="px-4 py-2">{{ item.quantity }}</td>
                     <td class="px-4 py-2">{{ item.reorder_level }}</td>
-                    <td class="px-4 py-2 {% if item.status == 'In Stock' %}text-green-600{% else %}text-yellow-600{% endif %}">{{ item.status }}</td>
+                    <td class="px-4 py-2">
+                        {% if item.status == 'In Stock' %}
+                            <span class="inline-block px-2 py-1 rounded bg-green-100 text-green-700 font-semibold text-xs">{{ item.status }}</span>
+                        {% else %}
+                            <span class="inline-block px-2 py-1 rounded bg-yellow-100 text-yellow-700 font-semibold text-xs">{{ item.status }}</span>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% else %}
                 <tr>
@@ -48,26 +77,32 @@
     </div>
 
     <!-- Recent Shipments Table -->
-    <div class="mb-8 bg-white shadow-md rounded p-4">
-        <h2 class="text-lg font-bold mb-2">Recent Shipments</h2>
-        <table class="w-full text-sm text-left text-black">
-            <thead class="text-xs uppercase text-white bg-black">
-                <tr>
-                    <th class="px-4 py-2">Shipment #</th>
+    <div class="mb-8 bg-white shadow-md rounded-xl border border-gray-200 p-6">
+        <h2 class="text-xl font-semibold mb-4 text-gray-700">Recent Shipments</h2>
+        <table class="min-w-full bg-white rounded-lg">
+            <thead>
+                <tr class="bg-black text-white text-left">
+                    <th class="px-4 py-2 rounded-tl-lg">Shipment #</th>
                     <th class="px-4 py-2">Date</th>
                     <th class="px-4 py-2">Carrier</th>
                     <th class="px-4 py-2">Destination</th>
-                    <th class="px-4 py-2">Status</th>
+                    <th class="px-4 py-2 rounded-tr-lg">Status</th>
                 </tr>
             </thead>
             <tbody>
                 {% for shipment in shipments %}
-                <tr>
+                <tr class="border-b hover:bg-gray-50 transition">
                     <td class="px-4 py-2">{{ shipment.shipment_id }}</td>
                     <td class="px-4 py-2">{{ shipment.date }}</td>
                     <td class="px-4 py-2">{{ shipment.carrier }}</td>
                     <td class="px-4 py-2">{{ shipment.destination }}</td>
-                    <td class="px-4 py-2 {% if shipment.status == 'Delivered' %}text-green-600{% else %}text-yellow-600{% endif %}">{{ shipment.status }}</td>
+                    <td class="px-4 py-2">
+                        {% if shipment.status == 'Delivered' %}
+                            <span class="inline-block px-2 py-1 rounded bg-green-100 text-green-700 font-semibold text-xs">{{ shipment.status }}</span>
+                        {% else %}
+                            <span class="inline-block px-2 py-1 rounded bg-yellow-100 text-yellow-700 font-semibold text-xs">{{ shipment.status }}</span>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% else %}
                 <tr>
@@ -79,26 +114,32 @@
     </div>
 
     <!-- Outstanding Orders Table -->
-    <div class="mb-8 bg-white shadow-md rounded p-4">
-        <h2 class="text-lg font-bold mb-2">Outstanding Orders</h2>
-        <table class="w-full text-sm text-left text-black">
-            <thead class="text-xs uppercase text-white bg-black">
-                <tr>
-                    <th class="px-4 py-2">Order #</th>
+    <div class="mb-8 bg-white shadow-md rounded-xl border border-gray-200 p-6">
+        <h2 class="text-xl font-semibold mb-4 text-gray-700">Outstanding Orders</h2>
+        <table class="min-w-full bg-white rounded-lg">
+            <thead>
+                <tr class="bg-black text-white text-left">
+                    <th class="px-4 py-2 rounded-tl-lg">Order #</th>
                     <th class="px-4 py-2">Customer</th>
                     <th class="px-4 py-2">Date</th>
                     <th class="px-4 py-2">Total</th>
-                    <th class="px-4 py-2">Status</th>
+                    <th class="px-4 py-2 rounded-tr-lg">Status</th>
                 </tr>
             </thead>
             <tbody>
                 {% for order in orders %}
-                <tr>
+                <tr class="border-b hover:bg-gray-50 transition">
                     <td class="px-4 py-2">{{ order.order_id }}</td>
                     <td class="px-4 py-2">{{ order.customer }}</td>
                     <td class="px-4 py-2">{{ order.date }}</td>
                     <td class="px-4 py-2">${{ order.total }}</td>
-                    <td class="px-4 py-2 {% if order.status == 'Shipped' %}text-green-600{% else %}text-yellow-600{% endif %}">{{ order.status }}</td>
+                    <td class="px-4 py-2">
+                        {% if order.status == 'Shipped' %}
+                            <span class="inline-block px-2 py-1 rounded bg-green-100 text-green-700 font-semibold text-xs">{{ order.status }}</span>
+                        {% else %}
+                            <span class="inline-block px-2 py-1 rounded bg-yellow-100 text-yellow-700 font-semibold text-xs">{{ order.status }}</span>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% else %}
                 <tr>
@@ -109,32 +150,19 @@
         </table>
     </div>
 
-    <!-- Quick Actions Table -->
-    <div class="mb-8 bg-white shadow-md rounded p-4">
-        <h2 class="text-lg font-bold mb-2">Quick Actions</h2>
-        <table class="w-full text-sm text-left text-black">
-            <tbody>
-                <tr>
-                    <td class="px-4 py-2">
-                        <a href="{{ url_for('add_shipment') }}">
-                            <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-800">Add Shipment</button>
-                        </a>
-                    </td>
-                    <td class="px-4 py-2">
-                        <a href="{{ url_for('add_order') }}">
-                            <button class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-800">Add Order</button>
-                        </a>
-                    </td>
-                    <td class="px-4 py-2">
-                        <a href="{{ url_for('receive_inventory') }}">
-                            <button class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-800">Receive Inventory</button>
-                        </a>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+    <!-- Quick Actions -->
+    <div class="mb-8 bg-white shadow-md rounded-xl border border-gray-200 p-6 flex gap-4">
+        <a href="{{ url_for('add_shipment') }}">
+            <button class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-blue-800 transition">Add Shipment</button>
+        </a>
+        <a href="{{ url_for('add_order') }}">
+            <button class="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-green-800 transition">Add Order</button>
+        </a>
+        <a href="{{ url_for('receive_inventory') }}">
+            <button class="bg-gray-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-gray-800 transition">Receive Inventory</button>
+        </a>
     </div>
-</section>
+</div>
 {% endblock %}
 
 {% block scripts %}

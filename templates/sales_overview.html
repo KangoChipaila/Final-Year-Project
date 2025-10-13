@@ -2,69 +2,91 @@
 {% block title %}Sales Overview{% endblock %}
 
 {% block content %}
-<div id="sales-page">
-    <div class="sales-overview">
-        <section class="top-content flex justify-between items-center mb-6">
-            <div class="page-title">
-                <div class="module-title">SALES</div>
-                <div class="submodule-title">Overview</div>
-            </div>
-            <div class="user-details flex items-center space-x-2">
-                <div class="user-info">USERNAME</div>
-                <img class="user-display-image" src="{{ url_for('static', filename='images/display picture.jpg') }}" alt="user-display-image" />
-            </div>
-        </section>
-        <section id="sales-top-controls" class="border border-black w-3/4 mx-auto mb-8">
-            <form action="/sales-data-upload-to-hadoop" method="POST" enctype="multipart/form-data" class="flex items-center gap-4">
-                <input id="sales-data-input" class="border border-black" type="file" name="sales-data-file">
-                <button class="upload-button border border-black px-4 py-2 rounded" type="submit">Upload File</button>
-            </form>
-        </section>
-        <section>
-            <div id="sales-trend-graph" class="mb-8"></div>
-            <div id="pie-charts" class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                <div id="goods-performance-pie-chart"></div>
-                <div id="customers-by-expenditure-pie-chart"></div>
-            </div>
-            <div id="quick-access-links" class="mb-8">
-                <div id="quick-access-links-title" class="font-bold mb-2">Quick Access Links</div>
-                <div id="quick-access-links-body" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="quick-access-link-item">
-                        <a href="/detailed-sales-analytics" class="flex items-center gap-2">
-                            <p>Detailed Sales Analytics</p>
-                            <img src="{{ url_for('static', filename='images/arrow1.svg') }}" alt="link-arrow"/>
-                        </a>
-                    </div>
-                    <div class="quick-access-link-item">
-                        <a href="#sales-page" class="flex items-center gap-2">
-                            <p>Goods and Services Payment Status</p>
-                            <img src="{{ url_for('static', filename='images/arrow1.svg') }}" alt="link-arrow"/>
-                        </a>
-                    </div>
-                    <div class="quick-access-link-item">
-                        <a href="#sales-page" class="flex items-center gap-2">
-                            <p>Customers</p>
-                            <img src="{{ url_for('static', filename='images/arrow1.svg') }}" alt="link-arrow"/>
-                        </a>
-                    </div>
-                    <div class="quick-access-link-item">
-                        <a href="#sales-page" class="flex items-center gap-2">
-                            <p>Sales Orders</p>
-                            <img src="{{ url_for('static', filename='images/arrow1.svg') }}" alt="link-arrow"/>
-                        </a>
-                    </div>
-                    <div class="quick-access-link-item">
-                        <a href="#sales-page" class="flex items-center gap-2">
-                            <p>Purchase Orders</p>
-                            <img src="{{ url_for('static', filename='images/arrow1.svg') }}" alt="link-arrow"/>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </div>
-</div>
+<div class="container mx-auto max-w-7xl px-4 py-8 bg-gray-50">
+    <!-- Header -->
+    <section class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-blue-700 tracking-tight">Sales Overview</h1>
+            <p class="text-gray-500 mt-2">Monitor sales performance and access key analytics</p>
+        </div>
+        <div class="flex items-center gap-4">
+            <span class="text-gray-700 font-semibold">{{ current_user.username if current_user else "USERNAME" }}</span>
+            <img class="rounded-full w-10 h-10 border border-gray-300" src="{{ url_for('static', filename='images/display picture.jpg') }}" alt="user-display-image" />
+        </div>
+    </section>
 
+    <!-- Upload Controls -->
+    <section class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8 flex flex-col md:flex-row items-center gap-4">
+        <form action="/sales-data-upload-to-hadoop" method="POST" enctype="multipart/form-data" class="flex items-center gap-4 w-full">
+            <input id="sales-data-input" class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-blue-300 focus:outline-none w-60" type="file" name="sales-data-file">
+            <button class="bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-blue-800 transition" type="submit">Upload File</button>
+        </form>
+    </section>
+
+    <!-- KPI Cards (example, add backend data for these) -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
+            <div class="text-gray-500 text-sm mb-2">Total Sales</div>
+            <div class="text-3xl font-bold text-blue-700">{{ kpi.total_sales if kpi else "N/A" }}</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
+            <div class="text-gray-500 text-sm mb-2">Orders</div>
+            <div class="text-3xl font-bold text-green-700">{{ kpi.orders if kpi else "N/A" }}</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
+            <div class="text-gray-500 text-sm mb-2">Customers</div>
+            <div class="text-3xl font-bold text-yellow-700">{{ kpi.customers if kpi else "N/A" }}</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
+            <div class="text-gray-500 text-sm mb-2">Revenue</div>
+            <div class="text-3xl font-bold text-red-700">{{ kpi.revenue if kpi else "N/A" }}</div>
+        </div>
+    </section>
+
+    <!-- Graphs -->
+    <div class="text-xl font-semibold mb-4 text-gray-700">Sales Analytics</div>
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+        <div>
+            <div class="font-semibold mb-2 text-gray-700">Sales Trend</div>
+            <div id="sales-trend-graph" style="height:320px; width:100%;"></div>
+        </div>
+        <div>
+            <div class="font-semibold mb-2 text-gray-700">Goods Performance</div>
+            <div id="goods-performance-pie-chart" style="height:320px; width:100%;"></div>
+        </div>
+        <div>
+            <div class="font-semibold mb-2 text-gray-700">Customers by Expenditure</div>
+            <div id="customers-by-expenditure-pie-chart" style="height:320px; width:100%;"></div>
+        </div>
+    </section>
+
+    <!-- Quick Access Links -->
+    <section class="mb-10">
+        <div class="text-xl font-semibold mb-4 text-gray-700">Quick Access</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <a href="/detailed-sales-analytics" class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-blue-800 transition">
+                <span>Detailed Sales Analytics</span>
+                <img src="{{ url_for('static', filename='images/arrow1.svg') }}" alt="link-arrow"/>
+            </a>
+            <a href="#sales-page" class="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-green-800 transition">
+                <span>Goods and Services Payment Status</span>
+                <img src="{{ url_for('static', filename='images/arrow1.svg') }}" alt="link-arrow"/>
+            </a>
+            <a href="#sales-page" class="flex items-center gap-2 bg-yellow-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-yellow-700 transition">
+                <span>Customers</span>
+                <img src="{{ url_for('static', filename='images/arrow1.svg') }}" alt="link-arrow"/>
+            </a>
+            <a href="#sales-page" class="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-purple-800 transition">
+                <span>Sales Orders</span>
+                <img src="{{ url_for('static', filename='images/arrow1.svg') }}" alt="link-arrow"/>
+            </a>
+            <a href="#sales-page" class="flex items-center gap-2 bg-pink-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-pink-800 transition">
+                <span>Purchase Orders</span>
+                <img src="{{ url_for('static', filename='images/arrow1.svg') }}" alt="link-arrow"/>
+            </a>
+        </div>
+    </section>
+</div>
 {% endblock %}
 
 {% block scripts %}
