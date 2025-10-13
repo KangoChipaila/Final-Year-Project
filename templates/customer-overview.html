@@ -1,37 +1,116 @@
-<!DOCTYPE html>
-<html>
-    <head>
-        <title>Customer Overview</title>
-        <script src = "https://cdn.plot.ly/plotly-latest.min.js"></script>
-        <script src="{{ url_for('static', filename='js/load_customer_data.js')}}" defer></script>
-        <link rel = "stylesheet" href = "{{ url_for('static', filename = 'css/output.css')}}" />
-        <link rel = "stylesheet" href = "{{ url_for ('static', filename = 'css/styles.css')}}" />
-    </head>
+{% extends "base.html" %}
+{% block title %}Customer Overview{% endblock %}
 
-    <body>
-        <div id = "sales-page">
-            {% include 'partials/drawer.html' %}
-            <div class="sales-overview">
-                <section class="top-content">
-                    <div class="page-title">
-                        <div class = "module-title">CUSTOMERS</div>
-                        <div class = "submodule-title">Overview</div>
-                    </div>
-                    <div class = "user-details">
-                        <div class = "user-info">USERNAME</div>
-                        <img class = "user-display-image" src = "{{url_for('static', filename = 'images/display picture.jpg')}}" alt = "user-display-image" />
-                    </div>
-                </section>
-                <section class = "w-full" id = "customers-main-content">
-                
-                </section>
-            </div>
-        </div>
-        <footer id = "footer">
-            <img class = "footer-logo" src = "{{ url_for ('static', filename = 'images/logo.jpg')}}" />
-            <div class="about">
-                <p>Copyright 2025</p>
-            </div>
-        </footer>
-        
-    </body>
+{% block content %}
+<section class="flex justify-between items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800">Customer Overview</h1>
+        <p class="text-gray-500">Manage and analyze your customer base</p>
+    </div>
+    <div class="flex items-center space-x-2">
+        {% if current_user.is_authenticated %}
+            <span class="font-medium">{{ current_user.username }}</span>
+            <img src="{{ url_for('static', filename='images/display picture.jpg') }}" 
+                 alt="User Avatar" class="h-10 w-10 rounded-full border">
+        {% endif %}
+    </div>
+</section>
+
+<!-- Summary Metrics -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    {% for stat in customer_summary %}
+    <div class="bg-white shadow-md rounded-lg p-4 text-center">
+        <h2 class="text-gray-600 text-sm uppercase">{{ stat.label }}</h2>
+        <p class="text-2xl font-semibold text-blue-700">{{ stat.value }}</p>
+    </div>
+    {% endfor %}
+</section>
+
+<!-- Search and Filter Bar -->
+<form method="GET" action="{{ url_for('customer_overview') }}" class="flex flex-wrap items-center gap-4 mb-6">
+    <div class="flex items-center">
+        <input type="text" name="query" placeholder="Search by name..."
+               value="{{ query }}"
+               class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-black-300 focus:outline-none w-60">
+    </div>
+    <div>
+        <select name="status" class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-black-300 focus:outline-none">
+            <option value="">All Statuses</option>
+            <option value="Active" {% if selected_status == 'Active' %}selected{% endif %}>Active</option>
+            <option value="Inactive" {% if selected_status == 'Inactive' %}selected{% endif %}>Inactive</option>
+        </select>
+    </div>
+    <button type="submit"
+            class="bg-black border border-black text-white px-4 py-2 rounded-lg hover:bg-white hover:text-black transition">
+        Filter
+    </button>
+    <a href="{{ url_for('customer_overview') }}"
+       class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition">
+       Reset
+    </a>
+    <a href="{{ url_for('add_customer') }}"
+       class="ml-auto bg-green-700 text-white px-4 py-2 rounded-lg hover:bg-green-800 transition">
+       + Add Customer
+    </a>
+</form>
+
+<!-- Customer Table -->
+<table class="min-w-full bg-white shadow-md rounded-lg">
+    <thead>
+        <tr class="bg-black text-white text-left">
+            <th class="py-3 px-4">#</th>
+            <th class="py-3 px-4">Name</th>
+            <th class="py-3 px-4">Contact Person</th>
+            <th class="py-3 px-4">Email</th>
+            <th class="py-3 px-4">Phone</th>
+            <th class="py-3 px-4">Status</th>
+            <th class="py-3 px-4">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for customer in customers %}
+        <tr class="border-b hover:bg-gray-50">
+            <td class="py-2 px-4 font-medium text-gray-700">{{ customer.id }}</td>
+            <td class="py-2 px-4">{{ customer.name }}</td>
+            <td class="py-2 px-4">{{ customer.contact_person }}</td>
+            <td class="py-2 px-4"><a href="mailto:{{ customer.email }}" class="hover:text-blue-500">{{ customer.email }}</a></td>
+            <td class="py-2 px-4">{{ customer.phone }}</td>
+            <td class="py-2 px-4">
+                {% if customer.status == "Active" %}
+                    <span class="text-green-700 font-semibold">{{ customer.status }}</span>
+                {% else %}
+                    <span class="text-red-600 font-semibold">{{ customer.status }}</span>
+                {% endif %}
+            </td>
+            <td class="py-2 px-4 flex space-x-3">
+                <a href="{{ url_for('edit_customer', customer_id=customer.id) }}" class="text-blue-600 hover:underline">Edit</a>
+                <form action="{{ url_for('delete_customer', customer_id=customer.id) }}" method="POST" onsubmit="return confirmDelete('{{ customer.name }}');">
+                    <button type="submit" class="text-red-600 hover:underline">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="7" class="text-center py-4 text-gray-500">No customers found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Customer Analytics Chart -->
+<section class="bg-white rounded-lg shadow-md p-6 mt-8">
+    <h2 class="text-lg font-semibold mb-4">Customer Status Distribution</h2>
+    <div id="customer-status-chart" style="height:400px;"></div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function confirmDelete(customerName) {
+        return confirm(`Are you sure you want to delete "${customerName}"? This action cannot be undone.`);
+    }
+    // Render Plotly chart
+    const chartData = {{ customer_chart_data | safe }};
+    Plotly.newPlot('customer-status-chart', chartData.data, chartData.layout);
+</script>
+{% endblock %}

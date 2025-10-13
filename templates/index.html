@@ -1,45 +1,145 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta charset="utf-8" />
-    <link rel="stylesheet" href = "{{ url_for ('static', filename = 'css/styles.css')}}" />
-    <link rel = "stylesheet" href = "{{ url_for ('static', filename = 'css/output.css')}}" />
-    <script src = "https://cdn.plot.ly/plotly-latest.min.js"></script>
-  </head>
-  <body>
-    <div id = "sales-page">
-            {% include 'partials/drawer.html' %}
-            <div class="sales-overview">
-                <section class="top-content">
-                    <div class="page-title">
-                        <div class = "module-title">DASHBOARD</div>
-                    </div>
-                    <div class = "user-details">
-                        <div class = "user-info">USERNAME</div>
-                        <img class = "user-display-image" src = "{{url_for('static', filename = 'images/display picture.jpg')}}" alt = "user-display-image" />
-                    </div>
-                </section>
-                <section id = "dashboard-main-content">
-                  <div id = "sales-analytics-dashboard-summary"></div>
-                  <div id="customer-dashboard-summary"></div>        
-                </section>
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div id="sales-page">
+    <div class="sales-overview">
+        <section class="top-content flex justify-between items-center mb-6">
+            <div class="page-title">
+                <div class="module-title">DASHBOARD</div>
             </div>
+            <div class="user-details flex items-center space-x-2">
+                <div class="user-info">{{ current_user.username if current_user else "USERNAME" }}</div>
+            </div>
+        </section>
+
+        <!-- KPI Summary Cards -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white shadow rounded-lg p-4 text-center">
+                <div class="text-gray-500 text-sm">Total Sales</div>
+                <div class="text-2xl font-bold text-blue-700">{{ kpi.total_sales }}</div>
+            </div>
+            <div class="bg-white shadow rounded-lg p-4 text-center">
+                <div class="text-gray-500 text-sm">Total Customers</div>
+                <div class="text-2xl font-bold text-green-700">{{ kpi.total_customers }}</div>
+            </div>
+            <div class="bg-white shadow rounded-lg p-4 text-center">
+                <div class="text-gray-500 text-sm">Inventory Value</div>
+                <div class="text-2xl font-bold text-yellow-700">{{ kpi.inventory_value }}</div>
+            </div>
+            <div class="bg-white shadow rounded-lg p-4 text-center">
+                <div class="text-gray-500 text-sm">Outstanding Orders</div>
+                <div class="text-2xl font-bold text-red-700">{{ kpi.outstanding_orders }}</div>
+            </div>
+        </section>
+
+        <!-- Quick Navigation Links -->
+        <section class="mb-8">
+            <div class="font-bold mb-2">Quick Access</div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                <a href="{{ url_for('sales_overview') }}" class="bg-blue-600 text-white px-4 py-2 rounded text-center hover:bg-blue-800">Sales</a>
+                <a href="{{ url_for('customer_overview') }}" class="bg-green-600 text-white px-4 py-2 rounded text-center hover:bg-green-800">Customers</a>
+                <a href="{{ url_for('distribution_overview') }}" class="bg-yellow-600 text-white px-4 py-2 rounded text-center hover:bg-yellow-700">Inventory</a>
+                <a href="{{ url_for('procurement_overview') }}" class="bg-purple-600 text-white px-4 py-2 rounded text-center hover:bg-purple-800">Procurement</a>
+                <a href="{{ url_for('human_resources_overview') }}" class="bg-pink-600 text-white px-4 py-2 rounded text-center hover:bg-pink-800">HR</a>
+                <a href="{{ url_for('finance_overview') }}" class="bg-gray-700 text-white px-4 py-2 rounded text-center hover:bg-gray-800">Finance</a>
+            </div>
+        </section>
+
+        <!-- Alerts & Notifications -->
+        {% if alerts %}
+        <section class="mb-8">
+            <div class="font-bold mb-2">Alerts & Notifications</div>
+            <ul class="list-disc pl-6 text-red-600">
+                {% for alert in alerts %}
+                <li>{{ alert }}</li>
+                {% endfor %}
+            </ul>
+        </section>
+        {% endif %}
+
+        <!-- Recent Activity Feed -->
+        <section class="mb-8">
+            <div class="font-bold mb-2">Recent Activity</div>
+            <ul class="list-disc pl-6 text-gray-700">
+                {% for activity in recent_activity %}
+                <li>{{ activity }}</li>
+                {% else %}
+                <li>No recent activity.</li>
+                {% endfor %}
+            </ul>
+        </section>
+
+        <!-- Mini Tables -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <div>
+                <div class="font-bold mb-2">Top Customers</div>
+                <table class="min-w-full bg-white shadow rounded-lg">
+                    <thead>
+                        <tr class="bg-black text-white text-left">
+                            <th class="py-2 px-4">Name</th>
+                            <th class="py-2 px-4">Total Spent</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for customer in top_customers %}
+                        <tr>
+                            <td class="py-2 px-4">{{ customer.name }}</td>
+                            <td class="py-2 px-4">${{ customer.total_spent }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="2" class="text-center py-4 text-gray-500">No data.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div>
+                <div class="font-bold mb-2">Recent Orders</div>
+                <table class="min-w-full bg-white shadow rounded-lg">
+                    <thead>
+                        <tr class="bg-black text-white text-left">
+                            <th class="py-2 px-4">Order #</th>
+                            <th class="py-2 px-4">Customer</th>
+                            <th class="py-2 px-4">Total</th>
+                            <th class="py-2 px-4">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in recent_orders %}
+                        <tr>
+                            <td class="py-2 px-4">{{ order.order_id }}</td>
+                            <td class="py-2 px-4">{{ order.customer }}</td>
+                            <td class="py-2 px-4">${{ order.total }}</td>
+                            <td class="py-2 px-4">{{ order.status }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-gray-500">No data.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Analytics Graphs -->
+        <section id="dashboard-main-content" class="w-4/5 mx-auto p-6">
+            <div id="sales-analytics-dashboard-summary"></div>
+            <div id="customer-dashboard-summary"></div>
+        </section>
     </div>
+</div>
+{% endblock %}
 
-    <footer id = "footer">
-      <img class = "footer-logo" src = "{{ url_for ('static', filename = 'images/logo.jpg')}}" />
-      <div class="about">
-        <p>Copyright 2025</p>
-      </div>
-    </footer>
-    
-    <script>
-      var salesTrendGraph = {{ sales_trend_graph | tojson}};
-      var customerGraph = {{ customers | tojson}};
+{% block scripts %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+    var salesTrendGraph = {{ sales_trend_graph | tojson }};
+    var customerGraph = {{ customers | tojson }};
 
-      Plotly.newPlot('sales-analytics-dashboard-summary', salesTrendGraph.data, salesTrendGraph.layout);
-      Plotly.newPlot('customer-dashboard-summary', customerGraph.data, customerGraph.layout);
-    </script>
-  </body>
-</html>
+    Plotly.newPlot('sales-analytics-dashboard-summary', salesTrendGraph.data, salesTrendGraph.layout);
+    Plotly.newPlot('customer-dashboard-summary', customerGraph.data, customerGraph.layout);
+</script>
+{% endblock %}

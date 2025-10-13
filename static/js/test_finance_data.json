@@ -1,0 +1,56 @@
+{
+  "cash_flow": [
+    {
+      "balance": 10000,
+      "date": "2025-09-25",
+      "description": "Customer Payment",
+      "inflow": 2000,
+      "outflow": ""
+    },
+    {
+      "balance": 8000,
+      "date": "2025-09-24",
+      "description": "Office Rent",
+      "inflow": "",
+      "outflow": 1000
+    },
+    {
+      "balance": "122222",
+      "date": "2025-10-18",
+      "description": "kkkk",
+      "inflow": "120",
+      "outflow": ""
+    }
+  ],
+  "finance_chart_data": {
+    "data": [],
+    "layout": {}
+  },
+  "financial_summary": {
+    "assets": 50000,
+    "cash": 10000,
+    "equity": 30000,
+    "liabilities": 20000
+  },
+  "income_statement": {
+    "expenses": 7000,
+    "net_income": 8000,
+    "revenue": 15000
+  },
+  "outstanding_payments": [
+    {
+      "amount": 500,
+      "due_date": "2025-09-30",
+      "party": "Zesco",
+      "payment_id": "1",
+      "status": "Pending"
+    },
+    {
+      "amount": 1200,
+      "due_date": "2025-10-05",
+      "party": "Acme Corp",
+      "payment_id": "2",
+      "status": "Received"
+    }
+  ]
+}

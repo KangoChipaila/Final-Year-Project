@@ -1,98 +1,81 @@
-<!DOCTYPE html>
-<html>
-    <head>
-        <title>Sales Overview</title>
-        <script src = "https://cdn.plot.ly/plotly-latest.min.js"></script>
-        <link rel = "stylesheet" href = "{{ url_for ('static', filename = 'css/styles.css')}}" />
-        <link rel = "stylesheet" href = "{{ url_for ('static', filename = 'css/output.css')}}" />
-    </head>
+{% extends "base.html" %}
+{% block title %}Sales Overview{% endblock %}
 
-    <body>
-        <div id = "sales-page">
-            {% include 'partials/drawer.html' %}
-            <div class="sales-overview">
-                <section class="top-content">
-                    <div class="page-title">
-                        <div class = "module-title">SALES</div>
-                        <div class = "submodule-title">Overview</div>
-                    </div>
-                    <div class = "user-details">
-                        <div class = "user-info">USERNAME</div>
-                        <img class = "user-display-image" src = "{{url_for('static', filename = 'images/display picture.jpg')}}" alt = "user-display-image" />
-                    </div>
-                </section>
-                <section id = "sales-top-controls" class = "border border-black w-3/4 mx-auto">
-                    <div>
-                        <form action = /sales-data-upload-to-hadoop method = "POST" enctype="multipart/form-data">
-                            <input id = "sales-data-input" class = "border border-black" type="file" name = "sales-data-file">
-                            
-                            <button class ="upload-button border border-black" type="submit">Upload File</button>
-                        </form>
-                    </div>
-                </section>
-                <section>
-                    <div>
-                        <div id = "sales-trend-graph"></div>
-                    </div>
-                    <div id = "pie-charts">
-                        <div id = "goods-performance-pie-chart"></div>
-                        <div id = "customers-by-expenditure-pie-chart"></div>
-                    </div>
-                    <div id = "quick-access-links">
-
-                        <div id="quick-access-links-title">Quick Access Links</div>
-
-                        <div id="quick-access-links-body">
-                            <div class = "quick-access-link-item">
-                                <a href = "/detailed-sales-analytics">
-                                    <p>Detailed Sales Analytics</p>
-                                    <img src = "{{ url_for ('static', filename = 'images/arrow1.svg')}}" alt = "link-arrow"/>
-                                </a>
-                            </div>
-                            <div class = "quick-access-link-item">
-                                <a href = "#sales-page">
-                                    <p>Goods and Services Payment Status</p>
-                                    <img src = "{{ url_for ('static', filename = 'images/arrow1.svg')}}" alt = "link-arrow"/>
-                                </a>
-                            </div>
-                            <div class = "quick-access-link-item">
-                                <a href = "#sales-page">
-                                    <p>Customers</p>
-                                    <img src = "{{ url_for ('static', filename = 'images/arrow1.svg')}}" alt = "link-arrow"/>
-                                </a>
-                            </div>
-                            <div class = "quick-access-link-item">
-                                <a href = "#sales-page">
-                                    <p>Sales Orders</p>
-                                    <img src = "{{ url_for ('static', filename = 'images/arrow1.svg')}}" alt = "link-arrow"/>
-                                </a>
-                            </div>
-                            <div class = "quick-access-link-item">
-                                <a href = "#sales-page">
-                                    <p>Purchase Orders</p>
-                                    <img src = "{{ url_for ('static', filename = 'images/arrow1.svg')}}" alt = "link-arrow"/>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </section>
+{% block content %}
+<div id="sales-page">
+    <div class="sales-overview">
+        <section class="top-content flex justify-between items-center mb-6">
+            <div class="page-title">
+                <div class="module-title">SALES</div>
+                <div class="submodule-title">Overview</div>
             </div>
-        </div>
-        <footer id = "footer">
-            <img class = "footer-logo" src = "{{ url_for ('static', filename = 'images/logo.jpg')}}" />
-            <div class="about">
-                <p>Copyright 2025</p>
+            <div class="user-details flex items-center space-x-2">
+                <div class="user-info">USERNAME</div>
+                <img class="user-display-image" src="{{ url_for('static', filename='images/display picture.jpg') }}" alt="user-display-image" />
             </div>
-        </footer>
-        
-        <script>
-            var salesTrendGraph = {{ sales_trend_graph | tojson }};
-            var goodsPerformancePieChart = {{ goods_performance_pie_chart | tojson }};
-            var customerExpenditurePieChart = {{ customer_expenditure_pie_chart | tojson }};
+        </section>
+        <section id="sales-top-controls" class="border border-black w-3/4 mx-auto mb-8">
+            <form action="/sales-data-upload-to-hadoop" method="POST" enctype="multipart/form-data" class="flex items-center gap-4">
+                <input id="sales-data-input" class="border border-black" type="file" name="sales-data-file">
+                <button class="upload-button border border-black px-4 py-2 rounded" type="submit">Upload File</button>
+            </form>
+        </section>
+        <section>
+            <div id="sales-trend-graph" class="mb-8"></div>
+            <div id="pie-charts" class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                <div id="goods-performance-pie-chart"></div>
+                <div id="customers-by-expenditure-pie-chart"></div>
+            </div>
+            <div id="quick-access-links" class="mb-8">
+                <div id="quick-access-links-title" class="font-bold mb-2">Quick Access Links</div>
+                <div id="quick-access-links-body" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="quick-access-link-item">
+                        <a href="/detailed-sales-analytics" class="flex items-center gap-2">
+                            <p>Detailed Sales Analytics</p>
+                            <img src="{{ url_for('static', filename='images/arrow1.svg') }}" alt="link-arrow"/>
+                        </a>
+                    </div>
+                    <div class="quick-access-link-item">
+                        <a href="#sales-page" class="flex items-center gap-2">
+                            <p>Goods and Services Payment Status</p>
+                            <img src="{{ url_for('static', filename='images/arrow1.svg') }}" alt="link-arrow"/>
+                        </a>
+                    </div>
+                    <div class="quick-access-link-item">
+                        <a href="#sales-page" class="flex items-center gap-2">
+                            <p>Customers</p>
+                            <img src="{{ url_for('static', filename='images/arrow1.svg') }}" alt="link-arrow"/>
+                        </a>
+                    </div>
+                    <div class="quick-access-link-item">
+                        <a href="#sales-page" class="flex items-center gap-2">
+                            <p>Sales Orders</p>
+                            <img src="{{ url_for('static', filename='images/arrow1.svg') }}" alt="link-arrow"/>
+                        </a>
+                    </div>
+                    <div class="quick-access-link-item">
+                        <a href="#sales-page" class="flex items-center gap-2">
+                            <p>Purchase Orders</p>
+                            <img src="{{ url_for('static', filename='images/arrow1.svg') }}" alt="link-arrow"/>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
 
-            Plotly.newPlot('sales-trend-graph', salesTrendGraph.data, salesTrendGraph.layout);
-            Plotly.newPlot('goods-performance-pie-chart', goodsPerformancePieChart.data, goodsPerformancePieChart.layout);
-            Plotly.newPlot('customers-by-expenditure-pie-chart', customerExpenditurePieChart.data, customerExpenditurePieChart.layout);
-        </script>
-    </body>
-</html>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+    var salesTrendGraph = {{ sales_trend_graph | tojson }};
+    var goodsPerformancePieChart = {{ goods_performance_pie_chart | tojson }};
+    var customerExpenditurePieChart = {{ customer_expenditure_pie_chart | tojson }};
+
+    Plotly.newPlot('sales-trend-graph', salesTrendGraph.data, salesTrendGraph.layout);
+    Plotly.newPlot('goods-performance-pie-chart', goodsPerformancePieChart.data, goodsPerformancePieChart.layout);
+    Plotly.newPlot('customers-by-expenditure-pie-chart', customerExpenditurePieChart.data, customerExpenditurePieChart.layout);
+</script>
+{% endblock %}

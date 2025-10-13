@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Process Payroll{% endblock %}
+{% block content %}
+<section class="max-w-xl mx-auto bg-white p-6 rounded-lg shadow-md mt-8">
+    <h2 class="text-xl font-bold mb-4">Process Payroll</h2>
+    <form method="POST">
+        <div class="mb-4">
+            <label class="block mb-1 font-medium">Employee</label>
+            <select name="employee" class="w-full border rounded px-3 py-2">
+                {% for employee in employees %}
+                <option value="{{ employee.name }}">{{ employee.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-4">
+            <label class="block mb-1 font-medium">Month</label>
+            <input type="month" name="month" required class="w-full border rounded px-3 py-2">
+        </div>
+        <div class="mb-4">
+            <label class="block mb-1 font-medium">Gross Pay</label>
+            <input type="number" name="gross_pay" required class="w-full border rounded px-3 py-2">
+        </div>
+        <div class="mb-4">
+            <label class="block mb-1 font-medium">Deductions</label>
+            <input type="number" name="deductions" required class="w-full border rounded px-3 py-2">
+        </div>
+        <div class="mb-4">
+            <label class="block mb-1 font-medium">Net Pay</label>
+            <input type="number" name="net_pay" required class="w-full border rounded px-3 py-2">
+        </div>
+        <div class="mb-4">
+            <label class="block mb-1 font-medium">Status</label>
+            <select name="status" class="w-full border rounded px-3 py-2">
+                <option value="Pending">Pending</option>
+                <option value="Paid">Paid</option>
+            </select>
+        </div>
+        <button type="submit" class="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800">Process Payroll</button>
+        <a href="{{ url_for('human_resources_overview') }}" class="ml-4 text-gray-600 hover:underline">Cancel</a>
+    </form>
+</section>
+{% endblock %}

@@ -1,0 +1,48 @@
+{
+  "production_orders": [
+    {
+      "order_id": "1",
+      "product": "Widget A",
+      "quantity": "100",
+      "start_date": "2025-10-01",
+      "end_date": "2025-10-05",
+      "status": "In Progress"
+    },
+    {
+      "order_id": "2",
+      "product": "Gadget B",
+      "quantity": "50",
+      "start_date": "2025-10-03",
+      "end_date": "2025-10-07",
+      "status": "Completed"
+    }
+  ],
+  "bill_of_materials": [
+    {
+      "product": "Widget A",
+      "component": "Steel Rod",
+      "quantity_required": "200",
+      "unit": "pcs"
+    },
+    {
+      "product": "Gadget B",
+      "component": "Plastic Shell",
+      "quantity_required": "50",
+      "unit": "pcs"
+    }
+  ],
+  "work_centers": [
+    {
+      "name": "Assembly Line 1",
+      "current_task": "Assembling Widget A",
+      "status": "Running",
+      "operator": "Alice Banda"
+    },
+    {
+      "name": "Packaging Station",
+      "current_task": "Packing Gadget B",
+      "status": "Idle",
+      "operator": "Brian Mwansa"
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "inventory": [
+    {
+      "product": "Widget A",
+      "sku": "WGT-A-001",
+      "warehouse": "Main Warehouse",
+      "quantity": "120",
+      "reorder_level": "50",
+      "status": "In Stock"
+    },
+    {
+      "product": "Gadget B",
+      "sku": "GDT-B-002",
+      "warehouse": "Secondary Warehouse",
+      "quantity": "30",
+      "reorder_level": "20",
+      "status": "Low Stock"
+    }
+  ],
+  "shipments": [
+    {
+      "shipment_id": "SHP-1001",
+      "date": "2025-10-05",
+      "carrier": "DHL",
+      "destination": "Lusaka",
+      "status": "Delivered"
+    },
+    {
+      "shipment_id": "SHP-1002",
+      "date": "2025-10-07",
+      "carrier": "FedEx",
+      "destination": "Ndola",
+      "status": "In Transit"
+    }
+  ],
+  "orders": [
+    {
+      "order_id": "ORD-5001",
+      "customer": "Acme Corp",
+      "date": "2025-10-06",
+      "total": "3500",
+      "status": "Pending"
+    },
+    {
+      "order_id": "ORD-5002",
+      "customer": "Beta Ltd",
+      "date": "2025-10-08",
+      "total": "1200",
+      "status": "Shipped"
+    }
+  ]
+}

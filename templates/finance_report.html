@@ -1,23 +1,13 @@
 {% extends "base.html" %}
-{% block title %}Finance Overview{% endblock %}
-
+{% block title %}Finance Report{% endblock %}
 {% block content %}
-<section class="top-content flex justify-between items-center mb-6">
-    <div class="page-title">
-        <div class="module-title">FINANCE</div>
-        <div class="submodule-title">Overview</div>
-    </div>
-    <div class="user-details flex items-center space-x-2">
-        <div class="user-info">USERNAME</div>
-        <img class="user-display-image" src="{{ url_for('static', filename='images/display picture.jpg') }}" alt="user-display-image" />
-    </div>
-</section>
-<section id="finance-main-content" class="w-4/5 mx-auto p-6">
+<section class="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow-md mt-8">
+    <h2 class="text-xl font-bold mb-4">Finance Report</h2>
 
-    <!-- Financial Summary Table -->
-    <div class="mb-8 bg-white shadow-md rounded p-4">
-        <h2 class="text-lg font-bold mb-2">Financial Summary</h2>
-        <table class="w-full text-sm text-left text-black">
+    <!-- Financial Summary -->
+    <div class="mb-6">
+        <h3 class="text-lg font-semibold mb-2">Financial Summary</h3>
+        <table class="w-full text-sm text-left text-black mb-4">
             <thead class="text-xs uppercase text-white bg-black">
                 <tr>
                     <th class="px-4 py-2">Total Assets</th>
@@ -37,10 +27,10 @@
         </table>
     </div>
 
-    <!-- Income Statement Table -->
-    <div class="mb-8 bg-white shadow-md rounded p-4">
-        <h2 class="text-lg font-bold mb-2">Income Statement (This Month)</h2>
-        <table class="w-full text-sm text-left text-black">
+    <!-- Income Statement -->
+    <div class="mb-6">
+        <h3 class="text-lg font-semibold mb-2">Income Statement (This Month)</h3>
+        <table class="w-full text-sm text-left text-black mb-4">
             <thead class="text-xs uppercase text-white bg-black">
                 <tr>
                     <th class="px-4 py-2">Revenue</th>
@@ -59,9 +49,9 @@
     </div>
 
     <!-- Cash Flow Table -->
-    <div class="mb-8 bg-white shadow-md rounded p-4">
-        <h2 class="text-lg font-bold mb-2">Cash Flow (This Month)</h2>
-        <table class="w-full text-sm text-left text-black">
+    <div class="mb-6">
+        <h3 class="text-lg font-semibold mb-2">Cash Flow (This Month)</h3>
+        <table class="w-full text-sm text-left text-black mb-4">
             <thead class="text-xs uppercase text-white bg-black">
                 <tr>
                     <th class="px-4 py-2">Date</th>
@@ -90,9 +80,9 @@
     </div>
 
     <!-- Outstanding Payments Table -->
-    <div class="mb-8 bg-white shadow-md rounded p-4">
-        <h2 class="text-lg font-bold mb-2">Outstanding Payments</h2>
-        <table class="w-full text-sm text-left text-black">
+    <div class="mb-6">
+        <h3 class="text-lg font-semibold mb-2">Outstanding Payments</h3>
+        <table class="w-full text-sm text-left text-black mb-4">
             <thead class="text-xs uppercase text-white bg-black">
                 <tr>
                     <th class="px-4 py-2">Payment #</th>
@@ -120,45 +110,11 @@
         </table>
     </div>
 
-    <!-- Quick Actions Table -->
-    <div class="mb-8 bg-white shadow-md rounded p-4">
-        <h2 class="text-lg font-bold mb-2">Quick Actions</h2>
-        <table class="w-full text-sm text-left text-black">
-            <tbody>
-                <tr>
-                    <td class="px-4 py-2">
-                        <a href="{{ url_for('add_payment') }}">
-                            <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-800">Add Payment</button>
-                        </a>
-                    </td>
-                    <td class="px-4 py-2">
-                        <a href="{{ url_for('add_receipt') }}">
-                            <button class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-800">Add Receipt</button>
-                        </a>
-                    </td>
-                    <td class="px-4 py-2">
-                        <a href="{{ url_for('generate_report') }}">
-                            <button class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-800">Generate Report</button>
-                        </a>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+    <!-- Download Report Button -->
+    <div class="mt-8 text-center">
+        <a href="{{ url_for('download_finance_report') }}" class="bg-black text-white px-6 py-2 rounded hover:bg-gray-800">
+            Download PDF Report
+        </a>
     </div>
-
-    <!-- Finance Analytics Chart -->
-    <section class="bg-white rounded-lg shadow-md p-6 mt-8">
-        <h2 class="text-lg font-semibold mb-4">Finance Analytics</h2>
-        <div id="finance-analytics-chart" style="height:400px;"></div>
-    </section>
 </section>
-{% endblock %}
-
-{% block scripts %}
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-<script>
-    // Example: Render Plotly chart
-    const chartData = {{ finance_chart_data | safe }};
-    Plotly.newPlot('finance-analytics-chart', chartData.data, chartData.layout);
-</script>
 {% endblock %}

@@ -1,0 +1,83 @@
+{
+  "attendance": [
+    {
+      "check_in": "08:00",
+      "check_out": "17:00",
+      "date": "2025-10-01",
+      "employee": "Alice Banda",
+      "status": "Present"
+    },
+    {
+      "check_in": "",
+      "check_out": "",
+      "date": "2025-10-01",
+      "employee": "Brian Mwansa",
+      "status": "On Leave"
+    }
+  ],
+  "employees": [
+    {
+      "department": "IT",
+      "email": "alice.banda@example.com",
+      "id": "1",
+      "name": "Alice Banda",
+      "phone": "0977000001",
+      "role": "Software Engineer",
+      "status": "Active"
+    },
+    {
+      "department": "Finance",
+      "email": "brian.mwansa@example.com",
+      "id": "2",
+      "name": "Brian Mwansa",
+      "phone": "0977000002",
+      "role": "Accountant",
+      "status": "On Leave"
+    },
+    {
+      "department": "HR",
+      "email": "chipo.zulu@example.com",
+      "id": "3",
+      "name": "Chipo Zulu",
+      "phone": "0977000003",
+      "role": "HR Manager",
+      "status": "Active"
+    },
+    {
+      "department": "Hi",
+      "email": "hi@gmail.com",
+      "id": "4",
+      "name": "HI",
+      "phone": "+260956804016",
+      "role": "HI",
+      "status": "Active"
+    }
+  ],
+  "leave_requests": [
+    {
+      "employee": "Brian Mwansa",
+      "end_date": "2025-10-10",
+      "reason": "Annual Leave",
+      "start_date": "2025-10-01",
+      "status": "Approved"
+    }
+  ],
+  "payroll": [
+    {
+      "deductions": "2000",
+      "employee": "Alice Banda",
+      "gross_pay": "15000",
+      "month": "2025-10",
+      "net_pay": "13000",
+      "status": "Paid"
+    },
+    {
+      "deductions": "1500",
+      "employee": "Brian Mwansa",
+      "gross_pay": "12000",
+      "month": "2025-10",
+      "net_pay": "10500",
+      "status": "Pending"
+    }
+  ]
+}

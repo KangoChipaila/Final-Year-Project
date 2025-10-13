@@ -1,0 +1,56 @@
+{
+  "purchase_requests": [
+    {
+      "request_id": "1",
+      "requested_by": "Alice Banda",
+      "date": "2025-10-01",
+      "item": "Laptop",
+      "quantity": "5",
+      "status": "Pending"
+    },
+    {
+      "request_id": "2",
+      "requested_by": "Brian Mwansa",
+      "date": "2025-10-02",
+      "item": "Printer Ink",
+      "quantity": "10",
+      "status": "Approved"
+    }
+  ],
+  "purchase_orders": [
+    {
+      "order_id": "1",
+      "vendor": "TechZone Ltd",
+      "date": "2025-10-03",
+      "item": "Laptop",
+      "quantity": "5",
+      "amount": "25000",
+      "status": "Ordered"
+    },
+    {
+      "order_id": "2",
+      "vendor": "OfficeSupplies Co",
+      "date": "2025-10-04",
+      "item": "Printer Ink",
+      "quantity": "10",
+      "amount": "1500",
+      "status": "Received"
+    }
+  ],
+  "suppliers": [
+    {
+      "name": "TechZone Ltd",
+      "contact_person": "John Phiri",
+      "email": "john.phiri@techzone.com",
+      "phone": "0977000100",
+      "status": "Active"
+    },
+    {
+      "name": "OfficeSupplies Co",
+      "contact_person": "Mary Tembo",
+      "email": "mary.tembo@officesupplies.com",
+      "phone": "0977000200",
+      "status": "Active"
+    }
+  ]
+}

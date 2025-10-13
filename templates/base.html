@@ -59,9 +59,9 @@
             <div class="p-4 font-semibold border-b">Navigation</div>
             <nav class="p-4 space-y-2 text-sm">
                 <a href="{{ url_for('index') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if request.path == '/' %}bg-blue-100{% endif %}">🏠 Dashboard</a>
-                <a href="{{ url_for('asset_overview') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if '/assets' in request.path %}bg-blue-100{% endif %}">💼 Assets</a>
+                <a href="{{ url_for('asset_overview') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if '/assets-overview' in request.path %}bg-blue-100{% endif %}">💼 Assets</a>
                 <a href="{{ url_for('accounting_overview') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if '/accounting' in request.path %}bg-blue-100{% endif %}">📊 Accounting</a>
-                <a href="{{ url_for('sales_overview') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if '/sales' in request.path %}bg-blue-100{% endif %}">📈 Sales</a>
+                <a href="{{ url_for('sales_overview') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if '/sales-overview' in request.path %}bg-blue-100{% endif %}">📈 Sales</a>
                 <a href="{{ url_for('customer_overview') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if '/customer' in request.path %}bg-blue-100{% endif %}">👥 Customers</a>
                 <a href="{{ url_for('finance_overview') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if '/finance' in request.path %}bg-blue-100{% endif %}">💰 Finance</a>
                 <a href="{{ url_for('human_resources_overview') }}" class="block px-3 py-2 rounded hover:bg-blue-50 {% if '/human-resources' in request.path %}bg-blue-100{% endif %}">🧑‍💼 HR</a>

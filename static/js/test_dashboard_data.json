@@ -1,0 +1,63 @@
+{
+  "kpi": {
+    "total_sales": 125000,
+    "total_customers": 42,
+    "inventory_value": 56000,
+    "outstanding_orders": 7
+  },
+  "alerts": [
+    "Low stock: Widget A in Main Warehouse",
+    "Outstanding payment from Beta Ltd",
+    "Pending approval for Purchase Order #12"
+  ],
+  "recent_activity": [
+    "Order ORD-5003 shipped to Acme Corp",
+    "New customer Gamma Inc added",
+    "Inventory received: 50 units of Gadget B",
+    "Payroll processed for October"
+  ],
+  "top_customers": [
+    { "name": "Acme Corp", "total_spent": 32000 },
+    { "name": "Beta Ltd", "total_spent": 21000 },
+    { "name": "Gamma Inc", "total_spent": 18000 },
+    { "name": "Delta PLC", "total_spent": 15000 },
+    { "name": "Zeta Group", "total_spent": 12000 }
+  ],
+  "recent_orders": [
+    { "order_id": "ORD-5003", "customer": "Acme Corp", "total": 3500, "status": "Shipped" },
+    { "order_id": "ORD-5004", "customer": "Beta Ltd", "total": 1200, "status": "Pending" },
+    { "order_id": "ORD-5005", "customer": "Gamma Inc", "total": 2200, "status": "Delivered" }
+  ],
+  "sales_trend_graph": {
+    "data": [
+      {
+        "x": ["2025-10-01", "2025-10-02", "2025-10-03", "2025-10-04", "2025-10-05"],
+        "y": [5000, 7000, 6500, 8000, 9000],
+        "type": "scatter",
+        "mode": "lines+markers",
+        "name": "Sales"
+      }
+    ],
+    "layout": {
+      "title": "Sales Trend (Last 5 Days)",
+      "xaxis": { "title": "Date" },
+      "yaxis": { "title": "Sales Amount" }
+    }
+  },
+  "customers_graph": {
+    "data": [
+      {
+        "labels": ["Acme Corp", "Beta Ltd", "Gamma Inc", "Delta PLC", "Zeta Group"],
+        "values": [32000, 21000, 18000, 15000, 12000],
+        "type": "pie",
+        "name": "Customer Expenditure"
+      }
+    ],
+    "layout": {
+      "title": "Top Customers by Expenditure"
+    }
+  },
+  "current_user": {
+    "username": "admin"
+  }
+}
