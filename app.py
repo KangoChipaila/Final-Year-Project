@@ -143,17 +143,17 @@ def get_accounting_alerts():
 
 def get_accounting_recent_activity():
     return [
-        "Payment of $5,000 made to Acme Corp.",
+        "Payment of K5,000 made to Acme Corp.",
         "Invoice INV-1003 received from Gamma Inc.",
         "Expense report submitted by Alice Banda."
     ]
 
 def get_accounting_summary():
     return [
-        {"label": "Total Revenue", "value": "$120,000"},
-        {"label": "Total Expenses", "value": "$85,000"},
-        {"label": "Net Profit", "value": "$35,000"},
-        {"label": "Outstanding Invoices", "value": "$9,700"}
+        {"label": "Total Revenue", "value": "K120,000"},
+        {"label": "Total Expenses", "value": "K85,000"},
+        {"label": "Net Profit", "value": "K35,000"},
+        {"label": "Outstanding Invoices", "value": "K9,700"}
     ]
 
 def get_cashflow_data():
@@ -315,10 +315,7 @@ def delete_asset(asset_id):
 @app.route("/assets/add", methods=["GET", "POST"])
 @login_required
 def add_asset():
-    """
-    Displays and handles the Add Asset form.
-    Currently stores data in memory (replace with DB insert later).
-    """
+   
     if request.method == "POST":
         name = request.form.get("name")
         category = request.form.get("category")
@@ -463,7 +460,7 @@ def delete_customer(customer_id):
 @app.route('/customer-overview')
 def customer_overview():
     customers = load_customers()    
-    print(type(customers), customers[:2])  # See what you get
+    print(type(customers)) 
     query = request.args.get('query', '')
     selected_status = request.args.get('status', '')
     filtered = [
@@ -475,9 +472,9 @@ def customer_overview():
         {'label': 'Total Customers', 'value': len(customers)},
         {'label': 'Active Customers', 'value': sum(1 for c in customers if c['status'] == 'Active')},
         {'label': 'Inactive Customers', 'value': sum(1 for c in customers if c['status'] == 'Inactive')},
-        # Add more stats as needed
+    
     ]
-    customer_chart_data = {}  # Generate chart data as needed
+    customer_chart_data = {}  
     return render_template('customer-overview.html',
                            customers=filtered,
                            query=query,

@@ -9,13 +9,7 @@
             <h1 class="text-3xl font-bold text-blue-700 tracking-tight">Accounting Overview</h1>
             <p class="text-gray-500 mt-2">Financial summary and insights for your organization</p>
         </div>
-        <div class="flex items-center gap-4">
-            {% if current_user.is_authenticated %}
-                <span class="font-medium text-gray-800">{{ current_user.username }}</span>
-                <img src="{{ url_for('static', filename='images/display picture.jpg') }}"
-                     alt="User Avatar" class="h-10 w-10 rounded-full border border-gray-300">
-            {% endif %}
-        </div>
+        
     </section>
 
     <!-- KPI Summary Cards -->

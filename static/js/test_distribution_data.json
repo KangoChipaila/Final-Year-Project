@@ -4,7 +4,7 @@
       "product": "Widget A",
       "sku": "WGT-A-001",
       "warehouse": "Main Warehouse",
-      "quantity": "120",
+      "quantity": 120,
       "reorder_level": "50",
       "status": "In Stock"
     },
@@ -12,7 +12,7 @@
       "product": "Gadget B",
       "sku": "GDT-B-002",
       "warehouse": "Secondary Warehouse",
-      "quantity": "30",
+      "quantity": 30,
       "reorder_level": "20",
       "status": "Low Stock"
     }
