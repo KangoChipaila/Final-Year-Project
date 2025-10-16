@@ -1,4 +1,4 @@
-[  
+[
   {
     "contact_person": "Jane Doe",
     "email": "jane@acme.com",
@@ -13,6 +13,390 @@
     "id": "2",
     "name": "John Smith",
     "phone": "987-654321",
+    "status": "Inactive"
+  },
+  {
+    "contact_person": "Alice Johnson",
+    "email": "alice.johnson@company.com",
+    "id": "3",
+    "name": "Johnson Supplies",
+    "phone": "555-123456",
+    "status": "Active"
+  },
+  {
+    "contact_person": "Bob Lee",
+    "email": "bob.lee@leeindustries.com",
+    "id": "4",
+    "name": "Lee Industries",
+    "phone": "555-654321",
+    "status": "Inactive"
+  },
+  {
+    "contact_person": "Carol White",
+    "email": "carol.white@whitetech.com",
+    "id": "5",
+    "name": "WhiteTech",
+    "phone": "555-111222",
+    "status": "Active"
+  },
+  {
+    "contact_person": "David Brown",
+    "email": "david.brown@brownenterprises.com",
+    "id": "6",
+    "name": "Brown Enterprises",
+    "phone": "555-333444",
+    "status": "Inactive"
+  },
+  {
+    "contact_person": "Emily Clark",
+    "email": "emily.clark@clarksolutions.com",
+    "id": "7",
+    "name": "Clark Solutions",
+    "phone": "555-555666",
+    "status": "Active"
+  },
+  {
+    "contact_person": "Frank Harris",
+    "email": "frank.harris@harrisgroup.com",
+    "id": "8",
+    "name": "Harris Group",
+    "phone": "555-777888",
+    "status": "Inactive"
+  },
+  {
+    "contact_person": "Grace Lewis",
+    "email": "grace.lewis@lewiscorp.com",
+    "id": "9",
+    "name": "Lewis Corp",
+    "phone": "555-999000",
+    "status": "Active"
+  },
+  {
+    "contact_person": "Henry Walker",
+    "email": "henry.walker@walkerservices.com",
+    "id": "10",
+    "name": "Walker Services",
+    "phone": "555-121314",
+    "status": "Inactive"
+  },
+  {
+    "contact_person": "Irene Hall",
+    "email": "irene.hall@halltech.com",
+    "id": "11",
+    "name": "HallTech",
+    "phone": "555-151617",
+    "status": "Active"
+  },
+  {
+    "contact_person": "Jack Young",
+    "email": "jack.young@younginnovations.com",
+    "id": "12",
+    "name": "Young Innovations",
+    "phone": "555-181920",
+    "status": "Inactive"
+  },
+  {
+    "contact_person": "Karen King",
+    "email": "karen.king@kingenterprises.com",
+    "id": "13",
+    "name": "King Enterprises",
+    "phone": "555-212223",
+    "status": "Active"
+  },
+  {
+    "contact_person": "Larry Scott",
+    "email": "larry.scott@scottgroup.com",
+    "id": "14",
+    "name": "Scott Group",
+    "phone": "555-242526",
+    "status": "Inactive"
+  },
+  {
+    "contact_person": "Mona Adams",
+    "email": "mona.adams@adamscorp.com",
+    "id": "15",
+    "name": "Adams Corp",
+    "phone": "555-272829",
+    "status": "Active"
+  },
+  {
+    "contact_person": "Nate Baker",
+    "email": "nate.baker@bakerindustries.com",
+    "id": "16",
+    "name": "Baker Industries",
+    "phone": "555-303132",
+    "status": "Inactive"
+  },
+  {
+    "contact_person": "Olivia Carter",
+    "email": "olivia.carter@cartertech.com",
+    "id": "17",
+    "name": "CarterTech",
+    "phone": "555-333435",
+    "status": "Active"
+  },
+  {
+    "contact_person": "Paul Evans",
+    "email": "paul.evans@evansgroup.com",
+    "id": "18",
+    "name": "Evans Group",
+    "phone": "555-363738",
+    "status": "Inactive"
+  },
+  {
+    "contact_person": "Quinn Foster",
+    "email": "quinn.foster@fosterenterprises.com",
+    "id": "19",
+    "name": "Foster Enterprises",
+    "phone": "555-394041",
+    "status": "Active"
+  },
+  {
+    "contact_person": "Rachel Green",
+    "email": "rachel.green@greentech.com",
+    "id": "20",
+    "name": "GreenTech",
+    "phone": "555-424344",
+    "status": "Inactive"
+  },
+  {
+    "contact_person": "Sam Hill",
+    "email": "sam.hill@hillgroup.com",
+    "id": "21",
+    "name": "Hill Group",
+    "phone": "555-454647",
+    "status": "Active"
+  },
+  {
+    "contact_person": "Tina Irwin",
+    "email": "tina.irwin@irwinenterprises.com",
+    "id": "22",
+    "name": "Irwin Enterprises",
+    "phone": "555-484950",
+    "status": "Inactive"
+  },
+  {
+    "contact_person": "Uma Jones",
+    "email": "uma.jones@jonestech.com",
+    "id": "23",
+    "name": "JonesTech",
+    "phone": "555-515253",
+    "status": "Active"
+  },
+  {
+    "contact_person": "Victor Knight",
+    "email": "victor.knight@knightgroup.com",
+    "id": "24",
+    "name": "Knight Group",
+    "phone": "555-545556",
+    "status": "Inactive"
+  },
+  {
+    "contact_person": "Wendy Lee",
+    "email": "wendy.lee@leecorp.com",
+    "id": "25",
+    "name": "Lee Corp",
+    "phone": "555-575859",
+    "status": "Active"
+  },
+  {
+    "contact_person": "Xander Moore",
+    "email": "xander.moore@mooreenterprises.com",
+    "id": "26",
+    "name": "Moore Enterprises",
+    "phone": "555-606162",
+    "status": "Inactive"
+  },
+  {
+    "contact_person": "Yara Nelson",
+    "email": "yara.nelson@nelsontech.com",
+    "id": "27",
+    "name": "NelsonTech",
+    "phone": "555-636465",
+    "status": "Active"
+  },
+  {
+    "contact_person": "Zane Owens",
+    "email": "zane.owens@owensgroup.com",
+    "id": "28",
+    "name": "Owens Group",
+    "phone": "555-666768",
+    "status": "Inactive"
+  },
+  {
+    "contact_person": "Amy Parker",
+    "email": "amy.parker@parkerenterprises.com",
+    "id": "29",
+    "name": "Parker Enterprises",
+    "phone": "555-697071",
+    "status": "Active"
+  },
+  {
+    "contact_person": "Ben Quinn",
+    "email": "ben.quinn@quinngroup.com",
+    "id": "30",
+    "name": "Quinn Group",
+    "phone": "555-727374",
+    "status": "Inactive"
+  },
+  {
+    "contact_person": "Cathy Reed",
+    "email": "cathy.reed@reedtech.com",
+    "id": "31",
+    "name": "ReedTech",
+    "phone": "555-757677",
+    "status": "Active"
+  },
+  {
+    "contact_person": "Dan Smith",
+    "email": "dan.smith@smithenterprises.com",
+    "id": "32",
+    "name": "Smith Enterprises",
+    "phone": "555-787980",
+    "status": "Inactive"
+  },
+  {
+    "contact_person": "Ella Taylor",
+    "email": "ella.taylor@taylorgroup.com",
+    "id": "33",
+    "name": "Taylor Group",
+    "phone": "555-818283",
+    "status": "Active"
+  },
+  {
+    "contact_person": "Fred Underwood",
+    "email": "fred.underwood@underwoodtech.com",
+    "id": "34",
+    "name": "UnderwoodTech",
+    "phone": "555-848586",
+    "status": "Inactive"
+  },
+  {
+    "contact_person": "Gina Vance",
+    "email": "gina.vance@vanceenterprises.com",
+    "id": "35",
+    "name": "Vance Enterprises",
+    "phone": "555-878889",
+    "status": "Active"
+  },
+  {
+    "contact_person": "Harry White",
+    "email": "harry.white@whitegroup.com",
+    "id": "36",
+    "name": "White Group",
+    "phone": "555-909192",
+    "status": "Inactive"
+  },
+  {
+    "contact_person": "Isabel Young",
+    "email": "isabel.young@youngtech.com",
+    "id": "37",
+    "name": "YoungTech",
+    "phone": "555-939495",
+    "status": "Active"
+  },
+  {
+    "contact_person": "Jake Zane",
+    "email": "jake.zane@zanecorp.com",
+    "id": "38",
+    "name": "ZaneCorp",
+    "phone": "555-969798",
+    "status": "Inactive"
+  },
+  {
+    "contact_person": "Kara Allen",
+    "email": "kara.allen@allenenterprises.com",
+    "id": "39",
+    "name": "Allen Enterprises",
+    "phone": "555-991001",
+    "status": "Active"
+  },
+  {
+    "contact_person": "Liam Brooks",
+    "email": "liam.brooks@brooksgroup.com",
+    "id": "40",
+    "name": "Brooks Group",
+    "phone": "555-102103",
+    "status": "Inactive"
+  },
+  {
+    "contact_person": "Mia Carter",
+    "email": "mia.carter@carterenterprises.com",
+    "id": "41",
+    "name": "Carter Enterprises",
+    "phone": "555-104105",
+    "status": "Active"
+  },
+  {
+    "contact_person": "Noah Davis",
+    "email": "noah.davis@davisgroup.com",
+    "id": "42",
+    "name": "Davis Group",
+    "phone": "555-106107",
+    "status": "Inactive"
+  },
+  {
+    "contact_person": "Olga Edwards",
+    "email": "olga.edwards@edwardstech.com",
+    "id": "43",
+    "name": "EdwardsTech",
+    "phone": "555-108109",
+    "status": "Active"
+  },
+  {
+    "contact_person": "Peter Foster",
+    "email": "peter.foster@fostergroup.com",
+    "id": "44",
+    "name": "Foster Group",
+    "phone": "555-110111",
+    "status": "Inactive"
+  },
+  {
+    "contact_person": "Quincy Grant",
+    "email": "quincy.grant@grantenterprises.com",
+    "id": "45",
+    "name": "Grant Enterprises",
+    "phone": "555-112113",
+    "status": "Active"
+  },
+  {
+    "contact_person": "Rita Harris",
+    "email": "rita.harris@harristech.com",
+    "id": "46",
+    "name": "HarrisTech",
+    "phone": "555-114115",
+    "status": "Inactive"
+  },
+  {
+    "contact_person": "Steve Irwin",
+    "email": "steve.irwin@irwingroup.com",
+    "id": "47",
+    "name": "Irwin Group",
+    "phone": "555-116117",
+    "status": "Active"
+  },
+  {
+    "contact_person": "Tara Jones",
+    "email": "tara.jones@jonesenterprises.com",
+    "id": "48",
+    "name": "Jones Enterprises",
+    "phone": "555-118119",
+    "status": "Inactive"
+  },
+  {
+    "contact_person": "Uma Kelly",
+    "email": "uma.kelly@kellytech.com",
+    "id": "49",
+    "name": "KellyTech",
+    "phone": "555-120121",
+    "status": "Active"
+  },
+  {
+    "contact_person": "Victor Lee",
+    "email": "victor.lee@leegroup.com",
+    "id": "50",
+    "name": "Lee Group",
+    "phone": "555-122123",
     "status": "Inactive"
   }
 ]

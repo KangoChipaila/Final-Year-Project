@@ -7,13 +7,6 @@
         <h1 class="text-2xl font-bold text-gray-800">Customer Overview</h1>
         <p class="text-gray-500">Manage and analyze your customer base</p>
     </div>
-    <div class="flex items-center space-x-2">
-        {% if current_user.is_authenticated %}
-            <span class="font-medium">{{ current_user.username }}</span>
-            <img src="{{ url_for('static', filename='images/display picture.jpg') }}" 
-                 alt="User Avatar" class="h-10 w-10 rounded-full border">
-        {% endif %}
-    </div>
 </section>
 
 <!-- Summary Metrics -->
@@ -55,47 +48,49 @@
 </form>
 
 <!-- Customer Table -->
-<table class="min-w-full bg-white shadow-md rounded-lg">
-    <thead>
-        <tr class="bg-black text-white text-left">
-            <th class="py-3 px-4">#</th>
-            <th class="py-3 px-4">Name</th>
-            <th class="py-3 px-4">Contact Person</th>
-            <th class="py-3 px-4">Email</th>
-            <th class="py-3 px-4">Phone</th>
-            <th class="py-3 px-4">Status</th>
-            <th class="py-3 px-4">Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for customer in customers %}
-        <tr class="border-b hover:bg-gray-50">
-            <td class="py-2 px-4 font-medium text-gray-700">{{ customer.id }}</td>
-            <td class="py-2 px-4">{{ customer.name }}</td>
-            <td class="py-2 px-4">{{ customer.contact_person }}</td>
-            <td class="py-2 px-4"><a href="mailto:{{ customer.email }}" class="hover:text-blue-500">{{ customer.email }}</a></td>
-            <td class="py-2 px-4">{{ customer.phone }}</td>
-            <td class="py-2 px-4">
-                {% if customer.status == "Active" %}
-                    <span class="text-green-700 font-semibold">{{ customer.status }}</span>
-                {% else %}
-                    <span class="text-red-600 font-semibold">{{ customer.status }}</span>
-                {% endif %}
-            </td>
-            <td class="py-2 px-4 flex space-x-3">
-                <a href="{{ url_for('edit_customer', customer_id=customer.id) }}" class="text-blue-600 hover:underline">Edit</a>
-                <form action="{{ url_for('delete_customer', customer_id=customer.id) }}" method="POST" onsubmit="return confirmDelete('{{ customer.name }}');">
-                    <button type="submit" class="text-red-600 hover:underline">Delete</button>
-                </form>
-            </td>
-        </tr>
-        {% else %}
-        <tr>
-            <td colspan="7" class="text-center py-4 text-gray-500">No customers found.</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class = "h-100 overflow-y-auto">
+    <table class="min-w-full bg-white shadow-md rounded-lg overflow-y-auto">
+        <thead>
+            <tr class="bg-black text-white text-left">
+                <th class="py-3 px-4">#</th>
+                <th class="py-3 px-4">Name</th>
+                <th class="py-3 px-4">Contact Person</th>
+                <th class="py-3 px-4">Email</th>
+                <th class="py-3 px-4">Phone</th>
+                <th class="py-3 px-4">Status</th>
+                <th class="py-3 px-4">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for customer in customers %}
+            <tr class="border-b hover:bg-gray-50">
+                <td class="py-2 px-4 font-medium text-gray-700">{{ customer.id }}</td>
+                <td class="py-2 px-4">{{ customer.name }}</td>
+                <td class="py-2 px-4">{{ customer.contact_person }}</td>
+                <td class="py-2 px-4"><a href="mailto:{{ customer.email }}" class="hover:text-blue-500">{{ customer.email }}</a></td>
+                <td class="py-2 px-4">{{ customer.phone }}</td>
+                <td class="py-2 px-4">
+                    {% if customer.status == "Active" %}
+                        <span class="text-green-700 font-semibold">{{ customer.status }}</span>
+                    {% else %}
+                        <span class="text-red-600 font-semibold">{{ customer.status }}</span>
+                    {% endif %}
+                </td>
+                <td class="py-2 px-4 flex space-x-3">
+                    <a href="{{ url_for('edit_customer', customer_id=customer.id) }}" class="text-blue-600 hover:underline">Edit</a>
+                    <form action="{{ url_for('delete_customer', customer_id=customer.id) }}" method="POST" onsubmit="return confirmDelete('{{ customer.name }}');">
+                        <button type="submit" class="text-red-600 hover:underline">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="text-center py-4 text-gray-500">No customers found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 
 <!-- Customer Analytics Chart -->
 <section class="bg-white rounded-lg shadow-md p-6 mt-8">

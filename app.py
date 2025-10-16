@@ -293,20 +293,15 @@ def edit_asset(asset_id):
 @app.route("/assets/delete/<int:asset_id>", methods=["POST"])
 @login_required
 def delete_asset(asset_id):
-    """
-    Deletes an asset from the in-memory list (temporary storage).
-    In production, this would delete from the database.
-    """
+   
     global assets_data
 
-    # Find asset by ID
     asset = next((a for a in assets_data if a["id"] == asset_id), None)
 
     if not asset:
         flash("Asset not found.", "error")
         return redirect(url_for("asset_overview"))
 
-    # Remove the asset
     assets_data = [a for a in assets_data if a["id"] != asset_id]
 
     flash(f"Asset '{asset['name']}' deleted successfully!", "success")
@@ -402,14 +397,14 @@ def generate_barcode():
 
     return jsonify({'barcode_url': f"/static/barcodes/{asset_id}.png"})
 
-DATA_FILE = 'static/js/test_customer_data.json'
+CUSTOMER_DATA_FILE = 'static/js/test_customer_data.json'
 
 def load_customers():
-    with open(DATA_FILE, 'r') as f:
+    with open(CUSTOMER_DATA_FILE, 'r') as f:
         return json.load(f)
 
 def save_customers(customers):
-    with open(DATA_FILE, 'w') as f:
+    with open(CUSTOMER_DATA_FILE, 'w') as f:
         json.dump(customers, f, indent=2)
 
 @app.route('/add_customer', methods=['GET', 'POST'])
@@ -460,13 +455,13 @@ def delete_customer(customer_id):
 @app.route('/customer-overview')
 def customer_overview():
     customers = load_customers()    
-    print(type(customers)) 
+    print(type(customers[0])) 
     query = request.args.get('query', '')
     selected_status = request.args.get('status', '')
     filtered = [
         c for c in customers
-        if (query.lower() in c['name'].lower()) and
-           (selected_status == '' or c['status'] == selected_status)
+        if (query.lower() in c.get('name', '').lower()) and
+           (selected_status == '' or c.get('status', '') == selected_status)
     ]
     customer_summary = [
         {'label': 'Total Customers', 'value': len(customers)},
@@ -565,14 +560,14 @@ def receive_inventory():
         return redirect(url_for('distribution_overview'))
     return render_template('receive_inventory.html')
 
-DATA_FILE = 'static/js/test_finance_data.json'
+FINANCE_DATA_FILE = 'static/js/test_finance_data.json'
 
 def load_finance():
-    with open(DATA_FILE, 'r') as f:
+    with open(FINANCE_DATA_FILE, 'r') as f:
         return json.load(f)
 
 def save_finance(data):
-    with open(DATA_FILE, 'w') as f:
+    with open(FINANCE_DATA_FILE, 'w') as f:
         json.dump(data, f, indent=2)
 
 @app.route('/finance-overview')
@@ -667,7 +662,6 @@ def generate_report():
         outstanding_payments=outstanding_payments
     )
 
-# ...existing imports and setup...
 
 HR_DATA_FILE = 'static/js/test_hr_data.json'
 
@@ -1039,7 +1033,7 @@ def upload_to_hadoop():
     if sales_data_file:
         filename = secure_filename(sales_data_file.filename)
         
-        # Use os.path.join correctly to create a valid local path for the OS
+        
         temp_dir = os.path.abspath(os.sep) + 'tmp' 
         if not os.path.exists(temp_dir):
             os.makedirs(temp_dir)
