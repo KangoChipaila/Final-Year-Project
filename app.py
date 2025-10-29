@@ -12,9 +12,35 @@ import subprocess
 from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user, login_required
 from datetime import datetime
 import pdfkit
+from sqlalchemy import text
+from sqlalchemy.exc import OperationalError, DataError
+from flask_migrate import Migrate
+
+
+# new: import models and DB helpers
+from models import (
+    db, register_extensions,
+    Customer, Employee,
+    InventoryItem, Shipment,
+    PurchaseRequest, PurchaseOrder, Supplier,
+    ProductionOrder, BillOfMaterials, WorkCenter,
+    Asset, SalesOrder, SalesForecast, Payment, User
+)
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"  # Replace with a real secret key
+
+# configure SQLAlchemy (use env var or fallback)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+    'DATABASE_URL',
+    'postgresql://postgres:kango@localhost:5432/Final-Year-Project'
+)
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# initialize DB extensions
+register_extensions(app)
+migrate = Migrate(app, db)
+
 
 config = pdfkit.configuration(wkhtmltopdf=r'C:\Progra~1\wkhtmltopdf\bin\wkhtmltopdf.exe')
 
@@ -34,14 +60,39 @@ class User(UserMixin):
         self.id = id
         self.username = username
 
+
 @login_manager.user_loader
 def load_user(user_id):
-    # In a real app, query your users table here
-    for username in USERS:
-        if username == user_id:
-            return User(user_id, username)
-    return None
+    """
+    Load a user by id. First try numeric-id lookup in DB, if user_id is non-numeric
+    try username lookup. If the DB isn't available or the query fails due to schema
+    mismatch, fall back to the in-memory USERS dict.
+    """
+    try:
+        # if user_id looks like an integer, query by id (safe for integer PKs)
+        try:
+            uid = int(user_id)
+            row = db.session.execute(
+                text("SELECT id, username FROM users WHERE id = :id LIMIT 1"),
+                {"id": uid}
+            ).fetchone()
+        except (ValueError, TypeError):
+            # not an integer — try username-based lookup
+            row = db.session.execute(
+                text("SELECT id, username FROM users WHERE username = :username LIMIT 1"),
+                {"username": user_id}
+            ).fetchone()
 
+        if row:
+            return User(id=str(row[0]), username=row[1])
+    except (OperationalError, DataError):
+        # DB not ready or wrong parameter type — fall back to in-memory users
+        pass
+
+    # fallback: check in-memory USERS (ids here are usernames)
+    if user_id in USERS:
+        return User(id=user_id, username=user_id)
+    return None
 # ------------------- Context Processor (for base.html) -------------------
 @app.context_processor
 def inject_globals():
@@ -55,16 +106,41 @@ def inject_globals():
 # ------------------- Login Route -------------------
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    """
+    Login will first attempt to authenticate against a 'users' table in the DB
+    (expected columns: id, username, password). If the table is not available,
+    it will fall back to the in-memory USERS dict.
+    Note: storing plaintext passwords in DB is insecure; use hashed passwords in production.
+    """
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
 
-        user = USERS.get(username)
-        if user and user["password"] == password:
-            login_user(User(id=username, username=username))
-            return redirect(url_for("index"))
-        else:
-            return render_template("login.html", error="Invalid username or password")
+        # Try DB authentication
+        try:
+            row = db.session.execute(
+                text("SELECT id, username, password FROM users WHERE username = :username LIMIT 1"),
+                {"username": username}
+            ).fetchone()
+            if row:
+                db_id, db_username, db_password = row[0], row[1], row[2]
+                # NOTE: if passwords are hashed in your DB use a proper hash check here.
+                if db_password == password:
+                    login_user(User(id=str(db_id), username=db_username))
+                    return redirect(url_for("index"))
+                else:
+                    return render_template("login.html", error="Invalid username or password")
+        except OperationalError:
+            # DB not available or table missing: fall back to in-memory users
+            user = USERS.get(username)
+            if user and user["password"] == password:
+                login_user(User(id=username, username=username))
+                return redirect(url_for("index"))
+            else:
+                return render_template("login.html", error="Invalid username or password")
+
+        # If query ran but no matching row
+        return render_template("login.html", error="Invalid username or password")
 
     return render_template("login.html")
 
@@ -101,6 +177,7 @@ def load_dashboard_data():
         return json.load(f)
 
 @app.route('/')
+@login_required
 def index():
     data = load_dashboard_data()
     kpi = data.get('kpi', {})
@@ -1069,4 +1146,38 @@ def upload_to_hadoop():
         return 'File successfully uploaded and processed'
 
 if __name__ == '__main__':
+    # Ensure DB tables exist (create missing tables from models.py)
+    try:
+        with app.app_context():
+            db.create_all()
+
+            # seed a default admin user if no users exist
+            try:
+                if 'User' in globals() and User is not None:
+                    user_count = db.session.query(User).count()
+                    if user_count == 0:
+                        admin = User(
+                            username='admin',
+                            email='admin@example.com',
+                            full_name='Administrator',
+                            group_id=0,
+                            role='admin',
+                            is_active=True
+                        )
+                        # prefer model's password helper if available
+                        if hasattr(admin, 'set_password'):
+                            admin.set_password('admin123')
+                        else:
+                            # fallback: set a plaintext-ish field if model uses password_hash
+                            if hasattr(admin, 'password_hash'):
+                                setattr(admin, 'password_hash', 'admin123')
+                        db.session.add(admin)
+                        db.session.commit()
+                        print("Created default admin user (username=admin, password=admin123). Change immediately.")
+            except Exception as seed_err:
+                print("Warning: could not seed admin user:", seed_err)
+
+    except OperationalError as e:
+        print("Database not available, skipping automatic table creation:", e)
+
     app.run(debug=True)
