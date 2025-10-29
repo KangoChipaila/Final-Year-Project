@@ -42,6 +42,13 @@
             </button>
         </form>
 
+        <p class="text-center mt-4">
+            Don't have an account? 
+            <a href="{{ url_for('signup') }}" class="text-blue-700 hover:underline font-medium">
+                Sign up
+            </a>
+        </p>
+
         <p class="text-center text-gray-500 text-sm mt-6">
             &copy; {{ current_year if current_year else "2025" }} Data-Driven ERP System
         </p>
