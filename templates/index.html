@@ -10,10 +10,6 @@
                 <h1 class="text-3xl font-bold text-blue-700 tracking-tight">ERP Dashboard</h1>
                 <p class="text-gray-500 mt-2">Welcome to your business overview</p>
             </div>
-            <div class="flex items-center gap-4">
-                <span class="text-gray-700 font-semibold">{{ current_user.username if current_user else "USERNAME" }}</span>
-                <img class="rounded-full w-10 h-10 border border-gray-300" src="{{ url_for('static', filename='images/display picture.jpg') }}" alt="user-display-image" />
-            </div>
         </section>
 
         <!-- KPI Summary Cards -->

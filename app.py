@@ -57,11 +57,15 @@ class AuthUser(UserMixin):
         # Flask-Login expects get_id() to return a string
         self.id = str(getattr(model, "id", ""))
         self.username = getattr(model, "username", None)
-        self.is_active = bool(getattr(model, "is_active", True))
 
     @property
     def model(self):
         return self._model
+
+    @property
+    def is_active(self):
+        # return model's is_active flag (default True) without setting an attribute
+        return bool(getattr(self._model, "is_active", True))
 
 # simple fallback in-memory user wrapper (for development)
 class FallbackUser:
@@ -159,6 +163,7 @@ def signup():
         except Exception as e:
             # generic error (validation / schema mismatch)
             flash("Failed to create account.", "error")
+            flash(e.message())
             return redirect(url_for("signup"))
 
     return render_template("signup.html")
@@ -249,7 +254,7 @@ def load_dashboard_data():
         return json.load(f)
 
 @app.route('/')
-#@login_required
+@login_required
 def index():
     data = load_dashboard_data()
     kpi = data.get('kpi', {})
@@ -264,7 +269,6 @@ def index():
     order_status_graph = data.get('order_status_graph', {'data': [], 'layout': {}})
     revenue_expenses_graph = data.get('revenue_expenses_graph', {'data': [], 'layout': {}})
     employee_status_graph = data.get('employee_status_graph', {'data': [], 'layout': {}})
-    current_user = data.get('current_user', {'username': 'USERNAME'})
     return render_template(
         'index.html',
         kpi=kpi,
@@ -278,8 +282,7 @@ def index():
         inventory_status_graph=inventory_status_graph,
         order_status_graph=order_status_graph,
         revenue_expenses_graph=revenue_expenses_graph,
-        employee_status_graph=employee_status_graph,
-        current_user=current_user
+        employee_status_graph=employee_status_graph
     )
 
 # Example mock data (replace with database queries)
