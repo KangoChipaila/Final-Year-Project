@@ -9,12 +9,34 @@
             <h1 class="text-3xl font-bold text-blue-700 tracking-tight">Asset Overview</h1>
             <p class="text-gray-500 mt-2">Manage and track your company assets efficiently</p>
         </div>
-        <a href="{{ url_for('add_asset') }}"
-           class="bg-green-700 text-white px-5 py-2 rounded-xl font-semibold shadow hover:bg-green-800 transition">
-           + Add Asset
-        </a>
     </section>
 
+    <section>
+        <div class="flex justify-end items-center gap-3 mb-8">
+            <a href="{{ url_for('add_asset') }}"
+               class="bg-green-700 text-white px-5 py-2 rounded-xl font-semibold shadow hover:bg-green-800 transition">
+               + Add Asset
+            </a>
+
+            <!-- Asset Upload Title + CSV Upload Form -->
+            <div class="flex flex-col items-start gap-2">
+                <div class="text-sm font-semibold text-gray-700">Import Assets (CSV)</div>
+
+                <form action="{{ url_for('assets_upload.upload_assets') }}" method="POST" enctype="multipart/form-data"
+                      class="bg-white rounded-xl p-2 shadow border border-gray-200 flex items-center gap-2">
+                    <input type="file" name="csv_file" accept=".csv" required
+                           class="text-sm file:bg-blue-700 file:text-white file:py-1 file:px-3 file:rounded-md file:border-none" />
+                    <button type="submit"
+                            class="bg-blue-700 text-white px-3 py-1 rounded-lg font-semibold hover:bg-blue-800 transition text-sm">
+                        Upload Asset via CSV
+                    </button>
+                </form>
+
+                <a href="{{ url_for('assets_upload.download_sample_csv') }}" class="text-sm text-gray-600 hover:underline">Download sample CSV</a>
+            </div>
+        </div>
+    </section>
+    
     <!-- Alerts & Notifications (example) -->
     {% if alerts %}
     <section class="mb-8">
@@ -69,21 +91,26 @@
     </form>
 
     <!-- Asset Table -->
-    <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
-        <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-semibold text-gray-700">Assets List</h2>
-            <span class="text-gray-500 text-sm">Total: {{ assets|length }}</span>
+    <div class="bg-white h-95 overflow-y-scroll rounded-xl shadow-lg border border-gray-200 px-6 py-0 mb-8">
+        <!-- Make title + total sticky inside the scrollable container -->
+        <div class="sticky mt-0 top-0 z-30 rounded-lg bg-white/95 backdrop-blur-sm -mx-6 px-6 py-4 mb-4">
+            <div class="flex justify-between rounded-sm items-center">
+                <h2 class="text-xl font-semibold text-gray-700">Asset List</h2>
+                <span class="text-gray-500 text-sm">Total: {{ assets|length }}</span>
+            </div>
         </div>
+
         <table class="min-w-full bg-white rounded-lg">
             <thead>
-                <tr class="bg-blue-700 text-white text-left">
-                    <th class="py-3 px-4 rounded-tl-lg">#</th>
-                    <th class="py-3 px-4">Name</th>
-                    <th class="py-3 px-4">Category</th>
-                    <th class="py-3 px-4">Purchase Date</th>
-                    <th class="py-3 px-4">Value (USD)</th>
-                    <th class="py-3 px-4">Status</th>
-                    <th class="py-3 px-4 rounded-tr-lg">Actions</th>
+                <tr class="text-white text-left">
+                    <!-- offset table header so it sits below the sticky title (64px) -->
+                    <th class="sticky top-[64px] z-20 bg-blue-700 py-3 px-4 rounded-tl-lg">#</th>
+                    <th class="sticky top-[64px] z-20 bg-blue-700 py-3 px-4">Name</th>
+                    <th class="sticky top-[64px] z-20 bg-blue-700 py-3 px-4">Category</th>
+                    <th class="sticky top-[64px] z-20 bg-blue-700 py-3 px-4">Purchase Date</th>
+                    <th class="sticky top-[64px] z-20 bg-blue-700 py-3 px-4">Value (ZMW)</th>
+                    <th class="sticky top-[64px] z-20 bg-blue-700 py-3 px-4">Status</th>
+                    <th class="sticky top-[64px] z-20 bg-blue-700 py-3 px-4 rounded-tr-lg">Actions</th>
                 </tr>
             </thead>
             <tbody>

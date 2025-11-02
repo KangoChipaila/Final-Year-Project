@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Admin — Account Control{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto bg-white rounded-xl shadow p-6">
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-xl font-bold text-blue-700">Account Control</h2>
+    <a href="{{ url_for('index') }}" class="text-sm text-gray-600 hover:underline">Back to dashboard</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="space-y-2 mb-4">
+        {% for category, message in messages %}
+          <div class="px-4 py-3 rounded text-sm {% if category in ['error','danger'] %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- Create user form -->
+  <div class="mb-6 border rounded p-4 bg-gray-50">
+    <h3 class="font-semibold mb-3">Create new user</h3>
+    <form method="post" action="{{ url_for('admin_create_user') }}" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div>
+        <label class="block text-sm text-gray-700">Username</label>
+        <input name="username" required class="w-full border rounded p-2" />
+      </div>
+      <div>
+        <label class="block text-sm text-gray-700">Email</label>
+        <input name="email" type="email" class="w-full border rounded p-2" />
+      </div>
+      <div>
+        <label class="block text-sm text-gray-700">Full name</label>
+        <input name="full_name" class="w-full border rounded p-2" />
+      </div>
+      <div>
+        <label class="block text-sm text-gray-700">Password</label>
+        <input name="password" type="password" required class="w-full border rounded p-2" />
+      </div>
+
+      <div>
+        <label class="block text-sm text-gray-700">Group</label>
+        <select name="group_id" class="w-full border rounded p-2">
+          {% for gid, gname in groups.items() %}
+            <option value="{{ gid }}">{{ gname }} ({{ gid }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm text-gray-700">Role</label>
+        <select name="role" class="w-full border rounded p-2">
+          {% for r in roles %}
+            <option value="{{ r }}">{{ r | replace('_', ' ') | upper }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="flex items-center gap-2 mt-2">
+        <label class="inline-flex items-center gap-2">
+          <input type="checkbox" name="is_active" checked class="form-checkbox" />
+          <span class="text-sm">Active</span>
+        </label>
+      </div>
+
+      <div class="sm:col-span-2 text-right">
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-800">Create user</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Existing user list (editable rows) -->
+  <div class="overflow-x-auto">
+    <table class="w-full table-auto border-collapse">
+      <thead>
+        <tr class="text-left text-sm text-gray-600 border-b">
+          <th class="py-2 px-3">ID</th>
+          <th class="py-2 px-3">Username</th>
+          <th class="py-2 px-3">Email</th>
+          <th class="py-2 px-3">Group</th>
+          <th class="py-2 px-3">Role</th>
+          <th class="py-2 px-3">Active</th>
+          <th class="py-2 px-3">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr class="border-b hover:bg-gray-50">
+          <td class="py-2 px-3 text-sm">{{ u.id }}</td>
+          <td class="py-2 px-3 text-sm">{{ u.username }}</td>
+          <td class="py-2 px-3 text-sm">{{ u.email or '' }}</td>
+          <td class="py-2 px-3 text-sm">
+            <form method="post" action="{{ url_for('admin_update_user', user_id=u.id) }}" class="flex items-center gap-2">
+              <select name="group_id" class="border rounded p-1 text-sm">
+                {% for gid, gname in groups.items() %}
+                  <option value="{{ gid }}" {% if (u.group_id is defined and u.group_id == gid) %}selected{% endif %}>{{ gname }} ({{ gid }})</option>
+                {% endfor %}
+              </select>
+          </td>
+          <td class="py-2 px-3 text-sm">
+              <select name="role" class="border rounded p-1 text-sm">
+                {% for r in roles %}
+                  <option value="{{ r }}" {% if (u.role is defined and u.role == r) %}selected{% endif %}>{{ r | replace('_', ' ') | upper }}</option>
+                {% endfor %}
+              </select>
+          </td>
+          <td class="py-2 px-3 text-sm">
+              <label class="inline-flex items-center">
+                <input type="checkbox" name="is_active" {% if (u.is_active is defined and u.is_active) or (u.is_active is not defined) %}checked{% endif %} class="form-checkbox">
+              </label>
+          </td>
+          <td class="py-2 px-3 text-sm">
+              <button type="submit" class="bg-blue-600 text-white px-3 py-1 rounded text-sm">Save</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="mt-6 text-sm text-gray-600">
+    <strong>Notes:</strong>
+    <ul class="list-disc ml-5 mt-2">
+      <li>Group IDs: Administrator = 0, User = 1, plus additional groups listed in the selector.</li>
+      <li>Suggested roles: pending user, admin, manager, finance, hr, it, logistics.</li>
+    </ul>
+  </div>
+</div>
+{% endblock %}

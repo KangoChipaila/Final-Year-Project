@@ -2,7 +2,7 @@ from flask import Flask, render_template, jsonify, Response, send_file, request,
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
 from werkzeug.utils import secure_filename
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import generate_password_hash
 import analytics
 import asset_upload_module
 import asset_functions
@@ -16,6 +16,8 @@ import pdfkit
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError, DataError
 from flask_migrate import Migrate
+from routes.assets_upload import bp as assets_upload_bp
+
 
 
 # new: import models and DB helpers
@@ -31,10 +33,16 @@ from models import (
 app = Flask(__name__)
 app.secret_key = "supersecretkey"  # Replace with a real secret key
 
+app.register_blueprint(assets_upload_bp)
+
 # configure SQLAlchemy (use env var or fallback)
+username = 'postgres'
+password = 'kango'
+directory = 'Final-Year-Project'
+
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
     'DATABASE_URL',
-    'postgresql://postgres:kango@localhost:5432/Final-Year-Project'
+    f'postgresql://{username}:{password}@localhost:5432/{directory}'
 )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -112,61 +120,80 @@ def load_user(user_id):
         return AuthUser(FallbackUser(user_id))
     return None"""
 
-# ------------------- Signup Route -------------------
-@app.route("/signup", methods=["GET", "POST"])
-def signup():
-    """
-    Simple signup page that creates a new User row (if DB available).
-    Expects form fields: username, password, (optional) email.
-    """
-    if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "")
-        email = request.form.get("email", None)
+# ------------------- Admin: Create user -------------------
+@app.route("/admin/users/create", methods=["POST"])
+@login_required
+def admin_create_user():
+    # only allow administrators (role == 'admin' or group_id == 0)
+    model = getattr(current_user, "model", None)
+    is_admin = bool(model and (getattr(model, "role", None) == "admin" or getattr(model, "group_id", None) == 0))
+    if not is_admin:
+        return render_template("403.html"), 403
 
-        if not username or not password:
-            flash("Please provide a username and password.", "error")
-            return redirect(url_for("signup"))
+    username = request.form.get("username", "").strip()
+    password = request.form.get("password", "")
+    email = request.form.get("email", "")
+    full_name = request.form.get("full_name", "")
+    role = request.form.get("role", "pending_user")
+    group_id_raw = request.form.get("group_id", "1")
+    is_active = request.form.get("is_active") == "on"
 
-        # Try to create user in DB
+    if not username or not password:
+        flash("Username and password are required.", "error")
+        return redirect(url_for("admin_users"))
+
+    try:
+        # ensure username unique
+        existing = db.session.query(User).filter_by(username=username).first()
+        if existing:
+            flash("Username already exists.", "error")
+            return redirect(url_for("admin_users"))
+
+        new_user = User(username=username)
+
+        # optional fields if model supports them
+        if hasattr(new_user, "email"):
+            setattr(new_user, "email", email)
+        if hasattr(new_user, "full_name"):
+            setattr(new_user, "full_name", full_name)
+
+        # group_id
         try:
-            # Ensure username not already taken
-            existing = db.session.query(User).filter_by(username=username).first()
-            if existing:
-                flash("Username already taken.", "error")
-                return redirect(url_for("signup"))
+            gid = int(group_id_raw)
+            setattr(new_user, "group_id", gid)
+        except Exception:
+            setattr(new_user, "group_id", group_id_raw)
 
-            new_user = User(username=username)
-           # Prefer model helper methods for password handling
-            if hasattr(new_user, "set_password"):
-                new_user.set_password(password)
+        # role
+        if hasattr(new_user, "role"):
+            setattr(new_user, "role", role)
+
+        # password (prefer model helper)
+        if hasattr(new_user, "set_password"):
+            new_user.set_password(password)
+        else:
+            if hasattr(new_user, "password_hash"):
+                setattr(new_user, "password_hash", generate_password_hash(password))
+            elif hasattr(new_user, "password"):
+                setattr(new_user, "password", generate_password_hash(password))
             else:
-                # always store a hashed password
-                if hasattr(new_user, "password_hash"):
-                    setattr(new_user, "password_hash", generate_password_hash(password))
-                elif hasattr(new_user, "password"):
-                    setattr(new_user, "password", generate_password_hash(password))
-                else:
-                    # fallback: add attribute password_hash
-                    setattr(new_user, "password_hash", generate_password_hash(password))
+                setattr(new_user, "password_hash", generate_password_hash(password))
 
-            db.session.add(new_user)
-            db.session.commit()
+        # is_active
+        if hasattr(new_user, "is_active"):
+            setattr(new_user, "is_active", bool(is_active))
+        else:
+            setattr(new_user, "is_active", bool(is_active))
 
-            login_user(AuthUser(new_user))
-            flash("Account created and logged in.", "success")
-            return redirect(url_for("index"))
-
-        except (OperationalError, DataError) as e:
-            flash("Database unavailable. Cannot create account right now.", "error")
-            return redirect(url_for("signup"))
-        except Exception as e:
-            # generic error (validation / schema mismatch)
-            flash("Failed to create account.", "error")
-            flash(e.message())
-            return redirect(url_for("signup"))
-
-    return render_template("signup.html")
+        db.session.add(new_user)
+        db.session.commit()
+        flash(f"User '{username}' created.", "success")
+    except Exception as e:
+        db.session.rollback()
+        app.logger.exception("Admin create user failed")
+        flash("Failed to create user.", "error")
+        flash(str(e))
+    return redirect(url_for("admin_users"))
 
 # ------------------- Login Route (use DB model when available) -------------------
 @app.route("/login", methods=["GET", "POST"])
@@ -498,28 +525,54 @@ def add_asset():
 @login_required
 def asset_overview():
     # Get search and filter parameters from URL
-    query = request.args.get("query", "").lower()
+    query = request.args.get("query", "").strip()
     category = request.args.get("category", "")
     status = request.args.get("status", "")
 
-    # Filter the assets based on user input
-    filtered_assets = assets_data
+    try:
+        # Query Postgres via SQLAlchemy Asset model
+        q = db.session.query(Asset)
 
-    if query:
-        filtered_assets = [a for a in filtered_assets if query in a["name"].lower()]
+        if query:
+            q = q.filter(Asset.name.ilike(f"%{query}%"))
 
-    if category:
-        filtered_assets = [a for a in filtered_assets if a["category"] == category]
+        if category:
+            q = q.filter(Asset.category == category)
 
-    if status:
-        filtered_assets = [a for a in filtered_assets if a["status"] == status]
+        if status:
+            # assume Asset has a 'status' column; adjust if different
+            q = q.filter(Asset.status == status)
 
-    # Build unique category list for the dropdown filter
-    categories = sorted(list(set([a["category"] for a in assets_data])))
+        assets_rows = q.order_by(Asset.id).all()
+
+        # Convert model objects to dicts to match existing template expectations
+        def asset_to_dict(a):
+            purchase_date = getattr(a, "purchase_date", None)
+            if hasattr(purchase_date, "isoformat"):
+                purchase_date = purchase_date.isoformat()
+            return {
+                "id": getattr(a, "id", None),
+                "name": getattr(a, "name", "") or "",
+                "category": getattr(a, "category", "") or "",
+                "purchase_date": purchase_date or "",
+                "value": float(getattr(a, "value", 0) or 0),
+                "depreciation_rate": float(getattr(a, "depreciation_rate", 0) or 0),
+                "status": getattr(a, "status", "") or ""
+            }
+
+        assets = [asset_to_dict(a) for a in assets_rows]
+        categories = sorted({a["category"] for a in assets if a["category"]})
+
+    except Exception as exc:
+        app.logger.exception("Failed to load assets from DB, falling back to in-memory list")
+        flash("Could not load assets from database. Showing in-memory data.", "warning")
+        # fallback to previous in-memory list (assets_data)
+        assets = assets_data
+        categories = sorted(list(set([a["category"] for a in assets])))
 
     return render_template(
         "assets-overview.html",
-        assets=filtered_assets,
+        assets=assets,
         categories=categories,
         query=query,
         selected_category=category,
@@ -1219,6 +1272,85 @@ def upload_to_hadoop():
         os.remove(temp_local_path)
 
         return 'File successfully uploaded and processed'
+
+# Define available groups and roles (add more groups here as needed)
+GROUPS = {
+    0: "Administrator",
+    1: "Pending User",
+    2: "Manager",
+    3: "Finance",
+    4: "HR",
+    5: "IT",
+    6: "Warehouse/Logistics"
+}
+
+# replace roles list so "user" becomes "pending_user"
+ROLES = ["pending_user", "admin", "manager", "finance", "hR", "iT", "logistics"]
+
+@app.route("/admin/users")
+@login_required
+def admin_users():
+    # allow only admin (role == 'admin' or group_id == 0)
+    model = getattr(current_user, "model", None)
+    is_admin = bool(model and (getattr(model, "role", None) == "admin" or getattr(model, "group_id", None) == 0))
+    if not is_admin:
+        return render_template("403.html"), 403
+
+    users = db.session.query(User).order_by(User.id).all()
+    return render_template("admin-users.html", users=users, groups=GROUPS, roles=ROLES)
+
+@app.route("/admin/users/<int:user_id>/update", methods=["POST"])
+@login_required
+def admin_update_user(user_id):
+    model = getattr(current_user, "model", None)
+    is_admin = bool(model and (getattr(model, "role", None) == "admin" or getattr(model, "group_id", None) == 0))
+    if not is_admin:
+        return render_template("403.html"), 403
+
+    user = db.session.get(User, user_id)
+    if not user:
+        flash("User not found.", "error")
+        return redirect(url_for("admin_users"))
+
+    try:
+        # Validate and set group_id
+        group_id_raw = request.form.get("group_id")
+        if group_id_raw is not None and group_id_raw != "":
+            try:
+                group_id = int(group_id_raw)
+                if group_id not in GROUPS:
+                    raise ValueError("Invalid group id")
+                setattr(user, "group_id", group_id)
+            except ValueError:
+                flash("Invalid group selected.", "error")
+                return redirect(url_for("admin_users"))
+
+        # Validate and set role
+        role = request.form.get("role")
+        if role:
+            if role not in ROLES:
+                flash("Invalid role selected.", "error")
+                return redirect(url_for("admin_users"))
+            setattr(user, "role", role)
+
+        # is_active checkbox
+        is_active = request.form.get("is_active") == "on"
+        # Some models may use boolean column or attribute name; handle both
+        if hasattr(user, "is_active"):
+            setattr(user, "is_active", bool(is_active))
+        else:
+            setattr(user, "is_active", bool(is_active))
+
+        db.session.add(user)
+        db.session.commit()
+        flash(f"Updated {getattr(user, 'username', 'user')}.", "success")
+    except Exception as e:
+        db.session.rollback()
+        app.logger.exception("Failed to update user")
+        flash("Failed to update user.", "error")
+        flash(str(e))
+
+    return redirect(url_for("admin_users"))
 
 if __name__ == '__main__':
      # Ensure DB tables exist (create missing tables from models.py)

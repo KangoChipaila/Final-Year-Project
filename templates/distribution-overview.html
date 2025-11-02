@@ -9,10 +9,6 @@
             <h1 class="text-3xl font-bold text-blue-700 tracking-tight">Distribution Overview</h1>
             <p class="text-gray-500 mt-2">Track inventory, shipments, and orders across your network</p>
         </div>
-        <div class="flex items-center gap-4">
-            <span class="font-semibold text-gray-700">{{ current_user.username if current_user else "USERNAME" }}</span>
-            <img class="rounded-full w-10 h-10 border border-gray-300" src="{{ url_for('static', filename='images/display picture.jpg') }}" alt="user-display-image" />
-        </div>
     </section>
 
     <!-- KPI Cards -->

@@ -74,6 +74,27 @@
                     <a href="{{ url_for('finance_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/finance' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
                         <span>💰</span> <span>Finance</span>
                     </a>
+
+                    {# Admin link: visible only for admin users (role == 'admin' or group_id == 0) #}
+                    {% set is_admin = false %}
+                    {% if current_user.is_authenticated %}
+                      {% set cu_model = current_user.model | default(None) %}
+                      {% if cu_model %}
+                        {% if (cu_model.role | default('')) == 'admin' or (cu_model.group_id | default(-1)) == 0 %}
++                          {% set is_admin = true %}
+                        {% endif %}
+                      {% else %}
+                        {% if (current_user.role | default('')) == 'admin' or (current_user.group_id | default(-1)) == 0 %}
++                          {% set is_admin = true %}
+                        {% endif %}
+                      {% endif %}
+                    {% endif %}
+
+                    {% if is_admin %}
+                    <a href="{{ url_for('admin_users') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/admin/users' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                        <span>🔒</span> <span>Account Control</span>
+                    </a>
+                    {% endif %}
                 </div>
                 <!-- Operations Section -->
                 <div>
@@ -84,7 +105,7 @@
                     <a href="{{ url_for('customer_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/customer' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
                         <span>👥</span> <span>Customers</span>
                     </a>
-                    <a href="{{ url_for('human_resources_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/human-resources' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                    <a href="{{ url_for('human_resources_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/human' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
                         <span>🧑‍💼</span> <span>HR</span>
                     </a>
                     <a href="{{ url_for('procurement_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/procurement' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
@@ -103,7 +124,7 @@
         <!-- Main Content Area -->
         <main class="flex-1 p-6 overflow-y-auto bg-gray-50 rounded-lg ml-0 md:ml-64">
             {% block content %}
-            <!-- Page content will be injected here -->
+            
             {% endblock %}
         </main>
     </div>
