@@ -41,6 +41,12 @@
 
     <!-- Graphs -->
     <div class="text-xl font-semibold mb-4 text-gray-700">Sales Analytics</div>
+    <section>
+        <div>
+            <div class="font-semibold mb-2 text-gray-700">Sales Forecast</div>
+            <div id="sales-forecast" style="height:fit-content; width:fit-content;">{{ sales_forecast_graph | safe }}</div>
+        </div>
+    </section>
     <section class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
         <div>
             <div class="font-semibold mb-2 text-gray-700">Sales Trend</div>
@@ -88,12 +94,15 @@
 {% block scripts %}
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
+    var salesForecastGraph = {{ sales_forecast_graph }};
     var salesTrendGraph = {{ sales_trend_graph | tojson }};
     var goodsPerformancePieChart = {{ goods_performance_pie_chart | tojson }};
     var customerExpenditurePieChart = {{ customer_expenditure_pie_chart | tojson }};
+    
 
     Plotly.newPlot('sales-trend-graph', salesTrendGraph.data, salesTrendGraph.layout);
     Plotly.newPlot('goods-performance-pie-chart', goodsPerformancePieChart.data, goodsPerformancePieChart.layout);
     Plotly.newPlot('customers-by-expenditure-pie-chart', customerExpenditurePieChart.data, customerExpenditurePieChart.layout);
+    Plotly.newPlot('sales-forecast', salesForecastGraph.data, salesForecastGraph.layout);
 </script>
 {% endblock %}

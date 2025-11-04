@@ -18,9 +18,6 @@ from sqlalchemy.exc import OperationalError, DataError
 from flask_migrate import Migrate
 from routes.assets_upload import bp as assets_upload_bp
 
-
-
-# new: import models and DB helpers
 from models import (
     db, register_extensions,
     Customer, Employee,
@@ -265,7 +262,7 @@ sales_trend_graph = analytics.generate_sales_trend()
 goods_performance_pie_chart = analytics.generate_goods_performance_pchart()
 customer_expenditure_pie_chart = analytics.generate_customer_expenditure_distribution_pchart()
 
-spark = SparkSession.builder.appName("CSVUpload").getOrCreate()
+#spark = SparkSession.builder.appName("CSVUpload").getOrCreate()
 
 # In-memory asset list (for demo; later replaced by DB)
 assets_data = [
@@ -1191,19 +1188,16 @@ def update_work_center():
     return render_template('update_work_center.html', work_centers=work_centers)
 
 @app.route('/sales-overview')
-def sales_overview():
+async def sales_overview():
 
-    return render_template('sales_overview.html', 
+    sales_forecast_graph = await analytics.generate_sales_forecast()
+    
+    return render_template('sales_overview.html',
+                           sales_forecast_graph = sales_forecast_graph, 
                            sales_trend_graph = sales_trend_graph, 
                            goods_performance_pie_chart = goods_performance_pie_chart,
                            customer_expenditure_pie_chart = customer_expenditure_pie_chart)
-
-@app.route('/detailed-sales-analytics')
-async def detailed_sales_analytics():
-
-    sales_forecast = await analytics.generate_sales_forecast()
-    return render_template('detailed-sales-analytics.html', sales_forecast = sales_forecast)
-
+"""
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_file():
     if 'file' not in request.files:
@@ -1223,7 +1217,9 @@ def upload_file():
         print(df.head())
         
         return "File uploaded and processed successfully!"
-    
+"""
+
+"""
 @app.route('/sales-data-upload-to-hadoop', methods=['GET', 'POST']) 
 def upload_to_hadoop():
 
@@ -1252,14 +1248,14 @@ def upload_to_hadoop():
         # Format the local path for the hadoop command, replacing backslashes with forward slashes
         posix_local_path = temp_local_path.replace(os.sep, '/')
         
-        """try:
+        try:
             subprocess.run([hadoop_bin_path, 'fs', '-mkdir', '-p', hdfs_upload_dir], check=True)
             subprocess.run([hadoop_bin_path, 'fs', '-put', '-f', posix_local_path, hdfs_upload_path], check=True)
 
         except subprocess.CalledProcessError as e:
             return f"Failed to upload file to HDFS: {e}"
         except FileNotFoundError:
-            return f"Hadoop executable not found at '{hadoop_bin_path}'. Please check your path."""
+            return f"Hadoop executable not found at '{hadoop_bin_path}'. Please check your path.
         
         sales_dataframe = spark.read.csv(hdfs_upload_path, header=True, inferSchema=True, encoding='cp1252')
 
@@ -1272,7 +1268,7 @@ def upload_to_hadoop():
         os.remove(temp_local_path)
 
         return 'File successfully uploaded and processed'
-
+"""    
 # Define available groups and roles (add more groups here as needed)
 GROUPS = {
     0: "Administrator",

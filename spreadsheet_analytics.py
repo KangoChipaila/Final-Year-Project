@@ -58,3 +58,46 @@ plt.grid()
 
 plt.show()
 """
+
+
+async def generate_sales_forecast():
+
+    extracted_data["ORDERDATE"] = pd.to_datetime(extracted_data["ORDERDATE"], errors = "coerce")
+
+    extracted_data["Year"] = extracted_data["ORDERDATE"].dt.to_period("D")
+
+    # Grouping data by Year-Month and calculating total sales
+    monthly_sales = extracted_data.groupby("Year")["SALES"].sum().reset_index()
+
+    monthly_sales.columns = ["ds", "y"]
+    monthly_sales["ds"] = monthly_sales["ds"].to_list()
+    monthly_sales["y"] = monthly_sales["y"].to_list()
+
+
+    monthly_sales["ds"] = monthly_sales["ds"].dt.to_timestamp()
+
+    model = Prophet(
+        interval_width = 0.95,
+        growth = 'linear',
+        daily_seasonality = True,
+        weekly_seasonality = True,
+        yearly_seasonality = True,
+        seasonality_mode = 'multiplicative'
+    )
+
+    model.fit(monthly_sales)
+
+    future_pd = model.make_future_dataframe(
+        periods = 90,
+        freq ='D',
+        include_history = True
+    )
+
+    # predict over the dataset
+    forecast_pd = model.predict(future_pd)
+
+    #fig = model.plot(forecast_pd, xlabel='date', ylabel='sales')
+    
+    fig = plot_plotly(model, forecast_pd)
+
+    return fig.to_html(full_html = False)
