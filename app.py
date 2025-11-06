@@ -17,6 +17,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import OperationalError, DataError
 from flask_migrate import Migrate
 from routes.assets_upload import bp as assets_upload_bp
+from plotly.utils import PlotlyJSONEncoder
 
 from models import (
     db, register_extensions,
@@ -1186,7 +1187,7 @@ def update_work_center():
         flash('Work center updated!', 'success')
         return redirect(url_for('production_overview'))
     return render_template('update_work_center.html', work_centers=work_centers)
-
+"""
 @app.route('/sales-overview')
 async def sales_overview():
 
@@ -1197,6 +1198,7 @@ async def sales_overview():
                            sales_trend_graph = sales_trend_graph, 
                            goods_performance_pie_chart = goods_performance_pie_chart,
                            customer_expenditure_pie_chart = customer_expenditure_pie_chart)
+"""
 """
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_file():
@@ -1348,6 +1350,209 @@ def admin_update_user(user_id):
 
     return redirect(url_for("admin_users"))
 
+def _jsonable_plotly(obj):
+    """
+    Convert Plotly Figure / dict / JSON-string / numpy-containing structure
+    into plain Python types (lists, dicts, scalars) suitable for json.dumps.
+    """
+    # If it's an HTML string, leave as-is (you render it with |safe in template)
+    if isinstance(obj, str):
+        # try to parse JSON string first (some functions return JSON string)
+        try:
+            return json.loads(obj)
+        except Exception:
+            return obj
+
+    # Prefer PlotlyJSONEncoder to handle Figures and numpy types
+    try:
+        return json.loads(json.dumps(obj, cls=PlotlyJSONEncoder))
+    except Exception:
+        # fallback: convert numpy arrays to lists recursively
+        try:
+            import numpy as np
+        except Exception:
+            np = None
+
+        def convert(v):
+            if np is not None and isinstance(v, np.ndarray):
+                return v.tolist()
+            if isinstance(v, dict):
+                return {k: convert(val) for k, val in v.items()}
+            if isinstance(v, list):
+                return [convert(x) for x in v]
+            return v
+
+        if hasattr(obj, "to_dict"):
+            return convert(obj.to_dict())
+        return convert(obj)
+
+@app.route('/sales-overview')
+async def sales_overview():
+
+    sales_forecast_graph = await analytics.generate_sales_forecast()
+    
+    sales_forecast_graph = _jsonable_plotly(sales_forecast_graph)
+    sales_trend_graphs = _jsonable_plotly(sales_trend_graph)
+    goods_performance_pie_charts = _jsonable_plotly(goods_performance_pie_chart)
+    customer_expenditure_pie_charts = _jsonable_plotly(customer_expenditure_pie_chart)
+
+    return render_template('sales_overview.html',
+                           sales_forecast_graph=sales_forecast_graph,
+                           sales_trend_graph=sales_trend_graphs,
+                           goods_performance_pie_chart=goods_performance_pie_charts,
+                           customer_expenditure_pie_chart=customer_expenditure_pie_charts)
+
+"""
+@app.route('/upload', methods=['GET', 'POST'])
+def upload_file():
+    if 'file' not in request.files:
+        return url_for('index')
+    file = request.files['file']
+
+    if file.filename == '' or not file.filename.endswith('.csv'):
+        return "Invalid file type. Please upload a CSV file."
+    
+    if file:
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        df = spark.read.csv(filepath, header = True, inferSchema = True, encoding = 'cp1252')
+        
+        print(df.head())
+        
+        return "File uploaded and processed successfully!"
+"""
+
+"""
+@app.route('/sales-data-upload-to-hadoop', methods=['GET', 'POST']) 
+def upload_to_hadoop():
+
+    if 'sales-data-file' not in request.files:
+        return "No file found for upload"
+    
+    sales_data_file = request.files['sales-data-file']
+
+    if sales_data_file.filename == '' or not sales_data_file.filename.endswith('.csv'):
+        return "Invalid data type selected. Please select a valid file"
+
+    if sales_data_file:
+        filename = secure_filename(sales_data_file.filename)
+        
+        
+        temp_dir = os.path.abspath(os.sep) + 'tmp' 
+        if not os.path.exists(temp_dir):
+            os.makedirs(temp_dir)
+
+        temp_local_path = os.path.join(temp_dir, filename)
+        sales_data_file.save(temp_local_path)
+
+        hdfs_upload_dir = 'hdfs://localhost:19000/data/raw_uploads'
+        hdfs_upload_path = os.path.join(hdfs_upload_dir, filename).replace('\\', '/')
+
+        # Format the local path for the hadoop command, replacing backslashes with forward slashes
+        posix_local_path = temp_local_path.replace(os.sep, '/')
+        
+        try:
+            subprocess.run([hadoop_bin_path, 'fs', '-mkdir', '-p', hdfs_upload_dir], check=True)
+            subprocess.run([hadoop_bin_path, 'fs', '-put', '-f', posix_local_path, hdfs_upload_path], check=True)
+
+        except subprocess.CalledProcessError as e:
+            return f"Failed to upload file to HDFS: {e}"
+        except FileNotFoundError:
+            return f"Hadoop executable not found at '{hadoop_bin_path}'. Please check your path.
+        
+        sales_dataframe = spark.read.csv(hdfs_upload_path, header=True, inferSchema=True, encoding='cp1252')
+
+        partitioned_data_file = sales_dataframe.withColumn('SalesYear', col('OrderDate').substr(7,10))
+
+        print(partitioned_data_file.head())
+        # Uncomment the line below to write the partitioned data to HDFS
+        # partitioned_data_file.write.partitionBy('SalesYear').mode('append').parquet('hdfs://localhost:19000/data/sales_data_files')
+
+        os.remove(temp_local_path)
+
+        return 'File successfully uploaded and processed'
+"""    
+# Define available groups and roles (add more groups here as needed)
+GROUPS = {
+    0: "Administrator",
+    1: "Pending User",
+    2: "Manager",
+    3: "Finance",
+    4: "HR",
+    5: "IT",
+    6: "Warehouse/Logistics"
+}
+
+# replace roles list so "user" becomes "pending_user"
+ROLES = ["pending_user", "admin", "manager", "finance", "hR", "iT", "logistics"]
+"""
+@app.route("/admin/users")
+@login_required
+def admin_users():
+    # allow only admin (role == 'admin' or group_id == 0)
+    model = getattr(current_user, "model", None)
+    is_admin = bool(model and (getattr(model, "role", None) == "admin" or getattr(model, "group_id", None) == 0))
+    if not is_admin:
+        return render_template("403.html"), 403
+
+    users = db.session.query(User).order_by(User.id).all()
+    return render_template("admin-users.html", users=users, groups=GROUPS, roles=ROLES)
+
+@app.route("/admin/users/<int:user_id>/update", methods=["POST"])
+@login_required
+def admin_update_user(user_id):
+    model = getattr(current_user, "model", None)
+    is_admin = bool(model and (getattr(model, "role", None) == "admin" or getattr(model, "group_id", None) == 0))
+    if not is_admin:
+        return render_template("403.html"), 403
+
+    user = db.session.get(User, user_id)
+    if not user:
+        flash("User not found.", "error")
+        return redirect(url_for("admin_users"))
+
+    try:
+        # Validate and set group_id
+        group_id_raw = request.form.get("group_id")
+        if group_id_raw is not None and group_id_raw != "":
+            try:
+                group_id = int(group_id_raw)
+                if group_id not in GROUPS:
+                    raise ValueError("Invalid group id")
+                setattr(user, "group_id", group_id)
+            except ValueError:
+                flash("Invalid group selected.", "error")
+                return redirect(url_for("admin_users"))
+
+        # Validate and set role
+        role = request.form.get("role")
+        if role:
+            if role not in ROLES:
+                flash("Invalid role selected.", "error")
+                return redirect(url_for("admin_users"))
+            setattr(user, "role", role)
+
+        # is_active checkbox
+        is_active = request.form.get("is_active") == "on"
+        # Some models may use boolean column or attribute name; handle both
+        if hasattr(user, "is_active"):
+            setattr(user, "is_active", bool(is_active))
+        else:
+            setattr(user, "is_active", bool(is_active))
+
+        db.session.add(user)
+        db.session.commit()
+        flash(f"Updated {getattr(user, 'username', 'user')}.", "success")
+    except Exception as e:
+        db.session.rollback()
+        app.logger.exception("Failed to update user")
+        flash("Failed to update user.", "error")
+        flash(str(e))
+
+    return redirect(url_for("admin_users"))
+"""
 if __name__ == '__main__':
      # Ensure DB tables exist (create missing tables from models.py)
     try:

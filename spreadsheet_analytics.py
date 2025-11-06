@@ -101,3 +101,50 @@ async def generate_sales_forecast():
     fig = plot_plotly(model, forecast_pd)
 
     return fig.to_html(full_html = False)
+
+async def generate_sales_forecast():
+
+    import asyncio
+
+    # Ensure datetime and drop bad rows
+    extracted_data["ORDERDATE"] = pd.to_datetime(extracted_data["ORDERDATE"], errors="coerce")
+    df_clean = extracted_data.dropna(subset=["ORDERDATE", "SALES"]).copy()
+
+    # Aggregate by week
+    df_clean["Week"] = df_clean["ORDERDATE"].dt.to_period("W")
+    weekly_sales = df_clean.groupby("Week")["SALES"].sum().reset_index()
+
+    # Prepare Prophet columns
+    weekly_sales = weekly_sales.rename(columns={"Week": "ds", "SALES": "y"})
+    weekly_sales["ds"] = weekly_sales["ds"].dt.to_timestamp()   # convert Period -> Timestamp
+    weekly_sales = weekly_sales.sort_values("ds").reset_index(drop=True)
+    weekly_sales["y"] = weekly_sales["y"].astype(float)
+
+    model = Prophet(
+        interval_width=0.95,
+        daily_seasonality=False,
+        weekly_seasonality=False,
+        yearly_seasonality=True
+    )
+
+    # Fit in executor to avoid blocking the event loop
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, lambda: model.fit(weekly_sales[['ds', 'y']]))
+
+    # Build future and predict in executor
+    future_pd = model.make_future_dataframe(periods=30, freq='W', include_history=True)
+    forecast_pd = await loop.run_in_executor(None, lambda: model.predict(future_pd))
+
+    # Compute in-sample RMSE (compare historical y to fitted yhat)
+    hist = forecast_pd[['ds', 'yhat']].merge(weekly_sales[['ds', 'y']], on='ds', how='inner')
+    if not hist.empty:
+        rmse = float(np.sqrt(mean_squared_error(hist['y'], hist['yhat'])))
+    else:
+        rmse = float('nan')
+
+    # Plot and include RMSE in the title
+    fig = plot_plotly(model, forecast_pd)
+    fig.update_layout(title=f"Weekly Sales Forecast — RMSE: {rmse:.2f}")
+
+    return fig.to_html(full_html=False)
+
