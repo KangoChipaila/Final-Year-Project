@@ -1389,18 +1389,23 @@ def _jsonable_plotly(obj):
 @app.route('/sales-overview')
 async def sales_overview():
 
-    sales_forecast_graph = await analytics.generate_sales_forecast()
-    
-    sales_forecast_graph = _jsonable_plotly(sales_forecast_graph)
-    sales_trend_graphs = _jsonable_plotly(sales_trend_graph)
-    goods_performance_pie_charts = _jsonable_plotly(goods_performance_pie_chart)
-    customer_expenditure_pie_charts = _jsonable_plotly(customer_expenditure_pie_chart)
+    sales_trend_graphs = sales_trend_graph
+    goods_performance_pie_charts = goods_performance_pie_chart
+    customer_expenditure_pie_charts = customer_expenditure_pie_chart
 
     return render_template('sales_overview.html',
-                           sales_forecast_graph=sales_forecast_graph,
                            sales_trend_graph=sales_trend_graphs,
                            goods_performance_pie_chart=goods_performance_pie_charts,
                            customer_expenditure_pie_chart=customer_expenditure_pie_charts)
+
+@app.route('/sales-forecast')
+async def sales_forecast():
+
+    sales_forecast_graph = await analytics.generate_sales_forecast()
+    
+    sales_forecast_graph = sales_forecast_graph
+
+    return render_template('sales_forecast.html', sales_forecast_graph=sales_forecast_graph)
 
 """
 @app.route('/upload', methods=['GET', 'POST'])

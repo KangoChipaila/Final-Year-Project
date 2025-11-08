@@ -81,11 +81,11 @@
                       {% set cu_model = current_user.model | default(None) %}
                       {% if cu_model %}
                         {% if (cu_model.role | default('')) == 'admin' or (cu_model.group_id | default(-1)) == 0 %}
-+                          {% set is_admin = true %}
+                            {% set is_admin = true %}
                         {% endif %}
                       {% else %}
                         {% if (current_user.role | default('')) == 'admin' or (current_user.group_id | default(-1)) == 0 %}
-+                          {% set is_admin = true %}
+                            {% set is_admin = true %}
                         {% endif %}
                       {% endif %}
                     {% endif %}
@@ -101,6 +101,9 @@
                     <div class="text-xs uppercase text-gray-400 mb-2 pl-2">Operations</div>
                     <a href="{{ url_for('sales_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/sales-overview' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
                         <span>📈</span> <span>Sales</span>
+                    </a>
+                    <a href="{{ url_for('sales_forecast') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/sales-forecast' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                        <span>📈</span> <span>Sales Forecast</span>
                     </a>
                     <a href="{{ url_for('customer_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/customer' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
                         <span>👥</span> <span>Customers</span>

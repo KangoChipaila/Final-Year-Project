@@ -43,15 +43,11 @@
     <div class="text-xl font-semibold mb-4 text-gray-700">Sales Analytics</div>
     <section>
         <div>
-            <div class="font-semibold mb-2 text-gray-700">Sales Forecast</div>
-            <div id="sales-forecast" style="height:fit-content; width:fit-content;">{{ sales_forecast_graph | safe }}</div>
-        </div>
-    </section>
-    <section class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-        <div>
             <div class="font-semibold mb-2 text-gray-700">Sales Trend</div>
             <div id="sales-trend-graph" style="height:320px; width:100%;"></div>
         </div>
+    </section>
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
         <div>
             <div class="font-semibold mb-2 text-gray-700">Goods Performance</div>
             <div id="goods-performance-pie-chart" style="height:320px; width:100%;"></div>
@@ -68,23 +64,18 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <a href="/detailed-sales-analytics" class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-blue-800 transition">
                 <span>Detailed Sales Analytics</span>
-                <img src="{{ url_for('static', filename='images/arrow1.svg') }}" alt="link-arrow"/>
             </a>
             <a href="#sales-page" class="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-green-800 transition">
                 <span>Goods and Services Payment Status</span>
-                <img src="{{ url_for('static', filename='images/arrow1.svg') }}" alt="link-arrow"/>
             </a>
             <a href="#sales-page" class="flex items-center gap-2 bg-yellow-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-yellow-700 transition">
                 <span>Customers</span>
-                <img src="{{ url_for('static', filename='images/arrow1.svg') }}" alt="link-arrow"/>
             </a>
             <a href="#sales-page" class="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-purple-800 transition">
                 <span>Sales Orders</span>
-                <img src="{{ url_for('static', filename='images/arrow1.svg') }}" alt="link-arrow"/>
             </a>
             <a href="#sales-page" class="flex items-center gap-2 bg-pink-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-pink-800 transition">
                 <span>Purchase Orders</span>
-                <img src="{{ url_for('static', filename='images/arrow1.svg') }}" alt="link-arrow"/>
             </a>
         </div>
     </section>
@@ -94,7 +85,6 @@
 {% block scripts %}
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
-    var salesForecastGraph = {{ sales_forecast_graph }};
     var salesTrendGraph = {{ sales_trend_graph | tojson }};
     var goodsPerformancePieChart = {{ goods_performance_pie_chart | tojson }};
     var customerExpenditurePieChart = {{ customer_expenditure_pie_chart | tojson }};
@@ -103,6 +93,5 @@
     Plotly.newPlot('sales-trend-graph', salesTrendGraph.data, salesTrendGraph.layout);
     Plotly.newPlot('goods-performance-pie-chart', goodsPerformancePieChart.data, goodsPerformancePieChart.layout);
     Plotly.newPlot('customers-by-expenditure-pie-chart', customerExpenditurePieChart.data, customerExpenditurePieChart.layout);
-    Plotly.newPlot('sales-forecast', salesForecastGraph.data, salesForecastGraph.layout);
 </script>
 {% endblock %}

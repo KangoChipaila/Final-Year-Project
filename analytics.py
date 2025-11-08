@@ -99,115 +99,111 @@ def generate_customer_expenditure_distribution_pchart():
 
     return fig.to_plotly_json()
 
-def generate_sales_forecast():
-
-    import asyncio
-
-    # Ensure datetime and drop bad rows
+async def generate_sales_forecast(forecast_periods: int = 50, freq: str = "D", train_size: int = 200):
+    """
+    Better, safer Prophet forecasting + metrics and interactive Plotly output.
+    Returns HTML string (plotly) containing:
+      - actuals, fitted (in-sample) and future forecast
+      - test points overlay
+      - vertical line marking training end
+      - annotation with Mean / RMSE / NRMSE
+    """
+    # Prepare data
     extracted_data["ORDERDATE"] = pd.to_datetime(extracted_data["ORDERDATE"], errors="coerce")
     df_clean = extracted_data.dropna(subset=["ORDERDATE", "SALES"]).copy()
 
-    # Aggregate by week
-    df_clean["Day"] = df_clean["ORDERDATE"].dt.to_period("D")
-    daily_sales = df_clean.groupby("Day")["SALES"].sum().reset_index()
+    # Make SALES numeric (strip currency/commas then to numeric)
+    df_clean["SALES"] = (
+        df_clean["SALES"].astype(str)
+        .str.replace(r"[^\d\.-]", "", regex=True)   # remove non-numeric chars
+        .replace("", "0")
+    )
+    df_clean["SALES"] = pd.to_numeric(df_clean["SALES"], errors="coerce").fillna(0.0)
 
-    # Prepare Prophet columns
-    daily_sales = daily_sales.rename(columns={"Day": "ds", "SALES": "y"})
-    daily_sales["ds"] = daily_sales["ds"].dt.to_timestamp()   # convert Period -> Timestamp
-    daily_sales = daily_sales.sort_values("ds").reset_index(drop=True)
-    daily_sales["y"] = daily_sales["y"].astype(float)
+    # Aggregate only dates that actually have transactions (avoid filling entire date range with zeros)
+    daily = (
+        df_clean
+        .assign(ds=df_clean["ORDERDATE"].dt.normalize())   # midnight timestamp for the day
+        .groupby("ds", as_index=False)["SALES"]
+        .sum()
+        .rename(columns={"SALES": "y"})
+    )
+    daily = daily.sort_values("ds").reset_index(drop=True)
+    daily["y"] = daily["y"].astype(float)
 
-    df_train_data = daily_sales.iloc[:200]
-    df_test_data = daily_sales.iloc[200:]
+    # Optionally remove days with zero sales (if zeros represent no activity and you don't want them modeled)
+    # daily = daily[daily["y"] != 0].reset_index(drop=True)
 
-    print(len(df_train_data))
+    if daily.empty:
+        raise ValueError("No valid daily sales rows after preprocessing.")
 
-    """model = Prophet(
-        changepoint_prior_scale=0.05,
-        interval_width=0.95,
-        daily_seasonality=False,
-        weekly_seasonality=True,
-        yearly_seasonality=False
-    )"""
+    # Train/test split (time order)
+    train_end = min(train_size, len(daily) - 1)
+    df_train = daily.iloc[:train_end].copy()
+    df_test = daily.iloc[train_end:].copy()
 
+    # Configure model (adjust seasonality depending on history length)
+    enable_yearly = len(daily) >= 365 * 2  # only enable yearly if ~2+ years of data
     model = Prophet(
-        growth='linear',
-        daily_seasonality=True,
+        interval_width=0.95,
+        daily_seasonality=False,     # for daily-aggregated series, set False
         weekly_seasonality=True,
-        yearly_seasonality=True,
-        seasonality_mode='multiplicative'
+        yearly_seasonality=enable_yearly,
+        seasonality_mode="multiplicative",
+        changepoint_prior_scale=0.05
     )
 
-    model.fit(df_train_data)
+    # Fit on training data
+    model.fit(df_train[["ds", "y"]])
 
-    df_future = model.make_future_dataframe(periods=12, freq='D')
+    # Forecast (include history so we get fitted yhat for train)
+    future = model.make_future_dataframe(periods=forecast_periods, freq=freq, include_history=True)
+    forecast = model.predict(future)
 
-    forecast_prophet = model.predict(df_future)
-
-    forecast_prophet[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].round().tail()
-
-    # plot the time series 
-    forecast_plot = model.plot(forecast_prophet)
-
-    # add a vertical line at the end of the training period
-    axes = forecast_plot.gca()
-    last_training_date = forecast_prophet['ds'].max()
-    axes.axvline(x=last_training_date, color='red', linestyle='--', label='Training End')
-
-    # plot true test data for the period after the red line
-    #df_test_data['Month'] = pd.to_datetime(df_test_data['Month'])
-    plt.plot(df_test_data['ds'], df_test_data['y'],'ro', markersize=3, label='True Test Data')
-
-    # show the legend to distinguish between the lines
-    plt.legend()
-    plt.show()
-
-    from prophet.diagnostics import cross_validation, performance_metrics
-
-    df_cv = cross_validation(model, initial="365 days", period="90 days", horizon="90 days")
-    df_p = performance_metrics(df_cv)
-    print(df_p[['horizon','rmse','mae','mape']])
-    
-    """
-    # Fit in executor to avoid blocking the event loop
-    loop = asyncio.get_running_loop()
-    await loop.run_in_executor(None, lambda: model.fit(weekly_sales[['ds', 'y']]))
-    
-    from prophet.diagnostics import cross_validation, performance_metrics
-
-    df_cv = cross_validation(model, initial="365 days", period="90 days", horizon="90 days")
-    df_p = performance_metrics(df_cv)
-    print(df_p[['horizon','rmse','mae','mape']])"""
-    """
-    # Build future and predict in executor
-    future_pd = model.make_future_dataframe(periods=30, freq='W', include_history=True)
-    forecast_pd = await loop.run_in_executor(None, lambda: model.predict(future_pd))
-
-    # Compute in-sample RMSE (compare historical y to fitted yhat)
-    hist = forecast_pd[['ds', 'yhat']].merge(weekly_sales[['ds', 'y']], on='ds', how='inner')
-    if not hist.empty:
-        rmse = float(np.sqrt(mean_squared_error(hist['y'], hist['yhat'])))
+    # Compute in-sample fitted RMSE (compare model yhat for training dates)
+    fitted = forecast[forecast["ds"].isin(df_train["ds"])][["ds", "yhat"]]
+    merged = pd.merge(df_train[["ds", "y"]], fitted, on="ds", how="inner")
+    if not merged.empty:
+        rmse = float(np.sqrt(mean_squared_error(merged["y"], merged["yhat"])))
     else:
-        rmse = float('nan')
+        rmse = float("nan")
 
-    # Compute mean and NRMSE (normalized RMSE as RMSE / mean -> shown as percentage)
-    mean_sales = float(weekly_sales['y'].mean()) if not weekly_sales['y'].empty else float('nan')
-    if mean_sales and not np.isnan(mean_sales) and mean_sales != 0:
-        nrmse_pct = 100.0 * rmse / mean_sales
-    else:
-        nrmse_pct = float('nan')
+    mean_sales = float(df_train["y"].mean()) if not df_train["y"].empty else float("nan")
+    nrmse_pct = (100.0 * rmse / mean_sales) if (mean_sales and not np.isnan(mean_sales)) else float("nan")
 
-    # Plot and include metrics in an annotation on the figure
-    fig = plot_plotly(model, forecast_pd)
+    # Build interactive Plotly figure (Plotly graph from Prophet)
+    fig = plot_plotly(model, forecast)
+
+    # Add vertical line at end of training set
+    last_train_date = df_train["ds"].max()
+    fig.update_layout(
+        shapes=[
+            dict(type="line", x0=last_train_date, x1=last_train_date, xref="x",
+                 y0=0, y1=1, yref="paper", line=dict(color="red", dash="dash"))
+        ]
+    )
+
+    # Overlay true test points (red markers) for the period after training end
+    if not df_test.empty:
+        fig.add_trace(go.Scatter(
+            x=df_test["ds"],
+            y=df_test["y"],
+            mode="markers",
+            marker=dict(color="red", size=6),
+            name="True test points"
+        ))
+
+    # Add metrics annotation
     metrics_text = f"Mean: {mean_sales:.2f}<br>RMSE: {rmse:.2f}<br>NRMSE: {nrmse_pct:.2f}%"
-    fig.update_layout(title="Weekly Sales Forecast")
     fig.add_annotation(
         x=0.01, y=0.99, xref="paper", yref="paper",
-        text=metrics_text,
-        showarrow=False, align="left",
+        text=metrics_text, showarrow=False, align="left",
         bordercolor="black", borderwidth=1, bgcolor="white"
     )
 
+    # Tidy layout
+    fig.update_layout(title="Daily Sales Forecast (Prophet)", xaxis_title="Date", yaxis_title="Sales",
+                      legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+
+    # Return HTML so this works in scripts, web servers, notebooks
     return fig.to_html(full_html=False)
-"""
-generate_sales_forecast()
