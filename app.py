@@ -281,34 +281,140 @@ def load_dashboard_data():
 @app.route('/')
 @login_required
 def index():
-    data = load_dashboard_data()
-    kpi = data.get('kpi', {})
-    alerts = data.get('alerts', [])
-    recent_activity = data.get('recent_activity', [])
-    top_customers = data.get('top_customers', [])
-    recent_orders = data.get('recent_orders', [])
-    sales_trend_graph = data.get('sales_trend_graph', {'data': [], 'layout': {}})
-    customers = data.get('customers_graph', {'data': [], 'layout': {}})
-    product_performance_graph = data.get('product_performance_graph', {'data': [], 'layout': {}})
-    inventory_status_graph = data.get('inventory_status_graph', {'data': [], 'layout': {}})
-    order_status_graph = data.get('order_status_graph', {'data': [], 'layout': {}})
-    revenue_expenses_graph = data.get('revenue_expenses_graph', {'data': [], 'layout': {}})
-    employee_status_graph = data.get('employee_status_graph', {'data': [], 'layout': {}})
-    return render_template(
-        'index.html',
-        kpi=kpi,
-        alerts=alerts,
-        recent_activity=recent_activity,
-        top_customers=top_customers,
-        recent_orders=recent_orders,
-        sales_trend_graph=sales_trend_graph,
-        customers=customers,
-        product_performance_graph=product_performance_graph,
-        inventory_status_graph=inventory_status_graph,
-        order_status_graph=order_status_graph,
-        revenue_expenses_graph=revenue_expenses_graph,
-        employee_status_graph=employee_status_graph
-    )
+    """
+    Dashboard index: try to load live KPIs from the database, fall back to static JSON file.
+    """
+    def safe_get(obj, attr, default=None):
+        try:
+            val = getattr(obj, attr)
+            # if it's a column/property InstrumentedAttribute on model instance, getattr returns value
+            return val if val is not None else default
+        except Exception:
+            return default
+
+    try:
+        from sqlalchemy import func
+
+        # KPIs
+        total_orders = db.session.query(func.count()).select_from(SalesOrder).scalar() or 0
+        total_customers = db.session.query(func.count()).select_from(Customer).scalar() or 0
+
+        # Try to sum a sensible revenue column if present
+        revenue_col = None
+        if hasattr(SalesOrder, "total"):
+            revenue_col = getattr(SalesOrder, "total")
+        elif hasattr(SalesOrder, "amount"):
+            revenue_col = getattr(SalesOrder, "amount")
+        if revenue_col is not None:
+            total_revenue = float(db.session.query(func.coalesce(func.sum(revenue_col), 0)).scalar() or 0.0)
+        else:
+            total_revenue = 0.0
+
+        # Recent orders (safely pick a date/identifier/total if available)
+        recent_q = db.session.query(SalesOrder).order_by(getattr(SalesOrder, "id", SalesOrder)).limit(5)
+        recent_orders_rows = recent_q.all()
+        recent_orders = []
+        for o in recent_orders_rows:
+            recent_orders.append({
+                "id": safe_get(o, "id", ""),
+                "customer": (safe_get(o, "customer_name") or safe_get(o, "customer") or ""),
+                "date": (safe_get(o, "order_date") or safe_get(o, "created_at") or safe_get(o, "date") or ""),
+                "total": float(safe_get(o, "total") or safe_get(o, "amount") or 0.0)
+            })
+
+        # Top customers by total order value (best-effort)
+        top_customers = []
+        try:
+            # attempt join and aggregation if SalesOrder has customer_id and total-like column
+            if hasattr(SalesOrder, "customer_id") and revenue_col is not None:
+                rows = (
+                    db.session.query(Customer.name, func.coalesce(func.sum(revenue_col), 0).label("total"))
+                    .join(SalesOrder, getattr(SalesOrder, "customer_id") == getattr(Customer, "id"))
+                    .group_by(Customer.name)
+                    .order_by(func.sum(revenue_col).desc())
+                    .limit(5)
+                    .all()
+                )
+                top_customers = [{"name": r[0], "total": float(r[1])} for r in rows]
+            else:
+                # fallback: list a few customers
+                cust_rows = db.session.query(Customer).limit(5).all()
+                top_customers = [{"name": safe_get(c, "name", ""), "total": 0.0} for c in cust_rows]
+        except Exception:
+            top_customers = []
+
+        # Small KPI dict to pass to template (mirrors previous file-based shape)
+        kpi = {
+            "total_orders": int(total_orders),
+            "total_customers": int(total_customers),
+            "total_revenue": total_revenue
+        }
+
+        # Small placeholder graphs: prefer analytics precomputed graphs if present
+        sales_trend_graph_local = sales_trend_graph or {"data": [], "layout": {}}
+        customers = goods_performance_pie_chart or {"data": [], "layout": {}}
+        product_performance_graph = goods_performance_pie_chart or {"data": [], "layout": {}}
+        inventory_status_graph = {"data": [], "layout": {}}
+        order_status_graph = {"data": [], "layout": {}}
+        revenue_expenses_graph = {"data": [], "layout": {}}
+        employee_status_graph = {"data": [], "layout": {}}
+
+        # recent activity: synthesize from recent orders/payments if possible
+        recent_activity = []
+        try:
+            payments = db.session.query(Payment).order_by(getattr(Payment, "id", Payment)).limit(5).all()
+            for p in payments:
+                recent_activity.append(f"Payment {safe_get(p,'id','')} amount {safe_get(p,'amount','')}")
+        except Exception:
+            recent_activity = []
+
+        return render_template(
+            'index.html',
+            kpi=kpi,
+            alerts=[],
+            recent_activity=recent_activity,
+            top_customers=top_customers,
+            recent_orders=recent_orders,
+            sales_trend_graph=sales_trend_graph_local,
+            customers=customers,
+            product_performance_graph=product_performance_graph,
+            inventory_status_graph=inventory_status_graph,
+            order_status_graph=order_status_graph,
+            revenue_expenses_graph=revenue_expenses_graph,
+            employee_status_graph=employee_status_graph
+        )
+
+    except Exception as e:
+        # If anything fails (DB unavailable / schema mismatch), fall back to the existing JSON file
+        app.logger.exception("Failed to load dashboard data from DB, falling back to static data")
+        data = load_dashboard_data()
+        kpi = data.get('kpi', {})
+        alerts = data.get('alerts', [])
+        recent_activity = data.get('recent_activity', [])
+        top_customers = data.get('top_customers', [])
+        recent_orders = data.get('recent_orders', [])
+        sales_trend_graph = data.get('sales_trend_graph', {'data': [], 'layout': {}})
+        customers = data.get('customers_graph', {'data': [], 'layout': {}})
+        product_performance_graph = data.get('product_performance_graph', {'data': [], 'layout': {}})
+        inventory_status_graph = data.get('inventory_status_graph', {'data': [], 'layout': {}})
+        order_status_graph = data.get('order_status_graph', {'data': [], 'layout': {}})
+        revenue_expenses_graph = data.get('revenue_expenses_graph', {'data': [], 'layout': {}})
+        employee_status_graph = data.get('employee_status_graph', {'data': [], 'layout': {}})
+        return render_template(
+            'index.html',
+            kpi=kpi,
+            alerts=alerts,
+            recent_activity=recent_activity,
+            top_customers=top_customers,
+            recent_orders=recent_orders,
+            sales_trend_graph=sales_trend_graph,
+            customers=customers,
+            product_performance_graph=product_performance_graph,
+            inventory_status_graph=inventory_status_graph,
+            order_status_graph=order_status_graph,
+            revenue_expenses_graph=revenue_expenses_graph,
+            employee_status_graph=employee_status_graph
+        )
 
 # Example mock data (replace with database queries)
 def get_accounting_alerts():
