@@ -22,7 +22,7 @@
   {% endwith %}
 
   <!-- Create user form -->
-  <div class="mb-6 border rounded p-4 bg-gray-50">
+  <div class="mb-6 shadow-lg rounded p-4 bg-gray-50">
     <h3 class="font-semibold mb-3">Create new user</h3>
     <form method="post" action="{{ url_for('admin_create_user') }}" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <div>
@@ -74,7 +74,7 @@
   </div>
 
   <!-- Existing user list (editable rows) -->
-  <div class="overflow-x-auto">
+  <div class="overflow-x-auto shadow-md">
     <table class="w-full table-auto border-collapse">
       <thead>
         <tr class="text-left text-sm text-gray-600 border-b">
@@ -121,14 +121,6 @@
         {% endfor %}
       </tbody>
     </table>
-  </div>
-
-  <div class="mt-6 text-sm text-gray-600">
-    <strong>Notes:</strong>
-    <ul class="list-disc ml-5 mt-2">
-      <li>Group IDs: Administrator = 0, User = 1, plus additional groups listed in the selector.</li>
-      <li>Suggested roles: pending user, admin, manager, finance, hr, it, logistics.</li>
-    </ul>
   </div>
 </div>
 {% endblock %}

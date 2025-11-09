@@ -7,10 +7,12 @@
         <h1 class="text-2xl font-bold text-gray-800">Customer Overview</h1>
         <p class="text-gray-500">Manage and analyze your customer base</p>
     </div>
+</section>
 
+<section>
     <!-- Upload CSV (added) -->
-    <div class="flex items-center gap-3">
-        <form action="{{ url_for('upload_customers') }}" method="POST" enctype="multipart/form-data" class="flex items-center gap-2">
+    <div class="flex items-center gap-3 mb-5">
+        <form action="{{ url_for('upload_customers') }}" method="POST" enctype="multipart/form-data" class="flex items-center gap-2 p-2 rounded-lg shadow-md">
             <input type="file" name="csv_file" accept=".csv" required
                    class="text-sm file:bg-blue-700 file:text-white file:py-1 file:px-3 file:rounded-md file:border-none" />
             <button type="submit"
@@ -18,8 +20,7 @@
                 Upload CSV
             </button>
         </form>
-        <a href="{{ url_for('download_customers_sample') }}" class="text-sm text-gray-600 hover:underline">Download sample CSV</a>
-
+        <div>OR</div>
         <a href="{{ url_for('add_customer') }}"
            class="ml-4 bg-green-700 text-white px-4 py-2 rounded-lg hover:bg-green-800 transition">
            + Add Customer
