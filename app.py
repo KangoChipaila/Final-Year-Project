@@ -899,7 +899,7 @@ def customer_overview():
                 "name": "Customer Status"
             }
         ],
-        "layout": {"title": "Customer Status Distribution", "height": 400}
+        "layout": {"title": ""}
     }
 
     return render_template(

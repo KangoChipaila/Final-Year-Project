@@ -37,6 +37,13 @@
     {% endfor %}
 </section>
 
+
+<!-- Customer Analytics Chart -->
+<section class="bg-white rounded-lg shadow-md p-6 mt-8 mb-4 w-full h-fit-content">
+    <h2 class="text-lg font-semibold mb-4">Customer Status Distribution</h2>
+    <div class="h-[400px] w-full" id="customer-status-chart"></div>
+</section>
+
 <!-- Search and Filter Bar -->
 <form method="GET" action="{{ url_for('customer_overview') }}" class="flex flex-wrap items-center gap-4 mb-6">
     <div class="flex items-center">
@@ -59,14 +66,10 @@
        class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition">
        Reset
     </a>
-    <a href="{{ url_for('add_customer') }}"
-       class="ml-auto bg-green-700 text-white px-4 py-2 rounded-lg hover:bg-green-800 transition">
-       + Add Customer
-    </a>
 </form>
 
 <!-- Customer Table -->
-<div class = "h-100 overflow-y-auto">
+<div class = "h-100 overflow-y-auto w-full rounded-lg">
     <table class="min-w-full bg-white shadow-md rounded-lg overflow-y-auto">
         <thead>
             <tr class="bg-black text-white text-left">
@@ -109,12 +112,6 @@
         </tbody>
     </table>
 </div>
-
-<!-- Customer Analytics Chart -->
-<section class="bg-white rounded-lg shadow-md p-6 mt-8">
-    <h2 class="text-lg font-semibold mb-4">Customer Status Distribution</h2>
-    <div id="customer-status-chart" style="height:400px;"></div>
-</section>
 {% endblock %}
 
 {% block scripts %}
