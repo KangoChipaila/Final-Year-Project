@@ -378,6 +378,10 @@
   .table {
     display: table;
   }
+  .size-6 {
+    width: calc(var(--spacing) * 6);
+    height: calc(var(--spacing) * 6);
+  }
   .h-3 {
     height: calc(var(--spacing) * 3);
   }
@@ -742,14 +746,8 @@
   .py-1 {
     padding-block: calc(var(--spacing) * 1);
   }
-  .py-1\.5 {
-    padding-block: calc(var(--spacing) * 1.5);
-  }
   .py-2 {
     padding-block: calc(var(--spacing) * 2);
-  }
-  .py-2\.5 {
-    padding-block: calc(var(--spacing) * 2.5);
   }
   .py-3 {
     padding-block: calc(var(--spacing) * 3);
