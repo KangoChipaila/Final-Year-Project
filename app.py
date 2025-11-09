@@ -18,6 +18,7 @@ from sqlalchemy.exc import OperationalError, DataError
 from flask_migrate import Migrate
 from routes.assets_upload import bp as assets_upload_bp
 from plotly.utils import PlotlyJSONEncoder
+import csv
 
 from models import (
     db, register_extensions,
@@ -706,86 +707,295 @@ def generate_barcode():
 
     return jsonify({'barcode_url': f"/static/barcodes/{asset_id}.png"})
 
-CUSTOMER_DATA_FILE = 'static/js/test_customer_data.json'
-
-def load_customers():
-    with open(CUSTOMER_DATA_FILE, 'r') as f:
-        return json.load(f)
-
-def save_customers(customers):
-    with open(CUSTOMER_DATA_FILE, 'w') as f:
-        json.dump(customers, f, indent=2)
-
 @app.route('/add_customer', methods=['GET', 'POST'])
 def add_customer():
     if request.method == 'POST':
-        customers = load_customers()
-        new_id = max(int(c['id']) for c in customers) + 1 if customers else 1
-        new_customer = {
-            'id': new_id,
-            'name': request.form[str('name')],
-            'contact_person': request.form['contact_person'],
-            'email': request.form['email'],
-            'phone': request.form['phone'],
-            'status': request.form['status']
-        }
-        customers.append(new_customer)
-        save_customers(customers)
-        flash('Customer added successfully!', 'success')
-        return redirect(url_for('customer_overview'))
+        name = request.form.get('name', '').strip()
+        contact_person = request.form.get('contact_person', '').strip()
+        email = request.form.get('email', '').strip()
+        phone = request.form.get('phone', '').strip()
+        status = request.form.get('status', 'Active').strip()
+
+        # Try to insert into DB; fall back to file storage if DB unavailable
+        try:
+            cust = Customer()
+            if hasattr(cust, "name"):
+                setattr(cust, "name", name)
+            if hasattr(cust, "contact_person"):
+                setattr(cust, "contact_person", contact_person)
+            if hasattr(cust, "email"):
+                setattr(cust, "email", email)
+            if hasattr(cust, "phone"):
+                setattr(cust, "phone", phone)
+            if hasattr(cust, "status"):
+                setattr(cust, "status", status)
+
+            # set upload timestamp on first matching possible field
+            for ts_field in ("uploaded_at", "created_at", "timestamp", "created_on", "uploaded_on", "created"):
+                if hasattr(cust, ts_field):
+                    setattr(cust, ts_field, datetime.utcnow())
+                    break
+
+            db.session.add(cust)
+            db.session.commit()
+            flash('Customer added successfully!', 'success')
+            return redirect(url_for('customer_overview'))
+        except Exception:
+            # DB failed - fallback to JSON file as before
+            db.session.rollback()
+            app.logger.exception("DB add_customer failed")
+
+            flash('Customer not added.', 'danger')
+            return redirect(url_for('customer_overview'))
+
     return render_template('add_customer.html')
+
 
 @app.route('/edit_customer/<int:customer_id>', methods=['GET', 'POST'])
 def edit_customer(customer_id):
-    customers = load_customers()
-    customer = next((c for c in customers if c['id'] == customer_id), None)
-    if not customer:
-        flash('Customer not found.', 'danger')
-        return redirect(url_for('customer_overview'))
-    if request.method == 'POST':
-        customer['name'] = request.form['name']
-        customer['contact_person'] = request.form['contact_person']
-        customer['email'] = request.form['email']
-        customer['phone'] = request.form['phone']
-        customer['status'] = request.form['status']
-        save_customers(customers)
-        flash('Customer updated successfully!', 'success')
-        return redirect(url_for('customer_overview'))
-    return render_template('edit_customer.html', customer=customer)
+    """
+    Edit a customer. Prefer updating the PostgreSQL Customer table; fall back to file-based storage.
+    """
+    # Try DB first
+    try:
+        cust = db.session.get(Customer, customer_id)
+    except Exception:
+        app.logger.exception("DB lookup failed for edit_customer")
+        cust = None
+
+    # If we found a DB row, operate on it
+    if cust:
+        if request.method == 'POST':
+            # Read form values
+            name = request.form.get('name', '').strip()
+            contact_person = request.form.get('contact_person', '').strip()
+            email = request.form.get('email', '').strip()
+            phone = request.form.get('phone', '').strip()
+            status = request.form.get('status', '').strip()
+
+            try:
+                if hasattr(cust, "name"):
+                    setattr(cust, "name", name)
+                if hasattr(cust, "contact_person"):
+                    setattr(cust, "contact_person", contact_person)
+                if hasattr(cust, "email"):
+                    setattr(cust, "email", email)
+                if hasattr(cust, "phone"):
+                    setattr(cust, "phone", phone)
+                if hasattr(cust, "status"):
+                    setattr(cust, "status", status)
+
+                # update "uploaded_at"/timestamp field if present (do not overwrite if empty)
+                for ts_field in ("uploaded_at", "created_at", "timestamp", "created_on", "uploaded_on", "created"):
+                    if hasattr(cust, ts_field):
+                        try:
+                            setattr(cust, ts_field, datetime.utcnow())
+                        except Exception:
+                            # ignore timestamp set errors
+                            app.logger.debug("Could not set timestamp field %s on Customer", ts_field)
+                        break
+
+                db.session.add(cust)
+                db.session.commit()
+                flash('Customer updated successfully!', 'success')
+                return redirect(url_for('customer_overview'))
+            except Exception:
+                db.session.rollback()
+                app.logger.exception("Failed to update customer in DB")
+                flash('Failed to update customer (database error).', 'danger')
+                return redirect(url_for('customer_overview'))
+
+        # GET: prepare a simple dict for the template (templates expect dict)
+        customer_dict = {
+            "id": getattr(cust, "id", None),
+            "name": getattr(cust, "name", "") or "",
+            "contact_person": getattr(cust, "contact_person", "") or "",
+            "email": getattr(cust, "email", "") or "",
+            "phone": getattr(cust, "phone", "") or "",
+            "status": getattr(cust, "status", "") or ""
+        }
+        return render_template('edit_customer.html', customer=customer_dict)
 
 @app.route('/delete_customer/<int:customer_id>', methods=['POST'])
+@login_required
 def delete_customer(customer_id):
-    customers = load_customers()
-    customers = [c for c in customers if c['id'] != customer_id]
-    save_customers(customers)
-    flash('Customer deleted successfully!', 'success')
+    """
+    Delete a customer. Prefer deleting from PostgreSQL Customer table; fall back to file-based storage.
+    """
+    # Try DB first
+    try:
+        cust = db.session.get(Customer, customer_id)
+    except Exception:
+        app.logger.exception("DB lookup failed for delete_customer")
+        cust = None
+
+    if cust:
+        try:
+            db.session.delete(cust)
+            db.session.commit()
+            flash('Customer deleted successfully!', 'success')
+            return redirect(url_for('customer_overview'))
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Failed to delete customer from DB")
+            flash('Failed to delete customer (database error).', 'danger')
+            return redirect(url_for('customer_overview'))
+
     return redirect(url_for('customer_overview'))
 
 @app.route('/customer-overview')
+@login_required
 def customer_overview():
-    customers = load_customers()    
-    print(type(customers[0])) 
-    query = request.args.get('query', '')
+    """
+    Load customers from the database (Customer model). Falls back to file-based loader on error.
+    Provides customer_summary and customer_chart_data for the template.
+    """
+    query = request.args.get('query', '').strip()
     selected_status = request.args.get('status', '')
-    filtered = [
-        c for c in customers
-        if (query.lower() in c.get('name', '').lower()) and
-           (selected_status == '' or c.get('status', '') == selected_status)
-    ]
-    customer_summary = [
-        {'label': 'Total Customers', 'value': len(customers)},
-        {'label': 'Active Customers', 'value': sum(1 for c in customers if c['status'] == 'Active')},
-        {'label': 'Inactive Customers', 'value': sum(1 for c in customers if c['status'] == 'Inactive')},
-    
-    ]
-    customer_chart_data = {}  
-    return render_template('customer-overview.html',
-                           customers=filtered,
-                           query=query,
-                           selected_status=selected_status,
-                           customer_summary=customer_summary,
-                           customer_chart_data=customer_chart_data)
 
+    try:
+        q = db.session.query(Customer)
+
+        if query:
+            q = q.filter(Customer.name.ilike(f"%{query}%"))
+
+        if selected_status:
+            q = q.filter(Customer.status == selected_status)
+
+        rows = q.order_by(getattr(Customer, "id", Customer)).all()
+
+        customers = []
+        for c in rows:
+            customers.append({
+                "id": getattr(c, "id", None),
+                "name": getattr(c, "name", "") or "",
+                "contact_person": getattr(c, "contact_person", "") or "",
+                "email": getattr(c, "email", "") or "",
+                "phone": getattr(c, "phone", "") or "",
+                "status": getattr(c, "status", "") or ""
+            })
+
+    except Exception:
+        app.logger.exception("Failed to load customers from DB, falling back to static file")
+        customers = load_customers()
+
+    # Summary metrics
+    total = len(customers)
+    active_count = sum(1 for c in customers if (c.get("status") or c.get("status", "")) == "Active")
+    inactive_count = sum(1 for c in customers if (c.get("status") or c.get("status", "")) == "Inactive")
+
+    customer_summary = [
+        {"label": "Total Customers", "value": total},
+        {"label": "Active Customers", "value": active_count},
+        {"label": "Inactive Customers", "value": inactive_count}
+    ]
+
+    customer_chart_data = {
+        "data": [
+            {
+                "labels": ["Active", "Inactive"],
+                "values": [active_count, inactive_count],
+                "type": "pie",
+                "name": "Customer Status"
+            }
+        ],
+        "layout": {"title": "Customer Status Distribution", "height": 400}
+    }
+
+    return render_template(
+        'customer-overview.html',
+        customers=customers,
+        query=query,
+        selected_status=selected_status,
+        customer_summary=customer_summary,
+        customer_chart_data=customer_chart_data
+    )
+
+@app.route('/customers/upload', methods=['POST'])
+@login_required
+def upload_customers():
+    """
+    Accept a CSV file with headers: Id,name,contact_person,email,phone,status
+    Insert rows into the Customer table. Skip rows that fail with a warning.
+    """
+    file = request.files.get('csv_file')
+    if not file:
+        flash("No file uploaded.", "error")
+        return redirect(url_for('customer_overview'))
+
+    try:
+        content = file.read().decode('utf-8-sig')
+        reader = csv.DictReader(content.splitlines())
+    except Exception:
+        flash("Failed to read CSV file.", "error")
+        app.logger.exception("CSV read error")
+        return redirect(url_for('customer_overview'))
+
+    inserted = 0
+    skipped = 0
+    for row in reader:
+        try:
+            # Map CSV columns safely
+            name = (row.get('name') or row.get('Name') or '').strip()
+            contact_person = (row.get('contact_person') or row.get('contactPerson') or row.get('Contact Person') or '').strip()
+            email = (row.get('email') or row.get('Email') or '').strip()
+            phone = (row.get('phone') or row.get('Phone') or '').strip()
+            status = (row.get('status') or row.get('Status') or 'Active').strip()
+
+            if not name:
+                skipped += 1
+                continue
+
+            cust = Customer()
+            if hasattr(cust, "name"):
+                setattr(cust, "name", name)
+            if hasattr(cust, "contact_person"):
+                setattr(cust, "contact_person", contact_person)
+            if hasattr(cust, "email"):
+                setattr(cust, "email", email)
+            if hasattr(cust, "phone"):
+                setattr(cust, "phone", phone)
+            if hasattr(cust, "status"):
+                setattr(cust, "status", status)
+
+            # set upload timestamp (UTC) on the first matching timestamp field
+            for ts_field in ("uploaded_at", "created_at", "timestamp", "created_on", "uploaded_on", "created"):
+                if hasattr(cust, ts_field):
+                    setattr(cust, ts_field, datetime.utcnow())
+                    break
+
+            db.session.add(cust)
+            db.session.flush()  # allow catching DB errors early
+            inserted += 1
+        except Exception:
+            db.session.rollback()
+            skipped += 1
+            app.logger.exception("Failed to insert customer row, skipping")
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        flash("Failed to save uploaded customers to database.", "error")
+        app.logger.exception("Commit failed for uploaded customers")
+        return redirect(url_for('customer_overview'))
+
+    flash(f"Customers uploaded: {inserted}. Skipped: {skipped}.", "success")
+    return redirect(url_for('customer_overview'))
+
+@app.route('/customers/download-sample')
+@login_required
+def download_customers_sample():
+    """
+    Return a small CSV sample for customers upload
+    """
+    sample = (
+        "Id,name,contact_person,email,phone,status\r\n"
+        "1,Acme Trading,Chileshe Mwansa,chileshe.mwansa@acmetrading.co.zm,+260971234567,Active\r\n"
+        "2,Zambia Supplies,Mwila Banda,mwila.banda@zambiasupplies.co.zm,+260967890123,Active\r\n"
+    )
+    return Response(sample, mimetype='text/csv',
+                    headers={"Content-Disposition": "attachment;filename=customers_sample.csv"})
 DISTRIBUTION_DATA_FILE = 'static/js/test_distribution_data.json'
 
 def load_distribution_data():
@@ -1675,6 +1885,7 @@ if __name__ == '__main__':
                 user_count = 0
                 try:
                     user_count = db.session.query(User).count()
+               
                 except Exception:
                     user_count = 0
 

@@ -1,0 +1,11 @@
+Id,name,contact_person,email,phone,status
+1,Acme Trading,Chileshe Mwansa,chileshe.mwansa@acmetrading.co.zm,+260971234567,Active
+2,Zambia Supplies,Mwila Banda,mwila.banda@zambiasupplies.co.zm,+260967890123,Active
+3,Copperbelt Traders,Patrick Phiri,patrick.phiri@copperbelt.co.zm,+260955678901,Active
+4,Lusaka Retailers,Chipo Zulu,chipo.zulu@lusakaretail.co.zm,+260971987654,Active
+5,Ndola Wholesalers,Lackson Nkandu,lackson.nkandu@ndolawholesalers.co.zm,+260979112233,Active
+6,Solwezi Hardware,Monica Tembo,monica.tembo@solwezihardware.co.zm,+260966223344,Active
+7,Livingstone Gifts,Esther Kunda,esther.kunda@livingstonegifts.co.zm,+260971445566,Active
+8,Kabwe Logistics,Kelvin Phiri,kelvin.phiri@kabwelogistics.co.zm,+260967334455,Inactive
+9,Chipata Farms,Charity Moyo,charity.moyo@chipatafarms.co.zm,+260955998877,Active
+10,Eastern Electronics,Joseph Banda,joseph.banda@easternelectronics.co.zm,+260976556677,Active
