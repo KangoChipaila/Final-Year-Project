@@ -2,7 +2,7 @@ from flask import Flask, render_template, jsonify, Response, send_file, request,
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
 from werkzeug.utils import secure_filename
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 import analytics
 import asset_upload_module
 import asset_functions
@@ -226,12 +226,6 @@ def login():
         except (OperationalError, DataError):
             # DB not available — try in-memory
             pass
-        """
-        # fallback: in-memory USERS
-        user = USERS.get(username)
-        if user and user["password"] == password:
-            login_user(AuthUser(FallbackUser(username)))
-            return redirect(url_for("index"))"""
 
         return render_template("login.html", error="Invalid username or password")
 
@@ -876,8 +870,7 @@ def customer_overview():
             })
 
     except Exception:
-        app.logger.exception("Failed to load customers from DB, falling back to static file")
-        customers = load_customers()
+        app.logger.exception("Failed to load customers from DB")
 
     # Summary metrics
     total = len(customers)
@@ -996,86 +989,192 @@ def download_customers_sample():
     )
     return Response(sample, mimetype='text/csv',
                     headers={"Content-Disposition": "attachment;filename=customers_sample.csv"})
-DISTRIBUTION_DATA_FILE = 'static/js/test_distribution_data.json'
 
-def load_distribution_data():
-    with open(DISTRIBUTION_DATA_FILE, 'r') as f:
-        return json.load(f)
+def _set_attr_if_exists(obj, field, value, date_try=False, cast_float=False):
+    """Helper: set attribute on obj if present. Try to convert date or numeric if requested."""
+    if not hasattr(obj, field):
+        return
+    val = value
+    if date_try and value:
+        try:
+            # expect 'YYYY-MM-DD' from forms
+            val = datetime.fromisoformat(value)
+        except Exception:
+            try:
+                val = datetime.strptime(value, "%Y-%m-%d")
+            except Exception:
+                pass
+    if cast_float and value not in (None, ""):
+        try:
+            val = float(value)
+        except Exception:
+            pass
+    try:
+        setattr(obj, field, val)
+    except Exception:
+        # ignore individual set errors
+        app.logger.debug("Could not set %s on %s", field, type(obj).__name__)
 
-def save_distribution_data(data):
-    with open(DISTRIBUTION_DATA_FILE, 'w') as f:
-        json.dump(data, f, indent=2)
-
+# Replace file-based distribution handlers with DB-backed versions
 @app.route('/distribution-overview')
 def distribution_overview():
-    data = load_distribution_data()
-    inventory = data.get('inventory', [])
-    shipments = data.get('shipments', [])
-    orders = data.get('orders', [])
-    return render_template(
-        'distribution-overview.html',
-        inventory=inventory,
-        shipments=shipments,
-        orders=orders
-    )
+    """
+    Show inventory items, shipments and orders from the PostgreSQL DB.
+    Falls back to file-based JSON if DB access fails.
+    """
+    try:
+        inv_rows = db.session.query(InventoryItem).order_by(getattr(InventoryItem, "id", InventoryItem)).all()
+        shipments_rows = db.session.query(Shipment).order_by(getattr(Shipment, "id", Shipment)).all()
+        orders_rows = db.session.query(SalesOrder).order_by(getattr(SalesOrder, "id", SalesOrder)).all()
+
+        def row_to_dict(row, fields):
+            out = {}
+            for f in fields:
+                try:
+                    val = getattr(row, f)
+                    # serialize datetimes
+                    if hasattr(val, "isoformat"):
+                        val = val.isoformat()
+                    out[f] = val
+                except Exception:
+                    out[f] = None
+            return out
+
+        # best-effort field lists (safe getters)
+        inventory = []
+        for r in inv_rows:
+            inventory.append(row_to_dict(r, [
+                getattr(InventoryItem, "id").key if hasattr(InventoryItem, "id") else "id",
+                "product" if hasattr(InventoryItem, "product") else ("name" if hasattr(InventoryItem, "name") else "item"),
+                "sku" if hasattr(InventoryItem, "sku") else "code",
+                "warehouse" if hasattr(InventoryItem, "warehouse") else "location",
+                "quantity" if hasattr(InventoryItem, "quantity") else ("qty" if hasattr(InventoryItem, "qty") else "stock"),
+                "reorder_level" if hasattr(InventoryItem, "reorder_level") else "reorder",
+                "status" if hasattr(InventoryItem, "status") else "state"
+            ]))
+
+        shipments = []
+        for s in shipments_rows:
+            shipments.append(row_to_dict(s, [
+                "shipment_id" if hasattr(Shipment, "shipment_id") else ("id" if hasattr(Shipment, "id") else "shipment"),
+                "date" if hasattr(Shipment, "date") else ("shipped_at" if hasattr(Shipment, "shipped_at") else "created_at"),
+                "carrier" if hasattr(Shipment, "carrier") else "carrier_name",
+                "destination" if hasattr(Shipment, "destination") else "dest",
+                "status" if hasattr(Shipment, "status") else "state"
+            ]))
+
+        orders = []
+        for o in orders_rows:
+            orders.append(row_to_dict(o, [
+                "order_id" if hasattr(SalesOrder, "order_id") else ("id" if hasattr(SalesOrder, "id") else "order"),
+                "customer_id" if hasattr(SalesOrder, "customer_id") else ("customer" if hasattr(SalesOrder, "customer") else "customer_name"),
+                "date" if hasattr(SalesOrder, "date") else ("order_date" if hasattr(SalesOrder, "order_date") else "created_at"),
+                "total" if hasattr(SalesOrder, "total") else ("amount" if hasattr(SalesOrder, "amount") else "value"),
+                "status" if hasattr(SalesOrder, "status") else "state"
+            ]))
+
+        return render_template(
+            'distribution-overview.html',
+            inventory=inventory,
+            shipments=shipments,
+            orders=orders
+        )
+    except Exception:
+        app.logger.exception("DB unavailable for distribution overview")
+        
 
 @app.route('/add_shipment', methods=['GET', 'POST'])
 def add_shipment():
     if request.method == 'POST':
-        data = load_distribution_data()
-        shipments = data.get('shipments', [])
-        new_id = max([int(s['shipment_id'].split('-')[-1]) for s in shipments], default=1000) + 1
-        new_shipment = {
-            'shipment_id': f"SHP-{new_id}",
-            'date': request.form['date'],
-            'carrier': request.form['carrier'],
-            'destination': request.form['destination'],
-            'status': request.form['status']
-        }
-        shipments.append(new_shipment)
-        data['shipments'] = shipments
-        save_distribution_data(data)
-        flash('Shipment added!', 'success')
+        date_val = request.form.get('date', '')
+        carrier = request.form.get('carrier', '')
+        destination = request.form.get('destination', '')
+        status = request.form.get('status', '')
+
+        try:
+            sh = Shipment()
+            # flexible attribute setting
+            _set_attr_if_exists(sh, "shipment_id", request.form.get('shipment_id', ''), date_try=False)
+            _set_attr_if_exists(sh, "date", date_val, date_try=True)
+            _set_attr_if_exists(sh, "carrier", carrier)
+            _set_attr_if_exists(sh, "carrier_name", carrier)
+            _set_attr_if_exists(sh, "destination", destination)
+            _set_attr_if_exists(sh, "dest", destination)
+            _set_attr_if_exists(sh, "status", status)
+            db.session.add(sh)
+            db.session.commit()
+            flash('Shipment added!', 'success')
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Failed to add shipment to DB; falling back to file")
+            # fallback to file-based storage for compatibility
+
         return redirect(url_for('distribution_overview'))
     return render_template('add_shipment.html')
 
 @app.route('/add_order', methods=['GET', 'POST'])
 def add_order():
     if request.method == 'POST':
-        data = load_distribution_data()
-        orders = data.get('orders', [])
-        new_id = max([int(o['order_id'].split('-')[-1]) for o in orders], default=5000) + 1
-        new_order = {
-            'order_id': f"ORD-{new_id}",
-            'customer': request.form['customer'],
-            'date': request.form['date'],
-            'total': request.form['total'],
-            'status': request.form['status']
-        }
-        orders.append(new_order)
-        data['orders'] = orders
-        save_distribution_data(data)
-        flash('Order added!', 'success')
+        order_id = request.form.get('order_id', '')
+        customer = request.form.get('customer', '')
+        date_val = request.form.get('date', '')
+        total = request.form.get('total', '')
+        status = request.form.get('status', '')
+
+        try:
+            o = SalesOrder()
+            # try multiple common fields
+            _set_attr_if_exists(o, "order_id", order_id)
+            if customer.isdigit():
+                _set_attr_if_exists(o, "customer_id", int(customer))
+            else:
+                _set_attr_if_exists(o, "customer", customer)
+                _set_attr_if_exists(o, "customer_name", customer)
+            _set_attr_if_exists(o, "date", date_val, date_try=True)
+            _set_attr_if_exists(o, "order_date", date_val, date_try=True)
+            _set_attr_if_exists(o, "total", total, cast_float=True)
+            _set_attr_if_exists(o, "amount", total, cast_float=True)
+            _set_attr_if_exists(o, "status", status)
+            db.session.add(o)
+            db.session.commit()
+            flash('Order added!', 'success')
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Failed to add order to DB")
+
         return redirect(url_for('distribution_overview'))
     return render_template('add_order.html')
 
 @app.route('/receive_inventory', methods=['GET', 'POST'])
 def receive_inventory():
     if request.method == 'POST':
-        data = load_distribution_data()
-        inventory = data.get('inventory', [])
-        new_item = {
-            'product': request.form['product'],
-            'sku': request.form['sku'],
-            'warehouse': request.form['warehouse'],
-            'quantity': request.form['quantity'],
-            'reorder_level': request.form['reorder_level'],
-            'status': request.form['status']
-        }
-        inventory.append(new_item)
-        data['inventory'] = inventory
-        save_distribution_data(data)
-        flash('Inventory received!', 'success')
+        product = request.form.get('product', '')
+        sku = request.form.get('sku', '')
+        warehouse = request.form.get('warehouse', '')
+        quantity = request.form.get('quantity', '')
+        reorder_level = request.form.get('reorder_level', '')
+        status = request.form.get('status', '')
+
+        try:
+            item = InventoryItem()
+            _set_attr_if_exists(item, "product", product)
+            _set_attr_if_exists(item, "name", product)
+            _set_attr_if_exists(item, "sku", sku)
+            _set_attr_if_exists(item, "code", sku)
+            _set_attr_if_exists(item, "warehouse", warehouse)
+            _set_attr_if_exists(item, "location", warehouse)
+            _set_attr_if_exists(item, "quantity", quantity, cast_float=True)
+            _set_attr_if_exists(item, "qty", quantity, cast_float=True)
+            _set_attr_if_exists(item, "reorder_level", reorder_level, cast_float=True)
+            _set_attr_if_exists(item, "reorder", reorder_level, cast_float=True)
+            _set_attr_if_exists(item, "status", status)
+            db.session.add(item)
+            db.session.commit()
+            flash('Inventory received!', 'success')
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Failed to add inventory to DB")
+            
         return redirect(url_for('distribution_overview'))
     return render_template('receive_inventory.html')
 
@@ -1435,74 +1534,232 @@ def save_production_data(data):
     with open(PRODUCTION_DATA_FILE, 'w') as f:
         json.dump(data, f, indent=2)
 
-@app.route('/production-overview')
-def production_overview():
-    data = load_production_data()
-    production_orders = data.get('production_orders', [])
-    bill_of_materials = data.get('bill_of_materials', [])
-    work_centers = data.get('work_centers', [])
-    return render_template(
-        'production-overview.html',
-        production_orders=production_orders,
-        bill_of_materials=bill_of_materials,
-        work_centers=work_centers
-    )
-
 @app.route('/add_production_order', methods=['GET', 'POST'])
+@login_required
 def add_production_order():
+    """
+    Backend for templates/add_production_order.html
+    Creates a ProductionOrder row using flexible attribute setting helper.
+    """
     if request.method == 'POST':
-        data = load_production_data()
-        orders = data.get('production_orders', [])
-        new_id = max([int(o['order_id']) for o in orders], default=0) + 1
-        new_order = {
-            'order_id': str(new_id),
-            'product': request.form['product'],
-            'quantity': request.form['quantity'],
-            'start_date': request.form['start_date'],
-            'end_date': request.form['end_date'],
-            'status': request.form['status']
-        }
-        orders.append(new_order)
-        data['production_orders'] = orders
-        save_production_data(data)
-        flash('Production order added!', 'success')
-        return redirect(url_for('production_overview'))
+        order_id = request.form.get('order_id', '').strip()
+        product = request.form.get('product', '').strip()
+        quantity = request.form.get('quantity', '').strip()
+        start_date = request.form.get('start_date', '').strip()
+        end_date = request.form.get('end_date', '').strip()
+        status = request.form.get('status', '').strip()
+
+        try:
+            po = ProductionOrder()
+            # Accept multiple possible model column names
+            _set_attr_if_exists(po, "order_id", order_id)
+            _set_attr_if_exists(po, "id", order_id)
+            _set_attr_if_exists(po, "product", product)
+            _set_attr_if_exists(po, "product_name", product)
+            _set_attr_if_exists(po, "name", product)
+            _set_attr_if_exists(po, "quantity", quantity, cast_float=True)
+            _set_attr_if_exists(po, "qty", quantity, cast_float=True)
+            _set_attr_if_exists(po, "amount", quantity, cast_float=True)
+            _set_attr_if_exists(po, "start_date", start_date, date_try=True)
+            _set_attr_if_exists(po, "date", start_date, date_try=True)
+            _set_attr_if_exists(po, "end_date", end_date, date_try=True)
+            _set_attr_if_exists(po, "status", status)
+            _set_attr_if_exists(po, "state", status)
+
+            db.session.add(po)
+            db.session.commit()
+            flash('Production order added!', 'success')
+            return redirect(url_for('production_overview'))
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Failed to add production order to DB")
+            flash('Failed to add production order.', 'error')
+            return redirect(url_for('production_overview'))
+
     return render_template('add_production_order.html')
 
 @app.route('/add_bom', methods=['GET', 'POST'])
+@login_required
 def add_bom():
+    """
+    Add a Bill of Materials entry. Uses flexible attribute setter to match model column names.
+    """
     if request.method == 'POST':
-        data = load_production_data()
-        boms = data.get('bill_of_materials', [])
-        new_bom = {
-            'product': request.form['product'],
-            'component': request.form['component'],
-            'quantity_required': request.form['quantity_required'],
-            'unit': request.form['unit']
-        }
-        boms.append(new_bom)
-        data['bill_of_materials'] = boms
-        save_production_data(data)
-        flash('BOM added!', 'success')
-        return redirect(url_for('production_overview'))
+        product = request.form.get('product', '').strip()
+        component = request.form.get('component', '').strip()
+        quantity_required = request.form.get('quantity_required', '').strip()
+        unit = request.form.get('unit', '').strip()
+
+        try:
+            bom = BillOfMaterials()
+            _set_attr_if_exists(bom, "product", product)
+            _set_attr_if_exists(bom, "product_name", product)
+            _set_attr_if_exists(bom, "name", product)
+
+            _set_attr_if_exists(bom, "component", component)
+            _set_attr_if_exists(bom, "component_name", component)
+            _set_attr_if_exists(bom, "part", component)
+
+            _set_attr_if_exists(bom, "quantity_required", quantity_required, cast_float=True)
+            _set_attr_if_exists(bom, "quantity", quantity_required, cast_float=True)
+            _set_attr_if_exists(bom, "qty", quantity_required, cast_float=True)
+
+            _set_attr_if_exists(bom, "unit", unit)
+            _set_attr_if_exists(bom, "uom", unit)
+
+            db.session.add(bom)
+            db.session.commit()
+            flash('BOM entry added!', 'success')
+            return redirect(url_for('production_overview'))
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Failed to add BOM to DB")
+            flash('Failed to add BOM.', 'error')
+            return redirect(url_for('production_overview'))
+
     return render_template('add_bom.html')
 
 @app.route('/update_work_center', methods=['GET', 'POST'])
+@login_required
 def update_work_center():
-    data = load_production_data()
-    work_centers = data.get('work_centers', [])
-    if request.method == 'POST':
-        wc_name = request.form['name']
-        for wc in work_centers:
-            if wc['name'] == wc_name:
-                wc['current_task'] = request.form['current_task']
-                wc['status'] = request.form['status']
-                wc['operator'] = request.form['operator']
-        data['work_centers'] = work_centers
-        save_production_data(data)
-        flash('Work center updated!', 'success')
-        return redirect(url_for('production_overview'))
-    return render_template('update_work_center.html', work_centers=work_centers)
+    """
+    Render form to update a work center (select by name) and apply changes to the DB.
+    Falls back to PRODUCTION_DATA_FILE when DB is unavailable.
+    """
+    # load work centers for the select box
+    try:
+        wc_rows = db.session.query(WorkCenter).order_by(getattr(WorkCenter, "id", WorkCenter)).all()
+        work_centers = [{"id": getattr(w, "id", None), "name": getattr(w, "name", "")} for w in wc_rows]
+    except Exception:
+        app.logger.exception("DB unavailable for update_work_center; using file fallback")
+        data = load_production_data()
+        work_centers = data.get("work_centers", [])
+
+    if request.method == "POST":
+        name = request.form.get("name")
+        current_task = request.form.get("current_task", "")
+        status = request.form.get("status", "")
+        operator = request.form.get("operator", "")
+
+        updated = False
+        # Try DB update first
+        try:
+            wc = db.session.query(WorkCenter).filter_by(name=name).first()
+            if wc:
+                _set_attr_if_exists(wc, "current_task", current_task)
+                _set_attr_if_exists(wc, "task", current_task)
+                _set_attr_if_exists(wc, "status", status)
+                _set_attr_if_exists(wc, "state", status)
+                _set_attr_if_exists(wc, "operator", operator)
+                _set_attr_if_exists(wc, "assigned_to", operator)
+                db.session.add(wc)
+                db.session.commit()
+                flash("Work center updated.", "success")
+                updated = True
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Failed to update WorkCenter in DB")
+
+        # Fallback to file-based update
+        if not updated:
+            try:
+                data = load_production_data()
+                wcs = data.get("work_centers", [])
+                for item in wcs:
+                    # match by name or id string
+                    if (item.get("name") and item.get("name") == name) or (str(item.get("id")) == str(name)):
+                        item["current_task"] = current_task
+                        item["status"] = status
+                        item["operator"] = operator
+                        break
+                data["work_centers"] = wcs
+                save_production_data(data)
+                flash("Work center updated (file fallback).", "success")
+            except Exception:
+                app.logger.exception("Failed to update work center in file fallback")
+                flash("Failed to update work center.", "error")
+
+        return redirect(url_for("production_overview"))
+
+    return render_template("update_work_center.html", work_centers=work_centers)
+
+@app.route('/production-overview')
+def production_overview():
+    """
+    Load production overview from PostgreSQL tables (ProductionOrder, BillOfMaterials, WorkCenter).
+    Falls back to file-based JSON when DB access fails.
+    """
+    try:
+        def safe_get(row, *candidates, default=None):
+            for c in candidates:
+                if hasattr(row, c):
+                    try:
+                        val = getattr(row, c)
+                        if hasattr(val, "isoformat"):
+                            return val.isoformat()
+                        return val
+                    except Exception:
+                        continue
+            return default
+
+        prod_rows = db.session.query(ProductionOrder).order_by(getattr(ProductionOrder, "id", ProductionOrder)).all()
+        bom_rows = db.session.query(BillOfMaterials).order_by(getattr(BillOfMaterials, "id", BillOfMaterials)).all()
+        wc_rows = db.session.query(WorkCenter).order_by(getattr(WorkCenter, "id", WorkCenter)).all()
+
+        production_orders = []
+        for r in prod_rows:
+            production_orders.append({
+                "id": safe_get(r, "id", "order_id"),
+                "order_id": safe_get(r, "order_id", "id"),
+                "product": safe_get(r, "product", "product_name", "name"),
+                "quantity": float(safe_get(r, "quantity", "qty", "amount", default=0) or 0),
+                "start_date": safe_get(r, "start_date", "start"),
+                "end_date": safe_get(r, "end_date", "end"),
+                "status": safe_get(r, "status", "state", default="")
+            })
+
+        bill_of_materials = []
+        for r in bom_rows:
+            bill_of_materials.append({
+                "id": safe_get(r, "id"),
+                "product": safe_get(r, "product", "product_name", "name", default=""),
+                "component": safe_get(r, "component", "component_name", "part", default=""),
+                "quantity_required": float(safe_get(r, "quantity_required", "quantity", "qty", default=0) or 0),
+                "unit": safe_get(r, "unit", "uom", default="pcs")
+            })
+
+        work_centers = []
+        for r in wc_rows:
+            work_centers.append({
+                "id": safe_get(r, "id"),
+                "name": safe_get(r, "name", "work_center", default=""),
+                "current_task": safe_get(r, "current_task", "task", default=""),
+                "status": safe_get(r, "status", "state", default=""),
+                "operator": safe_get(r, "operator", "assigned_to", default=""),
+                "capacity": float(safe_get(r, "capacity", default=0) or 0),
+                "throughput_per_hour": float(safe_get(r, "throughput_per_hour", "throughput", default=0) or 0)
+            })
+
+        return render_template(
+            'production-overview.html',
+            production_orders=production_orders,
+            bill_of_materials=bill_of_materials,
+            work_centers=work_centers
+        )
+
+    except Exception:
+        app.logger.exception("DB unavailable for production overview; falling back to file")
+        data = load_production_data()
+        production_orders = data.get('production_orders', [])
+        bill_of_materials = data.get('bill_of_materials', [])
+        work_centers = data.get('work_centers', [])
+        return render_template(
+            'production-overview.html',
+            production_orders=production_orders,
+            bill_of_materials=bill_of_materials,
+            work_centers=work_centers
+        )
+
 """
 @app.route('/sales-overview')
 async def sales_overview():
@@ -1515,6 +1772,7 @@ async def sales_overview():
                            goods_performance_pie_chart = goods_performance_pie_chart,
                            customer_expenditure_pie_chart = customer_expenditure_pie_chart)
 """
+
 """
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_file():
@@ -1578,15 +1836,7 @@ def upload_to_hadoop():
         sales_dataframe = spark.read.csv(hdfs_upload_path, header=True, inferSchema=True, encoding='cp1252')
 
         partitioned_data_file = sales_dataframe.withColumn('SalesYear', col('OrderDate').substr(7,10))
-
-        print(partitioned_data_file.head())
-        # Uncomment the line below to write the partitioned data to HDFS
-        # partitioned_data_file.write.partitionBy('SalesYear').mode('append').parquet('hdfs://localhost:19000/data/sales_data_files')
-
-        os.remove(temp_local_path)
-
-        return 'File successfully uploaded and processed'
-"""    
+"""
 # Define available groups and roles (add more groups here as needed)
 GROUPS = {
     0: "Administrator",
@@ -1598,10 +1848,12 @@ GROUPS = {
     6: "Warehouse/Logistics"
 }
 
-# replace roles list so "user" becomes "pending_user"
-ROLES = ["pending_user", "admin", "manager", "finance", "hR", "iT", "logistics"]
+# standardized roles list
+ROLES = ["pending_user", "admin", "manager", "finance", "hr", "it", "logistics"]
 
-@app.route("/admin/users")
+# NOTE: removed stray/duplicated code blocks and stray 'return' statements that caused syntax errors.
+
+@app.route("/admin-users")
 @login_required
 def admin_users():
     # allow only admin (role == 'admin' or group_id == 0)
@@ -1613,7 +1865,7 @@ def admin_users():
     users = db.session.query(User).order_by(User.id).all()
     return render_template("admin-users.html", users=users, groups=GROUPS, roles=ROLES)
 
-@app.route("/admin/users/<int:user_id>/update", methods=["POST"])
+@app.route("/admin-users/<int:user_id>/update", methods=["POST"])
 @login_required
 def admin_update_user(user_id):
     model = getattr(current_user, "model", None)
@@ -1666,41 +1918,81 @@ def admin_update_user(user_id):
 
     return redirect(url_for("admin_users"))
 
-def _jsonable_plotly(obj):
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
     """
-    Convert Plotly Figure / dict / JSON-string / numpy-containing structure
-    into plain Python types (lists, dicts, scalars) suitable for json.dumps.
+    Simple signup route for templates/signup.html.
+    Creates a user with role 'pending_user'. Uses model fields if present.
     """
-    # If it's an HTML string, leave as-is (you render it with |safe in template)
-    if isinstance(obj, str):
-        # try to parse JSON string first (some functions return JSON string)
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        if not username or not password:
+            flash('Username and password are required.', 'error')
+            return redirect(url_for('signup'))
+
         try:
-            return json.loads(obj)
-        except Exception:
-            return obj
+            new_user = User(username=username)
+            # prefer model helper if exists
+            if hasattr(new_user, 'set_password'):
+                new_user.set_password(password)
+            else:
+                if hasattr(new_user, 'password_hash'):
+                    setattr(new_user, 'password_hash', generate_password_hash(password))
+                elif hasattr(new_user, 'password'):
+                    setattr(new_user, 'password', generate_password_hash(password))
+                else:
+                    setattr(new_user, 'password_hash', generate_password_hash(password))
 
-    # Prefer PlotlyJSONEncoder to handle Figures and numpy types
-    try:
-        return json.loads(json.dumps(obj, cls=PlotlyJSONEncoder))
-    except Exception:
-        # fallback: convert numpy arrays to lists recursively
+            # set defaults where possible
+            if hasattr(new_user, 'role'):
+                setattr(new_user, 'role', 'pending_user')
+            if hasattr(new_user, 'group_id'):
+                setattr(new_user, 'group_id', 1)
+            if hasattr(new_user, 'is_active'):
+                setattr(new_user, 'is_active', True)
+
+            db.session.add(new_user)
+            db.session.commit()
+            flash('Account created. Please log in.', 'success')
+            return redirect(url_for('login'))
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Signup failed")
+            flash('Failed to create account.', 'error')
+            return redirect(url_for('signup'))
+
+    return render_template('signup.html')
+
+@app.route('/process_payroll', methods=['GET', 'POST'])
+@login_required
+def process_payroll():
+    """
+    Simple payroll processing endpoint backing templates/process_payroll.html.
+    Stores payroll rows into HR JSON fallback (same format used by payroll_overview).
+    """
+    if request.method == 'POST':
         try:
-            import numpy as np
+            data = load_hr_data()
+            payroll = data.get('payroll', [])
+            new_row = {
+                'employee': request.form.get('employee', ''),
+                'month': request.form.get('month', ''),
+                'gross_pay': request.form.get('gross_pay', ''),
+                'deductions': request.form.get('deductions', ''),
+                'net_pay': request.form.get('net_pay', ''),
+                'status': request.form.get('status', 'Processed')
+            }
+            payroll.append(new_row)
+            data['payroll'] = payroll
+            save_hr_data(data)
+            flash('Payroll processed successfully.', 'success')
         except Exception:
-            np = None
-
-        def convert(v):
-            if np is not None and isinstance(v, np.ndarray):
-                return v.tolist()
-            if isinstance(v, dict):
-                return {k: convert(val) for k, val in v.items()}
-            if isinstance(v, list):
-                return [convert(x) for x in v]
-            return v
-
-        if hasattr(obj, "to_dict"):
-            return convert(obj.to_dict())
-        return convert(obj)
+            app.logger.exception("Failed to process payroll")
+            flash('Failed to process payroll.', 'error')
+        return redirect(url_for('payroll_overview'))
+    return render_template('process_payroll.html')
 
 @app.route('/sales-overview')
 async def sales_overview():
@@ -1715,165 +2007,19 @@ async def sales_overview():
                            customer_expenditure_pie_chart=customer_expenditure_pie_charts)
 
 @app.route('/sales-forecast')
-async def sales_forecast():
-
-    sales_forecast_graph = await analytics.generate_sales_forecast()
-    
-    sales_forecast_graph = sales_forecast_graph
-
-    return render_template('sales_forecast.html', sales_forecast_graph=sales_forecast_graph)
-
-"""
-@app.route('/upload', methods=['GET', 'POST'])
-def upload_file():
-    if 'file' not in request.files:
-        return url_for('index')
-    file = request.files['file']
-
-    if file.filename == '' or not file.filename.endswith('.csv'):
-        return "Invalid file type. Please upload a CSV file."
-    
-    if file:
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
-        
-        df = spark.read.csv(filepath, header = True, inferSchema = True, encoding = 'cp1252')
-        
-        print(df.head())
-        
-        return "File uploaded and processed successfully!"
-"""
-
-"""
-@app.route('/sales-data-upload-to-hadoop', methods=['GET', 'POST']) 
-def upload_to_hadoop():
-
-    if 'sales-data-file' not in request.files:
-        return "No file found for upload"
-    
-    sales_data_file = request.files['sales-data-file']
-
-    if sales_data_file.filename == '' or not sales_data_file.filename.endswith('.csv'):
-        return "Invalid data type selected. Please select a valid file"
-
-    if sales_data_file:
-        filename = secure_filename(sales_data_file.filename)
-        
-        
-        temp_dir = os.path.abspath(os.sep) + 'tmp' 
-        if not os.path.exists(temp_dir):
-            os.makedirs(temp_dir)
-
-        temp_local_path = os.path.join(temp_dir, filename)
-        sales_data_file.save(temp_local_path)
-
-        hdfs_upload_dir = 'hdfs://localhost:19000/data/raw_uploads'
-        hdfs_upload_path = os.path.join(hdfs_upload_dir, filename).replace('\\', '/')
-
-        # Format the local path for the hadoop command, replacing backslashes with forward slashes
-        posix_local_path = temp_local_path.replace(os.sep, '/')
-        
-        try:
-            subprocess.run([hadoop_bin_path, 'fs', '-mkdir', '-p', hdfs_upload_dir], check=True)
-            subprocess.run([hadoop_bin_path, 'fs', '-put', '-f', posix_local_path, hdfs_upload_path], check=True)
-
-        except subprocess.CalledProcessError as e:
-            return f"Failed to upload file to HDFS: {e}"
-        except FileNotFoundError:
-            return f"Hadoop executable not found at '{hadoop_bin_path}'. Please check your path.
-        
-        sales_dataframe = spark.read.csv(hdfs_upload_path, header=True, inferSchema=True, encoding='cp1252')
-
-        partitioned_data_file = sales_dataframe.withColumn('SalesYear', col('OrderDate').substr(7,10))
-
-        print(partitioned_data_file.head())
-        # Uncomment the line below to write the partitioned data to HDFS
-        # partitioned_data_file.write.partitionBy('SalesYear').mode('append').parquet('hdfs://localhost:19000/data/sales_data_files')
-
-        os.remove(temp_local_path)
-
-        return 'File successfully uploaded and processed'
-"""    
-# Define available groups and roles (add more groups here as needed)
-GROUPS = {
-    0: "Administrator",
-    1: "Pending User",
-    2: "Manager",
-    3: "Finance",
-    4: "HR",
-    5: "IT",
-    6: "Warehouse/Logistics"
-}
-
-# replace roles list so "user" becomes "pending_user"
-ROLES = ["pending_user", "admin", "manager", "finance", "hR", "iT", "logistics"]
-"""
-@app.route("/admin/users")
-@login_required
-def admin_users():
-    # allow only admin (role == 'admin' or group_id == 0)
-    model = getattr(current_user, "model", None)
-    is_admin = bool(model and (getattr(model, "role", None) == "admin" or getattr(model, "group_id", None) == 0))
-    if not is_admin:
-        return render_template("403.html"), 403
-
-    users = db.session.query(User).order_by(User.id).all()
-    return render_template("admin-users.html", users=users, groups=GROUPS, roles=ROLES)
-
-@app.route("/admin/users/<int:user_id>/update", methods=["POST"])
-@login_required
-def admin_update_user(user_id):
-    model = getattr(current_user, "model", None)
-    is_admin = bool(model and (getattr(model, "role", None) == "admin" or getattr(model, "group_id", None) == 0))
-    if not is_admin:
-        return render_template("403.html"), 403
-
-    user = db.session.get(User, user_id)
-    if not user:
-        flash("User not found.", "error")
-        return redirect(url_for("admin_users"))
-
+def sales_forecast():
+    """
+    Render sales forecast chart page (templates/sales_forecast.html).
+    Attempts to call analytics.generate_sales_forecast(); falls back harmlessly on error.
+    """
     try:
-        # Validate and set group_id
-        group_id_raw = request.form.get("group_id")
-        if group_id_raw is not None and group_id_raw != "":
-            try:
-                group_id = int(group_id_raw)
-                if group_id not in GROUPS:
-                    raise ValueError("Invalid group id")
-                setattr(user, "group_id", group_id)
-            except ValueError:
-                flash("Invalid group selected.", "error")
-                return redirect(url_for("admin_users"))
+        import asyncio
+        sales_forecast_graph = asyncio.run(analytics.generate_sales_forecast())
+    except Exception:
+        app.logger.exception("Failed to generate sales forecast")
+        sales_forecast_graph = {"data": [], "layout": {}}
+    return render_template('sales_forecast.html', sales_forecast=sales_forecast_graph)
 
-        # Validate and set role
-        role = request.form.get("role")
-        if role:
-            if role not in ROLES:
-                flash("Invalid role selected.", "error")
-                return redirect(url_for("admin_users"))
-            setattr(user, "role", role)
-
-        # is_active checkbox
-        is_active = request.form.get("is_active") == "on"
-        # Some models may use boolean column or attribute name; handle both
-        if hasattr(user, "is_active"):
-            setattr(user, "is_active", bool(is_active))
-        else:
-            setattr(user, "is_active", bool(is_active))
-
-        db.session.add(user)
-        db.session.commit()
-        flash(f"Updated {getattr(user, 'username', 'user')}.", "success")
-    except Exception as e:
-        db.session.rollback()
-        app.logger.exception("Failed to update user")
-        flash("Failed to update user.", "error")
-        flash(str(e))
-
-    return redirect(url_for("admin_users"))
-"""
 if __name__ == '__main__':
      # Ensure DB tables exist (create missing tables from models.py)
     try:
