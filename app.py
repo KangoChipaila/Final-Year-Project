@@ -505,31 +505,164 @@ def get_outstanding_invoices_data():
         "layout": {"title": "Outstanding Invoices"}
     }
 
+# ...existing code...
 @app.route("/accounting-overview")
 @login_required
 def accounting_overview():
-    summary = get_accounting_summary()
-    alerts = get_accounting_alerts()
-    recent_activity = get_accounting_recent_activity()
-    top_vendors = get_top_vendors()
-    recent_transactions = get_recent_transactions()
-    cashflow_data = get_cashflow_data()
-    expense_breakdown_data = get_expense_breakdown_data()
-    revenue_sources_data = get_revenue_sources_data()
-    outstanding_invoices_data = get_outstanding_invoices_data()
-    return render_template(
-        "accounting-overview.html",
-        summary=summary,
-        alerts=alerts,
-        recent_activity=recent_activity,
-        top_vendors=top_vendors,
-        recent_transactions=recent_transactions,
-        cashflow_data=cashflow_data,
-        expense_breakdown_data=expense_breakdown_data,
-        revenue_sources_data=revenue_sources_data,
-        outstanding_invoices_data=outstanding_invoices_data,
-        current_user=current_user
-    )
+    """
+    Load accounting overview from PostgreSQL tables when available.
+    Falls back to the existing file-based finance loader on error.
+    """
+    def safe_get(row, *candidates, default=None):
+        for c in candidates:
+            if hasattr(row, c):
+                try:
+                    val = getattr(row, c)
+                    if hasattr(val, "isoformat"):
+                        return val.isoformat()
+                    return val
+                except Exception:
+                    continue
+        return default
+
+    try:
+        # Attempt to read from DB models if they exist in this module's globals
+        accounts = []
+        invoices = []
+        payments = []
+        expenses = []
+        journal_entries = []
+
+        # Accounts
+        if 'Account' in globals():
+            acc_rows = db.session.query(Account).order_by(getattr(Account, "id", Account)).all()
+            for a in acc_rows:
+                accounts.append({
+                    "id": getattr(a, "id", None),
+                    "name": getattr(a, "name", "") or "",
+                    "type": getattr(a, "type", "") or "",
+                    "balance": float(getattr(a, "balance", 0) or 0),
+                    "currency": getattr(a, "currency", "") or "",
+                    "status": getattr(a, "status", "") or ""
+                })
+
+        # Invoices
+        if 'Invoice' in globals():
+            inv_rows = db.session.query(Invoice).order_by(getattr(Invoice, "invoice_id", Invoice)).all()
+            for inv in inv_rows:
+                amount = safe_get(inv, "amount", "total", default=0) or 0
+                invoices.append({
+                    "id": safe_get(inv, "invoice_id", "id"),
+                    "customer_id": safe_get(inv, "customer_id", "customer"),
+                    "date": safe_get(inv, "date", "created_at"),
+                    "due_date": safe_get(inv, "due_date"),
+                    "amount": float(amount),
+                    "currency": safe_get(inv, "currency", "ccy", default=""),
+                    "status": safe_get(inv, "status", "state", default="")
+                })
+
+        # Payments (Payment model is imported at top if available)
+        if 'Payment' in globals():
+            pay_rows = db.session.query(Payment).order_by(getattr(Payment, "id", Payment)).all()
+            for p in pay_rows:
+                payments.append({
+                    "id": getattr(p, "id", None),
+                    "invoice_id": getattr(p, "invoice_id", None) or getattr(p, "invoice", None),
+                    "date": getattr(p, "date", None) or getattr(p, "created_at", None),
+                    "amount": float(getattr(p, "amount", 0) or 0),
+                    "method": getattr(p, "method", "") or "",
+                    "status": getattr(p, "status", "") or ""
+                })
+
+        # Expenses
+        if 'Expense' in globals():
+            exp_rows = db.session.query(Expense).order_by(getattr(Expense, "id", Expense)).all()
+            for e in exp_rows:
+                expenses.append({
+                    "id": getattr(e, "id", None),
+                    "account_id": getattr(e, "account_id", None),
+                    "date": getattr(e, "date", None),
+                    "description": getattr(e, "description", "") or "",
+                    "amount": float(getattr(e, "amount", 0) or 0),
+                    "category": getattr(e, "category", "") or "",
+                    "status": getattr(e, "status", "") or ""
+                })
+
+        # Journal entries
+        if 'JournalEntry' in globals():
+            je_rows = db.session.query(JournalEntry).order_by(getattr(JournalEntry, "entry_id", JournalEntry)).all()
+            for j in je_rows:
+                journal_entries.append({
+                    "id": safe_get(j, "entry_id", "id"),
+                    "date": safe_get(j, "date"),
+                    "description": safe_get(j, "description"),
+                    "debit_account_id": safe_get(j, "debit_account_id", "debit_account"),
+                    "credit_account_id": safe_get(j, "credit_account_id", "credit_account"),
+                    "amount": float(safe_get(j, "amount", default=0) or 0)
+                })
+
+        # If no DB data found, fall through to file fallback
+        any_db_data = any([accounts, invoices, payments, expenses, journal_entries])
+        if not any_db_data:
+            raise RuntimeError("No accounting models present in globals() or no rows returned")
+
+        # Compute simple summary metrics
+        total_revenue = sum(inv.get("amount", 0) for inv in invoices)
+        total_expenses = sum(exp.get("amount", 0) for exp in expenses)
+        outstanding_invoices_amount = sum(inv.get("amount", 0) for inv in invoices if (inv.get("status", "").lower() != "paid"))
+        outstanding_invoices_count = sum(1 for inv in invoices if (inv.get("status", "").lower() != "paid"))
+
+        # Build chart placeholders: cashflow from payments by month
+        cashflow_by_month = {}
+        for p in payments:
+            d = p.get("date") or ""
+            month = d[:7] if isinstance(d, str) and len(d) >= 7 else "unknown"
+            cashflow_by_month[month] = cashflow_by_month.get(month, 0) + float(p.get("amount", 0))
+
+        cashflow_data = {
+            "data": [
+                {"x": list(cashflow_by_month.keys()), "y": list(cashflow_by_month.values()), "type": "bar", "name": "Cash Flow"}
+            ],
+            "layout": {"title": "Cash Flow by Period"}
+        }
+
+        # Expense breakdown by category
+        expense_by_cat = {}
+        for e in expenses:
+            cat = e.get("category") or "Uncategorized"
+            expense_by_cat[cat] = expense_by_cat.get(cat, 0) + float(e.get("amount", 0))
+
+        expense_breakdown_data = {
+            "data": [{"labels": list(expense_by_cat.keys()), "values": list(expense_by_cat.values()), "type": "pie", "name": "Expenses"}],
+            "layout": {"title": "Expense Breakdown"}
+        }
+
+        summary = [
+            {"label": "Total Revenue", "value": f"{total_revenue:.2f}"},
+            {"label": "Total Expenses", "value": f"{total_expenses:.2f}"},
+            {"label": "Outstanding Invoices", "value": f"{outstanding_invoices_amount:.2f}"},
+            {"label": "Outstanding Count", "value": outstanding_invoices_count}
+        ]
+
+        recent_activity = [f"Payment {p.get('id')} {p.get('status')} {p.get('amount')}" for p in payments[:5]]
+        top_vendors = []  # would require supplier/payee model joins; leave empty if not available
+        recent_transactions = payments[:5] if payments else []
+
+        return render_template(
+            "accounting-overview.html",
+            summary=summary,
+            alerts=[],
+            recent_activity=recent_activity,
+            top_vendors=top_vendors,
+            recent_transactions=recent_transactions,
+            cashflow_data=cashflow_data,
+            expense_breakdown_data=expense_breakdown_data,
+            revenue_sources_data={"data": [], "layout": {}},
+            outstanding_invoices_data={"data": [], "layout": {}}
+        )
+
+    except Exception:
+        app.logger.exception("DB unavailable or accounting models missing; falling back to file-based finance data")
 
 @app.route("/assets/edit/<int:asset_id>", methods=["GET", "POST"])
 @login_required
@@ -1189,59 +1322,289 @@ def save_finance(data):
         json.dump(data, f, indent=2)
 
 @app.route('/finance-overview')
+@login_required
 def finance_overview():
-    data = load_finance()
-    # Extract summary, income_statement, cash_flow, outstanding_payments, finance_chart_data from data
-    financial_summary = data.get('financial_summary', {})
-    income_statement = data.get('income_statement', {})
-    cash_flow = data.get('cash_flow', [])
-    outstanding_payments = data.get('outstanding_payments', [])
-    finance_chart_data = data.get('finance_chart_data', {})
-    return render_template('finance-overview.html',
-                           financial_summary=financial_summary,
-                           income_statement=income_statement,
-                           cash_flow=cash_flow,
-                           outstanding_payments=outstanding_payments,
-                           finance_chart_data=finance_chart_data)
+    """
+    Prefer PostgreSQL-backed finance tables when available. Fallback to static JSON file
+    (load_finance/save_finance) if DB models/tables are missing or an error occurs.
+    """
+    def safe_get(row, *candidates, default=None):
+        for c in candidates:
+            if hasattr(row, c):
+                try:
+                    val = getattr(row, c)
+                    if hasattr(val, "isoformat"):
+                        return val.isoformat()
+                    return val
+                except Exception:
+                    continue
+        return default
+
+    try:
+        # Try to load from DB models if present
+        any_db = False
+
+        # Financial summary lines
+        financial_summary = {}
+        if 'FinancialSummaryLine' in globals():
+            any_db = True
+            rows = db.session.query(FinancialSummaryLine).order_by(getattr(FinancialSummaryLine, "id", FinancialSummaryLine)).all()
+            for r in rows:
+                label = safe_get(r, "label", "name") or ""
+                amount = float(safe_get(r, "value_amount", "amount", default=0) or 0)
+                period = safe_get(r, "period", default="")
+                # group by label (latest override)
+                financial_summary[label] = {"value": amount, "currency": safe_get(r, "currency", ""), "period": period}
+
+        # Income statement lines
+        income_statement = []
+        if 'IncomeStatementLine' in globals():
+            any_db = True
+            rows = db.session.query(IncomeStatementLine).order_by(getattr(IncomeStatementLine, "id", IncomeStatementLine)).all()
+            for r in rows:
+                income_statement.append({
+                    "period": safe_get(r, "period", ""),
+                    "category": safe_get(r, "category", "label", ""),
+                    "amount": float(safe_get(r, "amount", default=0) or 0),
+                    "line_type": safe_get(r, "line_type", "type", "")
+                })
+
+        # Cash flow entries
+        cash_flow = []
+        if 'CashFlowEntry' in globals():
+            any_db = True
+            rows = db.session.query(CashFlowEntry).order_by(getattr(CashFlowEntry, "date", CashFlowEntry)).all()
+            for r in rows:
+                cash_flow.append({
+                    "entry_id": safe_get(r, "entry_id", "id"),
+                    "date": safe_get(r, "date"),
+                    "description": safe_get(r, "description", ""),
+                    "inflow": float(safe_get(r, "inflow", default=0) or 0),
+                    "outflow": float(safe_get(r, "outflow", default=0) or 0),
+                    "balance": float(safe_get(r, "balance", default=0) or 0)
+                })
+
+        # Outstanding payments
+        outstanding_payments = []
+        # Prefer a dedicated OutstandingPayment model, otherwise try Payment as fallback
+        if 'OutstandingPayment' in globals():
+            any_db = True
+            rows = db.session.query(OutstandingPayment).order_by(getattr(OutstandingPayment, "due_date", OutstandingPayment)).all()
+            for r in rows:
+                outstanding_payments.append({
+                    "payment_id": safe_get(r, "payment_id", "id"),
+                    "party": safe_get(r, "party", "payee", ""),
+                    "due_date": safe_get(r, "due_date", "date"),
+                    "amount": float(safe_get(r, "amount", default=0) or 0),
+                    "status": safe_get(r, "status", "")
+                })
+        elif 'Payment' in globals():
+            # Payment model already used elsewhere but may contain payments we can surface
+            any_db = True
+            rows = db.session.query(Payment).order_by(getattr(Payment, "date", Payment)).all()
+            for r in rows:
+                outstanding_payments.append({
+                    "payment_id": safe_get(r, "payment_id", "id"),
+                    "party": safe_get(r, "party", getattr(r, "invoice_id", None) or ""),  # best-effort
+                    "due_date": safe_get(r, "date"),
+                    "amount": float(safe_get(r, "amount", default=0) or 0),
+                    "status": safe_get(r, "status", "")
+                })
+
+        # Finance chart data (JSON stored)
+        finance_chart_data = {}
+        if 'FinanceChartData' in globals():
+            any_db = True
+            rows = db.session.query(FinanceChartData).order_by(getattr(FinanceChartData, "chart_id", FinanceChartData)).all()
+            for r in rows:
+                name = safe_get(r, "name", "chart_id")
+                chart_json = safe_get(r, "chart_json", "data") or safe_get(r, "json", None)
+                # attempt to parse if stored as text
+                try:
+                    parsed = chart_json if isinstance(chart_json, (dict, list)) else json.loads(chart_json)
+                except Exception:
+                    parsed = {"data": [], "layout": {}}
+                finance_chart_data[name] = parsed
+
+        if not any_db:
+            raise RuntimeError("No finance DB models available")
+
+        # Prepare summary list (template expects list of label/value)
+        summary_list = []
+        if financial_summary:
+            for k, v in financial_summary.items():
+                summary_list.append({"label": k, "value": f"{v.get('value', 0):.2f}"})
+        else:
+            # fallback aggregate from income_statement / cash_flow if needed
+            total_revenue = sum(i.get("amount", 0) for i in income_statement if i.get("line_type") == "income")
+            total_expenses = -sum(i.get("amount", 0) for i in income_statement if i.get("line_type") == "expense")
+            summary_list = [
+                {"label": "Total Revenue", "value": f"{total_revenue:.2f}"},
+                {"label": "Total Expenses", "value": f"{total_expenses:.2f}"}
+            ]
+
+        # Basic charts extraction
+        cashflow_chart = finance_chart_data.get("monthly_cashflow") or {"data": [], "layout": {}}
+        expense_breakdown = finance_chart_data.get("expense_breakdown") or {"data": [], "layout": {}}
+        revenue_sources = finance_chart_data.get("revenue_sources") or {"data": [], "layout": {}}
+
+        return render_template(
+            'finance-overview.html',
+            financial_summary=financial_summary,
+            financial_summary_list=summary_list,
+            income_statement=income_statement,
+            cash_flow=cash_flow,
+            outstanding_payments=outstanding_payments,
+            finance_chart_data=finance_chart_data,
+            cashflow_chart=cashflow_chart,
+            expense_breakdown=expense_breakdown,
+            revenue_sources=revenue_sources
+        )
+
+    except Exception:
+        app.logger.exception("DB unavailable for finance overview; falling back to file")
+        data = load_finance()
+        financial_summary = data.get('financial_summary', {})
+        income_statement = data.get('income_statement', {})
+        cash_flow = data.get('cash_flow', [])
+        outstanding_payments = data.get('outstanding_payments', [])
+        finance_chart_data = data.get('finance_chart_data', {})
+        return render_template('finance-overview.html',
+                               financial_summary=financial_summary,
+                               income_statement=income_statement,
+                               cash_flow=cash_flow,
+                               outstanding_payments=outstanding_payments,
+                               finance_chart_data=finance_chart_data)
+
 
 @app.route('/add_payment', methods=['GET', 'POST'])
+@login_required
 def add_payment():
+    """
+    Create an outstanding payment record in the DB when model exists; otherwise fallback to file.
+    """
     if request.method == 'POST':
-        data = load_finance()
-        payments = data.get('outstanding_payments', [])
-        new_id = max([int(p['payment_id']) for p in payments], default=0) + 1
-        new_payment = {
-            'payment_id': str(new_id),
-            'party': request.form['party'],
-            'due_date': request.form['due_date'],
-            'amount': request.form['amount'],
-            'status': request.form['status']
-        }
-        payments.append(new_payment)
-        data['outstanding_payments'] = payments
-        save_finance(data)
-        flash('Payment added successfully!', 'success')
+        party = request.form.get('party', '').strip()
+        due_date = request.form.get('due_date', '').strip()
+        amount = request.form.get('amount', '').strip()
+        status = request.form.get('status', '').strip()
+
+        # Try DB first (prefer OutstandingPayment model)
+        try:
+            if 'OutstandingPayment' in globals():
+                op = OutstandingPayment()
+                _set_attr_if_exists(op, "payment_id", request.form.get('payment_id', None))
+                _set_attr_if_exists(op, "party", party)
+                _set_attr_if_exists(op, "due_date", due_date, date_try=True)
+                _set_attr_if_exists(op, "amount", amount, cast_float=True)
+                _set_attr_if_exists(op, "status", status)
+                db.session.add(op)
+                db.session.commit()
+                flash('Payment added successfully!', 'success')
+                return redirect(url_for('finance_overview'))
+
+            # fallback to generic Payment model if available
+            if 'Payment' in globals():
+                p = Payment()
+                _set_attr_if_exists(p, "party", party)
+                _set_attr_if_exists(p, "date", due_date, date_try=True)
+                _set_attr_if_exists(p, "amount", amount, cast_float=True)
+                _set_attr_if_exists(p, "status", status)
+                db.session.add(p)
+                db.session.commit()
+                flash('Payment added successfully!', 'success')
+                return redirect(url_for('finance_overview'))
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Failed to insert payment into DB; falling back to file")
+
+        # File fallback
+        try:
+            data = load_finance()
+            payments = data.get('outstanding_payments', [])
+            new_id = 1
+            # compute numeric suffix if payment_id present
+            if payments:
+                try:
+                    # attempt to parse last numeric suffix
+                    numeric_ids = [int(''.join(filter(str.isdigit, (p.get('payment_id') or '')))) for p in payments if p.get('payment_id')]
+                    if numeric_ids:
+                        new_id = max(numeric_ids) + 1
+                except Exception:
+                    new_id = len(payments) + 1
+            new_payment = {
+                'payment_id': f"OP-{new_id:04d}",
+                'party': party,
+                'due_date': due_date,
+                'amount': float(amount or 0),
+                'status': status
+            }
+            payments.append(new_payment)
+            data['outstanding_payments'] = payments
+            save_finance(data)
+            flash('Payment added (file fallback).', 'success')
+        except Exception:
+            app.logger.exception("Failed to append payment to finance JSON")
+            flash('Failed to add payment.', 'error')
+
         return redirect(url_for('finance_overview'))
+
     return render_template('add_payment.html')
 
+
 @app.route('/add_receipt', methods=['GET', 'POST'])
+@login_required
 def add_receipt():
+    """
+    Add a cashflow receipt row: prefer CashFlowEntry model; otherwise use finance JSON.
+    """
     if request.method == 'POST':
-        data = load_finance()
-        cash_flow = data.get('cash_flow', [])
-        new_receipt = {
-            'date': request.form['date'],
-            'description': request.form['description'],
-            'inflow': request.form['inflow'],
-            'outflow': '',
-            'balance': request.form['balance']
-        }
-        cash_flow.append(new_receipt)
-        data['cash_flow'] = cash_flow
-        save_finance(data)
-        flash('Receipt added successfully!', 'success')
+        date_val = request.form.get('date', '').strip()
+        description = request.form.get('description', '').strip()
+        inflow = request.form.get('inflow', '').strip()
+        balance = request.form.get('balance', '').strip()
+
+        # DB attempt
+        try:
+            if 'CashFlowEntry' in globals():
+                cfe = CashFlowEntry()
+                _set_attr_if_exists(cfe, "entry_id", request.form.get('entry_id', None))
+                _set_attr_if_exists(cfe, "date", date_val, date_try=True)
+                _set_attr_if_exists(cfe, "description", description)
+                _set_attr_if_exists(cfe, "inflow", inflow, cast_float=True)
+                _set_attr_if_exists(cfe, "outflow", 0, cast_float=True)
+                _set_attr_if_exists(cfe, "balance", balance, cast_float=True)
+                db.session.add(cfe)
+                db.session.commit()
+                flash('Receipt added successfully!', 'success')
+                return redirect(url_for('finance_overview'))
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Failed to insert cashflow entry into DB; falling back to file")
+
+        # File fallback
+        try:
+            data = load_finance()
+            cash_flow = data.get('cash_flow', [])
+            new_receipt = {
+                'date': date_val,
+                'description': description,
+                'inflow': float(inflow or 0),
+                'outflow': 0.0,
+                'balance': float(balance or 0)
+            }
+            cash_flow.append(new_receipt)
+            data['cash_flow'] = cash_flow
+            save_finance(data)
+            flash('Receipt added successfully (file fallback)!', 'success')
+        except Exception:
+            app.logger.exception("Failed to append receipt to finance JSON")
+            flash('Failed to add receipt.', 'error')
+
         return redirect(url_for('finance_overview'))
+
     return render_template('add_receipt.html')
+
 
 @app.route('/download_finance_report')
 def download_finance_report():
