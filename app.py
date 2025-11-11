@@ -1282,8 +1282,6 @@ def generate_report():
 
 #HUMAN RESOURCES
 
-# ...existing code...
-
 @app.route('/add_employee', methods=['GET', 'POST'])
 def add_employee():
     """
