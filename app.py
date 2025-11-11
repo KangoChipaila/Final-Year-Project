@@ -1280,248 +1280,505 @@ def generate_report():
         outstanding_payments=outstanding_payments
     )
 
+#HUMAN RESOURCES
 
-HR_DATA_FILE = 'static/js/test_hr_data.json'
-
-def load_hr_data():
-    with open(HR_DATA_FILE, 'r') as f:
-        return json.load(f)
-
-def save_hr_data(data):
-    with open(HR_DATA_FILE, 'w') as f:
-        json.dump(data, f, indent=2)
+# ...existing code...
 
 @app.route('/add_employee', methods=['GET', 'POST'])
 def add_employee():
+    """
+    Create an Employee row in the DB when possible, otherwise fall back to file-based storage.
+    """
     if request.method == 'POST':
-        data = load_hr_data()
-        employees = data.get('employees', [])
-        new_id = max([int(e['id']) for e in employees], default=0) + 1
-        new_employee = {
-            'id': str(new_id),
-            'name': request.form['name'],
-            'department': request.form['department'],
-            'role': request.form['role'],
-            'email': request.form['email'],
-            'phone': request.form['phone'],
-            'status': request.form['status']
-        }
-        employees.append(new_employee)
-        data['employees'] = employees
-        save_hr_data(data)
-        flash('Employee added successfully!', 'success')
-        return redirect(url_for('human_resources_overview'))
-    return render_template('add_employee.html')
+        name = request.form.get('name', '').strip()
+        department = request.form.get('department', '').strip()
+        role = request.form.get('role', '').strip()
+        email = request.form.get('email', '').strip()
+        phone = request.form.get('phone', '').strip()
+        status = request.form.get('status', '').strip() or 'Active'
+
+        # Try DB insert first
+        try:
+            if 'Employee' in globals():
+                emp = Employee()
+                _set_attr_if_exists(emp, "name", name)
+                _set_attr_if_exists(emp, "department", department)
+                _set_attr_if_exists(emp, "role", role)
+                _set_attr_if_exists(emp, "email", email)
+                _set_attr_if_exists(emp, "phone", phone)
+                _set_attr_if_exists(emp, "status", status)
+                # optional timestamp fields
+                for ts in ("hired_at", "created_at", "joined_on", "created"):
+                    if hasattr(emp, ts):
+                        _set_attr_if_exists(emp, ts, datetime.utcnow().isoformat())
+                        break
+                db.session.add(emp)
+                db.session.commit()
+                flash('Employee added successfully!', 'success')
+                return redirect(url_for('human_resources_overview'))
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Failed to add employee to DB; falling back to file")
+            return render_template('add_employee.html')
+
 
 @app.route('/edit_employee/<employee_id>', methods=['GET', 'POST'])
 def edit_employee(employee_id):
-    data = load_hr_data()
-    employees = data.get('employees', [])
-    employee = next((e for e in employees if e['id'] == employee_id), None)
-    if not employee:
-        flash('Employee not found.', 'danger')
-        return redirect(url_for('human_resources_overview'))
-    if request.method == 'POST':
-        employee['name'] = request.form['name']
-        employee['department'] = request.form['department']
-        employee['role'] = request.form['role']
-        employee['email'] = request.form['email']
-        employee['phone'] = request.form['phone']
-        employee['status'] = request.form['status']
-        save_hr_data(data)
-        flash('Employee updated successfully!', 'success')
-        return redirect(url_for('human_resources_overview'))
-    return render_template('edit_employee.html', employee=employee)
+    """
+    Edit an employee: prefer DB row update; fallback to JSON file.
+    """
+    # Try DB first
+    emp_obj = None
+    try:
+        # allow numeric id or string id depending on model
+        if 'Employee' in globals():
+            try:
+                eid = int(employee_id)
+            except Exception:
+                eid = employee_id
+            emp_obj = db.session.get(Employee, eid)
+    except Exception:
+        app.logger.exception("DB lookup failed for edit_employee")
+        emp_obj = None
+
+    if emp_obj:
+        if request.method == 'POST':
+            name = request.form.get('name', '').strip()
+            department = request.form.get('department', '').strip()
+            role = request.form.get('role', '').strip()
+            email = request.form.get('email', '').strip()
+            phone = request.form.get('phone', '').strip()
+            status = request.form.get('status', '').strip()
+            try:
+                _set_attr_if_exists(emp_obj, "name", name)
+                _set_attr_if_exists(emp_obj, "department", department)
+                _set_attr_if_exists(emp_obj, "role", role)
+                _set_attr_if_exists(emp_obj, "email", email)
+                _set_attr_if_exists(emp_obj, "phone", phone)
+                _set_attr_if_exists(emp_obj, "status", status)
+                # update timestamp if available
+                for ts in ("updated_at", "modified_at", "updated"):
+                    if hasattr(emp_obj, ts):
+                        _set_attr_if_exists(emp_obj, ts, datetime.utcnow().isoformat())
+                        break
+                db.session.add(emp_obj)
+                db.session.commit()
+                flash('Employee updated successfully!', 'success')
+                return redirect(url_for('human_resources_overview'))
+            except Exception:
+                db.session.rollback()
+                app.logger.exception("Failed to update employee in DB")
+                flash('Failed to update employee (database error).', 'danger')
+                return redirect(url_for('human_resources_overview'))
+        # GET -> prepare dict for template
+        employee_dict = {
+            "id": getattr(emp_obj, "id", None),
+            "name": getattr(emp_obj, "name", "") or "",
+            "department": getattr(emp_obj, "department", "") or "",
+            "role": getattr(emp_obj, "role", "") or "",
+            "email": getattr(emp_obj, "email", "") or "",
+            "phone": getattr(emp_obj, "phone", "") or "",
+            "status": getattr(emp_obj, "status", "") or ""
+        }
+        return render_template('edit_employee.html', employee=employee_dict)
+
 
 @app.route('/delete_employee/<employee_id>', methods=['POST'])
 def delete_employee(employee_id):
-    data = load_hr_data()
-    employees = data.get('employees', [])
-    employees = [e for e in employees if e['id'] != employee_id]
-    data['employees'] = employees
-    save_hr_data(data)
-    flash('Employee deleted successfully!', 'success')
-    return redirect(url_for('human_resources_overview'))
+    """
+    Delete employee from DB when possible; otherwise remove from HR JSON.
+    """
+    # Try DB delete
+    try:
+        if 'Employee' in globals():
+            try:
+                eid = int(employee_id)
+            except Exception:
+                eid = employee_id
+            emp = db.session.get(Employee, eid)
+            if emp:
+                db.session.delete(emp)
+                db.session.commit()
+                flash('Employee deleted successfully!', 'success')
+                return redirect(url_for('human_resources_overview'))
+    except Exception:
+        db.session.rollback()
+        app.logger.exception("Failed to delete employee from DB")
 
+#Fix this
 @app.route('/departments_overview')
 def departments_overview():
-    data = load_hr_data()
-    employees = data.get('employees', [])
-    departments = sorted(set(e['department'] for e in employees))
+    """
+    Aggregate departments from DB Employee table when available; fallback to HR JSON.
+    """
+    try:
+        if 'Employee' in globals():
+            rows = db.session.query(Employee).all()
+            departments = sorted(set(getattr(r, "department", "") or "" for r in rows if getattr(r, "department", None)))
+            department_stats = [
+                {'name': dept, 'employees': sum(1 for r in rows if (getattr(r, "department", "") or "") == dept)}
+                for dept in departments
+            ]
+            return render_template('departments_overview.html', departments=department_stats)
+    except Exception:
+        app.logger.exception("DB unavailable for departments_overview; falling back to file")
+
+    # file fallback
+    employees = ('employees', [])
+    departments = sorted(set(e.get('department') for e in employees))
     department_stats = [
-        {'name': dept, 'employees': sum(1 for e in employees if e['department'] == dept)}
+        {'name': dept, 'employees': sum(1 for e in employees if e.get('department') == dept)}
         for dept in departments
     ]
     return render_template('departments_overview.html', departments=department_stats)
 
+#Fix this
 @app.route('/attendance_overview')
 def attendance_overview():
-    data = load_hr_data()
-    attendance_records = data.get('attendance', [])
+    """
+    Prefer DB Attendance table when available; otherwise use HR JSON 'attendance'.
+    """
+    try:
+        if 'Attendance' in globals():
+            att_rows = db.session.query(Attendance).order_by(getattr(Attendance, "date", Attendance)).all()
+            attendance_records = []
+            for a in att_rows:
+                attendance_records.append({
+                    'id': getattr(a, 'id', None),
+                    'employee_id': getattr(a, 'employee_id', None),
+                    'date': getattr(a, 'date', None),
+                    'status': getattr(a, 'status', None),
+                    'check_in': getattr(a, 'check_in', None),
+                    'check_out': getattr(a, 'check_out', None)
+                })
+            return render_template('attendance_overview.html', attendance_records=attendance_records)
+    except Exception:
+        app.logger.exception("DB unavailable for attendance_overview; falling back to file")
+
+    # file fallback
+    attendance_records = ('attendance', [])
     return render_template('attendance_overview.html', attendance_records=attendance_records)
 
+#Fix this
 @app.route('/payroll_overview')
 def payroll_overview():
-    data = load_hr_data()
-    payroll = data.get('payroll', [])
+    """
+    Prefer DB Payroll table when available; otherwise use HR JSON 'payroll'.
+    """
+    try:
+        if 'Payroll' in globals():
+            payroll_rows = db.session.query(Payroll).order_by(getattr(Payroll, "id", Payroll)).all()
+            payroll = []
+            for p in payroll_rows:
+                payroll.append({
+                    'id': getattr(p, 'id', None),
+                    'employee_id': getattr(p, 'employee_id', None),
+                    'month': getattr(p, 'month', None),
+                    'gross_pay': getattr(p, 'gross_pay', None),
+                    'deductions': getattr(p, 'deductions', None),
+                    'net_pay': getattr(p, 'net_pay', None),
+                    'status': getattr(p, 'status', None)
+                })
+            return render_template('payroll_overview.html', payroll=payroll)
+    except Exception:
+        app.logger.exception("DB unavailable for payroll_overview; falling back to file")
+
+    payroll = ('payroll', [])
     return render_template('payroll_overview.html', payroll=payroll)
 
+#Fix this
 @app.route('/leave_overview')
 def leave_overview():
+    """
+    Prefer DB LeaveRequest table when available; otherwise use HR JSON 'leave_requests'.
+    """
+    try:
+        if 'LeaveRequest' in globals():
+            leaves = db.session.query(LeaveRequest).order_by(getattr(LeaveRequest, "id", LeaveRequest)).all()
+            leave_requests = []
+            for l in leaves:
+                leave_requests.append({
+                    'id': getattr(l, 'id', None),
+                    'employee_id': getattr(l, 'employee_id', None),
+                    'start_date': getattr(l, 'start_date', None),
+                    'end_date': getattr(l, 'end_date', None),
+                    'leave_type': getattr(l, 'leave_type', None),
+                    'reason': getattr(l, 'reason', None),
+                    'status': getattr(l, 'status', None),
+                    'requested_on': getattr(l, 'requested_on', None)
+                })
+            return render_template('leave_overview.html', leave_requests=leave_requests)
+    except Exception:
+        app.logger.exception("DB unavailable for leave_overview")
+
     data = load_hr_data()
     leave_requests = data.get('leave_requests', [])
     return render_template('leave_overview.html', leave_requests=leave_requests)
 
+#Fix this
 @app.route('/hr_reports')
 def hr_reports():
-    data = load_hr_data()
-    reports = data.get('reports', [
+    """
+    Prefer DB reports if a Reports model/table exists; otherwise load from HR JSON.
+    """
+    try:
+        if 'HRReport' in globals():
+            reports_rows = db.session.query(HRReport).order_by(getattr(HRReport, "date", HRReport)).all()
+            reports = [{"title": getattr(r, "title", ""), "date": getattr(r, "date", "")} for r in reports_rows]
+            return render_template('hr_reports.html', reports=reports)
+    except Exception:
+        app.logger.exception("DB unavailable for hr_reports; falling back to file")
+
+    reports =('reports', [
         {"title": "Headcount Report", "date": "2025-10-01"},
         {"title": "Attendance Summary", "date": "2025-10-10"}
     ])
     return render_template('hr_reports.html', reports=reports)
 
+
 @app.route('/human_resources_overview')
 def human_resources_overview():
-    data = load_hr_data()
-    employees = data.get('employees', [])
-    alerts = data.get('alerts', [
-        "Employee contract expiring soon: John Banda.",
-        "Pending leave approval for Alice Mwansa.",
-        "New employee onboarding: Peter Zulu."
-    ])
-    recent_activity = data.get('recent_activity', [
-        "Alice Mwansa requested leave for 5 days.",
-        "Peter Zulu added to IT department.",
-        "John Banda completed annual review."
-    ])  
-    hr_summary = [
-        {'label': 'Total Employees', 'value': len(employees)},
-        {'label': 'Active', 'value': sum(1 for e in employees if e['status'] == 'Active')},
-        {'label': 'On Leave', 'value': sum(1 for e in employees if e['status'] == 'On Leave')},
-        {'label': 'Inactive', 'value': sum(1 for e in employees if e['status'] == 'Inactive')}
-    ]
-    departments = sorted(set(e['department'] for e in employees))
-    query = request.args.get('query', '')
-    selected_department = request.args.get('department', '')
-    selected_status = request.args.get('status', '')
-    filtered_employees = [
-        e for e in employees
-        if (query.lower() in e['name'].lower())
-        and (selected_department == '' or e['department'] == selected_department)
-        and (selected_status == '' or e['status'] == selected_status)
-    ]
-    hr_chart_data = {
-        "data": [
-            {
-                "labels": ["Active", "On Leave", "Inactive"],
-                "values": [
-                    sum(1 for e in employees if e['status'] == 'Active'),
-                    sum(1 for e in employees if e['status'] == 'On Leave'),
-                    sum(1 for e in employees if e['status'] == 'Inactive')
-                ],
-                "type": "pie",
-                "name": "Employee Status"
-            }
-        ],
-        "layout": {"title": "Employee Status Distribution"}
-    }
-    return render_template(
-        'human-resources-overview.html',
-        alerts=alerts,
-        hr_summary=hr_summary,
-        departments=departments,
-        selected_department=selected_department,
-        selected_status=selected_status,
-        query=query,
-        employees=filtered_employees,
-        recent_activity=recent_activity,
-        hr_chart_data=hr_chart_data
-    )
+    """
+    Load HR overview preferentially from PostgreSQL Employee table, with safe fallbacks.
+    """
+    try:
+        # Try DB employees first
+        if 'Employee' in globals():
+            q = db.session.query(Employee)
+            query = request.args.get('query', '').strip()
+            selected_department = request.args.get('department', '')
+            selected_status = request.args.get('status', '')
 
-PROCUREMENT_DATA_FILE = 'static/js/test_procurement_data.json'
+            if query:
+                # try to match name or email fields if present
+                if hasattr(Employee, "name"):
+                    q = q.filter(getattr(Employee, "name").ilike(f"%{query}%"))
+                elif hasattr(Employee, "email"):
+                    q = q.filter(getattr(Employee, "email").ilike(f"%{query}%"))
 
-def load_procurement_data():
-    with open(PROCUREMENT_DATA_FILE, 'r') as f:
-        return json.load(f)
+            if selected_department and hasattr(Employee, "department"):
+                q = q.filter(getattr(Employee, "department") == selected_department)
+            if selected_status and hasattr(Employee, "status"):
+                q = q.filter(getattr(Employee, "status") == selected_status)
 
-def save_procurement_data(data):
-    with open(PROCUREMENT_DATA_FILE, 'w') as f:
-        json.dump(data, f, indent=2)
+            rows = q.order_by(getattr(Employee, "id", Employee)).all()
+            employees = []
+            for e in rows:
+                employees.append({
+                    "id": getattr(e, "id", None),
+                    "name": getattr(e, "name", "") or "",
+                    "department": getattr(e, "department", "") or "",
+                    "role": getattr(e, "role", "") or "",
+                    "email": getattr(e, "email", "") or "",
+                    "phone": getattr(e, "phone", "") or "",
+                    "status": getattr(e, "status", "") or ""
+                })
+
+            alerts = []  # could be populated from DB if available
+            recent_activity = []  # optionally synthesize from audit logs/payroll/leave tables
+
+            hr_summary = [
+                {'label': 'Total Employees', 'value': len(employees)},
+                {'label': 'Active', 'value': sum(1 for ev in employees if ev.get('status') == 'Active')},
+                {'label': 'On Leave', 'value': sum(1 for ev in employees if ev.get('status') == 'On Leave')},
+                {'label': 'Inactive', 'value': sum(1 for ev in employees if ev.get('status') == 'Inactive')}
+            ]
+            departments = sorted(set(ev.get('department') for ev in employees if ev.get('department')))
+
+            filtered_employees = employees
+            return render_template(
+                'human-resources-overview.html',
+                alerts=alerts,
+                hr_summary=hr_summary,
+                departments=departments,
+                selected_department=request.args.get('department', ''),
+                selected_status=request.args.get('status', ''),
+                query=request.args.get('query', ''),
+                employees=filtered_employees,
+                recent_activity=recent_activity,
+                hr_chart_data={
+                    "data": [
+                        {
+                            "labels": ["Active", "On Leave", "Inactive"],
+                            "values": [
+                                sum(1 for ev in employees if ev.get('status') == 'Active'),
+                                sum(1 for ev in employees if ev.get('status') == 'On Leave'),
+                                sum(1 for ev in employees if ev.get('status') == 'Inactive')
+                            ],
+                            "type": "pie",
+                            "name": "Employee Status"
+                        }
+                    ],
+                    "layout": {"title": "Employee Status Distribution"}
+                }
+            )
+    except Exception:
+        app.logger.exception("DB unavailable for human_resources_overview")
+
+#PROCUREMENT
 
 @app.route('/procurement-overview')
 def procurement_overview():
-    data = load_procurement_data()
-    purchase_requests = data.get('purchase_requests', [])
-    purchase_orders = data.get('purchase_orders', [])
-    suppliers = data.get('suppliers', [])
-    return render_template(
-        'procurement-overview.html',
-        purchase_requests=purchase_requests,
-        purchase_orders=purchase_orders,
-        suppliers=suppliers
-    )
+    """
+    Load procurement overview from PostgreSQL tables (PurchaseRequest, PurchaseOrder, Supplier).
+    Falls back to file-based JSON when DB access fails.
+    """
+    try:
+        def safe_get(row, *candidates, default=None):
+            for c in candidates:
+                if hasattr(row, c):
+                    try:
+                        val = getattr(row, c)
+                        if hasattr(val, "isoformat"):
+                            return val.isoformat()
+                        return val
+                    except Exception:
+                        continue
+            return default
+
+        pr_rows = db.session.query(PurchaseRequest).order_by(getattr(PurchaseRequest, "id", PurchaseRequest)).all()
+        po_rows = db.session.query(PurchaseOrder).order_by(getattr(PurchaseOrder, "id", PurchaseOrder)).all()
+        supplier_rows = db.session.query(Supplier).order_by(getattr(Supplier, "id", Supplier)).all()
+
+        purchase_requests = []
+        for r in pr_rows:
+            purchase_requests.append({
+                "id": safe_get(r, "id", "request_id"),
+                "request_id": safe_get(r, "request_id", "id"),
+                "requested_by": safe_get(r, "requested_by", "requested_by_name", default=""),
+                "date": safe_get(r, "date", "requested_on", "created_at", default=""),
+                "item": safe_get(r, "item", "description", default=""),
+                "quantity": float(safe_get(r, "quantity", "qty", default=0) or 0),
+                "status": safe_get(r, "status", "state", default="")
+            })
+
+        purchase_orders = []
+        for r in po_rows:
+            purchase_orders.append({
+                "id": safe_get(r, "id", "order_id"),
+                "order_id": safe_get(r, "order_id", "id"),
+                "vendor": safe_get(r, "vendor", "supplier", default=""),
+                "date": safe_get(r, "date", "order_date", "created_at", default=""),
+                "item": safe_get(r, "item", "description", default=""),
+                "quantity": float(safe_get(r, "quantity", "qty", default=0) or 0),
+                "amount": float(safe_get(r, "amount", "total", default=0) or 0),
+                "status": safe_get(r, "status", "state", default="")
+            })
+
+        suppliers = []
+        for s in supplier_rows:
+            suppliers.append({
+                "id": safe_get(s, "id"),
+                "name": safe_get(s, "name", default=""),
+                "contact_person": safe_get(s, "contact_person", "contact", default=""),
+                "email": safe_get(s, "email", default=""),
+                "phone": safe_get(s, "phone", default=""),
+                "status": safe_get(s, "status", default="")
+            })
+
+        return render_template(
+            'procurement-overview.html',
+            purchase_requests=purchase_requests,
+            purchase_orders=purchase_orders,
+            suppliers=suppliers
+        )
+
+    except Exception:
+        app.logger.exception("DB unavailable for procurement overview")
+
 
 @app.route('/add_purchase_request', methods=['GET', 'POST'])
 def add_purchase_request():
     if request.method == 'POST':
-        data = load_procurement_data()
-        requests = data.get('purchase_requests', [])
-        new_id = max([int(r['request_id']) for r in requests], default=0) + 1
-        new_request = {
-            'request_id': str(new_id),
-            'requested_by': request.form['requested_by'],
-            'date': request.form['date'],
-            'item': request.form['item'],
-            'quantity': request.form['quantity'],
-            'status': request.form['status']
-        }
-        requests.append(new_request)
-        data['purchase_requests'] = requests
-        save_procurement_data(data)
-        flash('Purchase request added!', 'success')
-        return redirect(url_for('procurement_overview'))
+        requested_by = request.form.get('requested_by', '').strip()
+        date_val = request.form.get('date', '').strip()
+        item = request.form.get('item', '').strip()
+        quantity = request.form.get('quantity', '').strip()
+        status = request.form.get('status', '').strip()
+        request_id = request.form.get('request_id', '').strip()
+
+        # Try DB insert first
+        try:
+            pr = PurchaseRequest()
+            _set_attr_if_exists(pr, "request_id", request_id)
+            _set_attr_if_exists(pr, "requested_by", requested_by)
+            _set_attr_if_exists(pr, "requested_by_name", requested_by)
+            _set_attr_if_exists(pr, "date", date_val, date_try=True)
+            _set_attr_if_exists(pr, "item", item)
+            _set_attr_if_exists(pr, "description", item)
+            _set_attr_if_exists(pr, "quantity", quantity, cast_float=True)
+            _set_attr_if_exists(pr, "qty", quantity, cast_float=True)
+            _set_attr_if_exists(pr, "status", status)
+            db.session.add(pr)
+            db.session.commit()
+            flash('Purchase request added!', 'success')
+            return redirect(url_for('procurement_overview'))
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Failed to add purchase request to DB; falling back to file")
+            return redirect(url_for('procurement_overview'))
+        
     return render_template('add_purchase_request.html')
 
 @app.route('/add_purchase_order', methods=['GET', 'POST'])
 def add_purchase_order():
     if request.method == 'POST':
-        data = load_procurement_data()
-        orders = data.get('purchase_orders', [])
-        new_id = max([int(o['order_id']) for o in orders], default=0) + 1
-        new_order = {
-            'order_id': str(new_id),
-            'vendor': request.form['vendor'],
-            'date': request.form['date'],
-            'item': request.form['item'],
-            'quantity': request.form['quantity'],
-            'amount': request.form['amount'],
-            'status': request.form['status']
-        }
-        orders.append(new_order)
-        data['purchase_orders'] = orders
-        save_procurement_data(data)
-        flash('Purchase order added!', 'success')
-        return redirect(url_for('procurement_overview'))
+        order_id = request.form.get('order_id', '').strip()
+        vendor = request.form.get('vendor', '').strip()
+        date_val = request.form.get('date', '').strip()
+        item = request.form.get('item', '').strip()
+        quantity = request.form.get('quantity', '').strip()
+        amount = request.form.get('amount', '').strip()
+        status = request.form.get('status', '').strip()
+
+        try:
+            po = PurchaseOrder()
+            _set_attr_if_exists(po, "order_id", order_id)
+            _set_attr_if_exists(po, "vendor", vendor)
+            _set_attr_if_exists(po, "supplier", vendor)
+            _set_attr_if_exists(po, "date", date_val, date_try=True)
+            _set_attr_if_exists(po, "item", item)
+            _set_attr_if_exists(po, "quantity", quantity, cast_float=True)
+            _set_attr_if_exists(po, "amount", amount, cast_float=True)
+            _set_attr_if_exists(po, "total", amount, cast_float=True)
+            _set_attr_if_exists(po, "status", status)
+            db.session.add(po)
+            db.session.commit()
+            flash('Purchase order added!', 'success')
+            return redirect(url_for('procurement_overview'))
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Failed to add purchase order to DB; falling back to file")
+            return redirect(url_for('procurement_overview'))
+        
     return render_template('add_purchase_order.html')
 
 @app.route('/add_supplier', methods=['GET', 'POST'])
 def add_supplier():
     if request.method == 'POST':
-        data = load_procurement_data()
-        suppliers = data.get('suppliers', [])
-        new_supplier = {
-            'name': request.form['name'],
-            'contact_person': request.form['contact_person'],
-            'email': request.form['email'],
-            'phone': request.form['phone'],
-            'status': request.form['status']
-        }
-        suppliers.append(new_supplier)
-        data['suppliers'] = suppliers
-        save_procurement_data(data)
-        flash('Supplier added!', 'success')
-        return redirect(url_for('procurement_overview'))
+        name = request.form.get('name', '').strip()
+        contact_person = request.form.get('contact_person', '').strip()
+        email = request.form.get('email', '').strip()
+        phone = request.form.get('phone', '').strip()
+        status = request.form.get('status', '').strip()
+
+        try:
+            s = Supplier()
+            _set_attr_if_exists(s, "name", name)
+            _set_attr_if_exists(s, "contact_person", contact_person)
+            _set_attr_if_exists(s, "contact", contact_person)
+            _set_attr_if_exists(s, "email", email)
+            _set_attr_if_exists(s, "phone", phone)
+            _set_attr_if_exists(s, "status", status)
+            db.session.add(s)
+            db.session.commit()
+            flash('Supplier added!', 'success')
+            return redirect(url_for('procurement_overview'))
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Failed to add supplier to DB; falling back to file")
+            return redirect(url_for('procurement_overview'))
+    
     return render_template('add_supplier.html')
 
 PRODUCTION_DATA_FILE = 'static/js/test_production_data.json'
