@@ -9,7 +9,7 @@
   </header>
 
   <section id="forecast-area" class="mb-4 w-full">
-      <div id="sales-forecast"></div>
+      <div id="sales-forecast">{{ sales_forecast_graph | safe}}</div>
   </section>
 
   <section id="forecast-metrics" class="text-sm text-gray-700 bg-gray-50 p-3 rounded border">
@@ -30,7 +30,7 @@
 {% block scripts %}
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
-  var salesForecastGraph = {{ sales_forecast_graph | tojson}};
+  var salesForecastGraph = {{ sales_forecast_graph }};
 
   Plotly.newPlot('sales-forecast', salesForecastGraph.data, salesForecastGraph.layout);
 </script>
