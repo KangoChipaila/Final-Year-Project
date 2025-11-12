@@ -11,6 +11,28 @@
 
     <!-- Plotly for Charts -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+    <style>
+        /* Smooth transitions for the drawer and main content */
+        #sidebar { transition: transform .18s ease, width .18s ease; }
+        #mainContent { transition: margin-left .18s ease, padding .18s ease; }
+
+        /* Collapsed state adjustments are applied from JS by toggling 'sidebar-collapsed' on <body> */
+        body.sidebar-collapsed #sidebar {
+            transform: translateX(-100%); /* hide sidebar */
+            width: 0 !important;
+            visibility: hidden;
+        }
+        body.sidebar-collapsed #mainContent {
+            margin-left: 0 !important;
+        }
+
+        /* Ensure large-screen default spacing (matches existing md:ml-64) */
+        @media (min-width: 768px) {
+            #mainContent { margin-left: 16rem; } /* 64 = 16rem matches sidebar width */
+        }
+    </style>
+
     {% block head_scripts %}{% endblock %}
 </head>
 
@@ -19,6 +41,25 @@
     <!-- Navbar (sticky to top, does not scroll with page) -->
     <header class="bg-white shadow-sm border-b flex justify-between items-center px-6 py-4 fixed top-0 left-0 w-full z-40">
         <div class="flex items-center gap-3">
+            <!-- Sidebar toggle -->
+            <button id="sidebarToggle" aria-label="Toggle sidebar"
+                    class="mr-2 p-1 rounded hover:bg-gray-100 md:hidden focus:outline-none"
+                    title="Toggle sidebar">
+                <!-- simple hamburger icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+            </button>
+
+            <!-- Desktop toggle -->
+            <button id="sidebarToggleDesktop" aria-label="Toggle sidebar"
+                    class="mr-2 p-1 rounded hidden md:inline-flex hover:bg-gray-100 focus:outline-none"
+                    title="Toggle sidebar">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 12h18" />
+                </svg>
+            </button>
+
             <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="Logo" class="h-8 w-8 rounded-full border border-gray-300">
             <a href="{{ url_for('index') }}" class="text-2xl font-bold text-blue-700 tracking-tight hover:text-blue-900 transition">Data-Driven ERP System</a>
         </div>
@@ -56,7 +97,7 @@
 
     <div class="flex flex-1 pt-20">
         <!-- Sidebar -->
-        <aside class="w-64 bg-white border-r shadow-md hidden md:flex flex-col fixed left-0 z-30" style="top:4.5rem; height:calc(100vh - 4.5rem);">
+        <aside id="sidebar" class="w-64 bg-white border-r shadow-md hidden md:flex flex-col fixed left-0 z-30" style="top:4.5rem; height:calc(100vh - 4.5rem);">
             <div class="p-4 font-bold border-b text-blue-700 text-lg tracking-tight">ERP Navigation</div>
             <nav class="p-4 space-y-6 text-sm">
                 <!-- Core Section -->
@@ -184,7 +225,7 @@
         </aside>
 
         <!-- Main Content Area -->
-        <main class="flex-1 p-6 overflow-y-auto bg-gray-50 rounded-lg ml-0 md:ml-64">
+        <main id="mainContent" class="flex-1 p-6 overflow-y-auto bg-gray-50 rounded-lg ml-0 md:ml-64">
             {% block content %}
             
             {% endblock %}
@@ -195,6 +236,78 @@
     <footer class="bg-white border-t text-gray-500 text-center py-3 text-sm mt-8 shadow-sm">
         &copy; {{ current_year if current_year else "2025" }} Data-Driven ERP System. All rights reserved.
     </footer>
+
+    <!-- Persistent sidebar script: always included (placed BEFORE the child scripts block) -->
+    <script>
+        (function () {
+            // run after DOM ready to be safe with templates that load late content
+            function initSidebar() {
+                const body = document.body;
+                const sidebar = document.getElementById('sidebar');
+                const toggle = document.getElementById('sidebarToggle'); // mobile hamburger
+                const toggleDesktop = document.getElementById('sidebarToggleDesktop'); // desktop collapse button
+                if (!sidebar) return; // nothing to do on pages without sidebar
+
+                const collapsedKey = 'erp_sidebar_collapsed';
+                const isCollapsed = localStorage.getItem(collapsedKey) === 'true';
+
+                function applyDesktopState(collapsed) {
+                    if (collapsed) {
+                        body.classList.add('sidebar-collapsed');
+                        if (window.innerWidth >= 768) sidebar.classList.add('hidden');
+                    } else {
+                        body.classList.remove('sidebar-collapsed');
+                        if (window.innerWidth >= 768) sidebar.classList.remove('hidden');
+                    }
+                    if (toggleDesktop) toggleDesktop.setAttribute('aria-pressed', collapsed ? 'true' : 'false');
+                }
+
+                applyDesktopState(isCollapsed);
+
+                function toggleSidebar(e) {
+                    if (window.innerWidth < 768) {
+                        const nowHidden = sidebar.classList.toggle('hidden');
+                        if (toggle) toggle.setAttribute('aria-expanded', (!nowHidden).toString());
+                    } else {
+                        const collapsed = body.classList.toggle('sidebar-collapsed');
+                        localStorage.setItem(collapsedKey, collapsed);
+                        applyDesktopState(collapsed);
+                    }
+                    if (e) e.stopPropagation();
+                }
+
+                if (toggle) toggle.addEventListener('click', toggleSidebar);
+                if (toggleDesktop) toggleDesktop.addEventListener('click', toggleSidebar);
+
+                // Close mobile sidebar when clicking outside or pressing Escape
+                document.addEventListener('click', function (e) {
+                    if (window.innerWidth < 768) {
+                        const sidebarVisible = !sidebar.classList.contains('hidden');
+                        const clickedToggle = toggle && (toggle.contains(e.target) || toggle === e.target);
+                        if (sidebarVisible && !sidebar.contains(e.target) && !clickedToggle) {
+                            sidebar.classList.add('hidden');
+                            if (toggle) toggle.setAttribute('aria-expanded', 'false');
+                        }
+                    }
+                }, true);
+
+                document.addEventListener('keydown', function (e) {
+                    if (e.key === 'Escape' && window.innerWidth < 768) {
+                        if (!sidebar.classList.contains('hidden')) {
+                            sidebar.classList.add('hidden');
+                            if (toggle) toggle.setAttribute('aria-expanded', 'false');
+                        }
+                    }
+                });
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initSidebar);
+            } else {
+                initSidebar();
+            }
+        })();
+    </script>
 
     {% block scripts %}{% endblock %}
 </body>

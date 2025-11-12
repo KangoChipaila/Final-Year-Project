@@ -26,8 +26,16 @@ from models import (
     InventoryItem, Shipment,
     PurchaseRequest, PurchaseOrder, Supplier,
     ProductionOrder, BillOfMaterials, WorkCenter,
-    Asset, SalesOrder, SalesForecast, Payment, User
+    Asset, SalesOrder, SalesForecast, Payment, User, LeaveRequest,
+    CashFlowRecord, AttendanceRecord, PayrollRecord, HRReport, Account,
+    OutstandingPayment, FinanceChartData, FinancialSummaryLine, JournalEntry,
+    Expense, Invoice, IncomeStatementLine
 )
+
+CashFlowEntry = CashFlowRecord
+Attendance = AttendanceRecord
+Payroll = PayrollRecord
+
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"  # Replace with a real secret key
@@ -1872,10 +1880,6 @@ def leave_overview():
     except Exception:
         app.logger.exception("DB unavailable for leave_overview")
 
-    data = load_hr_data()
-    leave_requests = data.get('leave_requests', [])
-    return render_template('leave_overview.html', leave_requests=leave_requests)
-
 #Fix this
 @app.route('/hr_reports')
 def hr_reports():
@@ -2587,29 +2591,48 @@ def signup():
 @login_required
 def process_payroll():
     """
-    Simple payroll processing endpoint backing templates/process_payroll.html.
-    Stores payroll rows into HR JSON fallback (same format used by payroll_overview).
+    Process payroll and persist to PostgreSQL Payroll table when available.
+    Falls back to flashing an error if the DB model is not present or commit fails.
     """
     if request.method == 'POST':
+        employee = request.form.get('employee', '').strip()
+        month = request.form.get('month', '').strip()
+        gross_pay = request.form.get('gross_pay', '').strip()
+        deductions = request.form.get('deductions', '').strip()
+        net_pay = request.form.get('net_pay', '').strip()
+        status = request.form.get('status', 'Processed').strip()
+
         try:
-            data = load_hr_data()
-            payroll = data.get('payroll', [])
-            new_row = {
-                'employee': request.form.get('employee', ''),
-                'month': request.form.get('month', ''),
-                'gross_pay': request.form.get('gross_pay', ''),
-                'deductions': request.form.get('deductions', ''),
-                'net_pay': request.form.get('net_pay', ''),
-                'status': request.form.get('status', 'Processed')
-            }
-            payroll.append(new_row)
-            data['payroll'] = payroll
-            save_hr_data(data)
-            flash('Payroll processed successfully.', 'success')
+            if 'Payroll' in globals():
+                p = Payroll()
+                # accept either employee id or name depending on your model
+                if employee.isdigit():
+                    _set_attr_if_exists(p, "employee_id", int(employee))
+                _set_attr_if_exists(p, "employee", employee)
+                _set_attr_if_exists(p, "month", month)
+                _set_attr_if_exists(p, "gross_pay", gross_pay, cast_float=True)
+                _set_attr_if_exists(p, "deductions", deductions, cast_float=True)
+                _set_attr_if_exists(p, "net_pay", net_pay, cast_float=True)
+                _set_attr_if_exists(p, "status", status)
+                # set processed/created timestamp if model supports it
+                for ts in ("processed_at", "processed_on", "created_at", "date"):
+                    if hasattr(p, ts):
+                        _set_attr_if_exists(p, ts, datetime.utcnow().isoformat())
+                        break
+
+                db.session.add(p)
+                db.session.commit()
+                flash('Payroll processed and saved to database.', 'success')
+                return redirect(url_for('payroll_overview'))
+            else:
+                flash('Payroll model is not available. Unable to save to database.', 'error')
         except Exception:
-            app.logger.exception("Failed to process payroll")
-            flash('Failed to process payroll.', 'error')
+            db.session.rollback()
+            app.logger.exception("Failed to insert payroll record into DB")
+            flash('Failed to process payroll (database error).', 'error')
+
         return redirect(url_for('payroll_overview'))
+
     return render_template('process_payroll.html')
 
 @app.route('/sales-overview')

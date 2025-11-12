@@ -1,5 +1,6 @@
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.dialects.postgresql import JSON
 
 db = SQLAlchemy()
 
@@ -43,7 +44,7 @@ class SalesForecast(db.Model):
     __tablename__ = "sales_forecasts"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=True)
-    payload = db.Column(db.JSON, nullable=True)  # store Plotly graph data/layout or raw forecast
+    payload = db.Column(db.JSON, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def to_dict(self):
@@ -337,3 +338,119 @@ def register_extensions(app):
         register_extensions(app)
     """
     db.init_app(app)
+
+class Account(db.Model):
+    __tablename__ = "accounts"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    type = db.Column(db.String(80))
+    balance = db.Column(db.Numeric(18, 2), default=0)
+    currency = db.Column(db.String(10), default="USD")
+    status = db.Column(db.String(50), default="active")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<Account {self.name} ({self.id})>"
+
+class Invoice(db.Model):
+    __tablename__ = "invoices"
+    id = db.Column(db.Integer, primary_key=True)
+    invoice_id = db.Column(db.String(100), unique=True, index=True)
+    customer_id = db.Column(db.Integer, nullable=True)
+    date = db.Column(db.DateTime, default=datetime.utcnow)
+    due_date = db.Column(db.DateTime, nullable=True)
+    amount = db.Column(db.Numeric(18, 2), default=0)
+    currency = db.Column(db.String(10), default="USD")
+    status = db.Column(db.String(50), default="draft")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<Invoice {self.invoice_id or self.id}>"
+
+class Expense(db.Model):
+    __tablename__ = "expenses"
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, nullable=True)
+    date = db.Column(db.DateTime, default=datetime.utcnow)
+    description = db.Column(db.Text)
+    amount = db.Column(db.Numeric(18, 2), default=0)
+    category = db.Column(db.String(120))
+    status = db.Column(db.String(50), default="recorded")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<Expense {self.id} {self.amount}>"
+
+class JournalEntry(db.Model):
+    __tablename__ = "journal_entries"
+    id = db.Column(db.Integer, primary_key=True)
+    entry_id = db.Column(db.String(100), unique=True, index=True)
+    date = db.Column(db.DateTime, default=datetime.utcnow)
+    description = db.Column(db.Text)
+    debit_account_id = db.Column(db.Integer, nullable=True)
+    credit_account_id = db.Column(db.Integer, nullable=True)
+    amount = db.Column(db.Numeric(18, 2), default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<JournalEntry {self.entry_id or self.id}>"
+
+class FinancialSummaryLine(db.Model):
+    __tablename__ = "financial_summary_lines"
+    id = db.Column(db.Integer, primary_key=True)
+    label = db.Column(db.String(200), nullable=False)
+    value_amount = db.Column(db.Numeric(18, 2), default=0)
+    currency = db.Column(db.String(10), default="USD")
+    period = db.Column(db.String(50))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<FinancialSummaryLine {self.label}: {self.value_amount}>"
+
+class IncomeStatementLine(db.Model):
+    __tablename__ = "income_statement_lines"
+    id = db.Column(db.Integer, primary_key=True)
+    period = db.Column(db.String(50))
+    category = db.Column(db.String(200))
+    amount = db.Column(db.Numeric(18, 2), default=0)
+    line_type = db.Column(db.String(50))  # e.g. 'income' or 'expense'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<IncomeStatementLine {self.category} {self.amount}>"
+
+class OutstandingPayment(db.Model):
+    __tablename__ = "outstanding_payments"
+    id = db.Column(db.Integer, primary_key=True)
+    payment_id = db.Column(db.String(100), unique=True, index=True)
+    party = db.Column(db.String(200))
+    due_date = db.Column(db.DateTime, nullable=True)
+    amount = db.Column(db.Numeric(18, 2), default=0)
+    status = db.Column(db.String(50), default="open")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<OutstandingPayment {self.payment_id} {self.amount}>"
+
+class FinanceChartData(db.Model):
+    __tablename__ = "finance_chart_data"
+    id = db.Column(db.Integer, primary_key=True)
+    chart_id = db.Column(db.String(100), unique=True, index=True)
+    name = db.Column(db.String(200))
+    chart_json = db.Column(JSON, nullable=True)  # uses Postgres JSON if available
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<FinanceChartData {self.chart_id}>"
+
+class HRReport(db.Model):
+    __tablename__ = "hr_reports"
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(250), nullable=False)
+    date = db.Column(db.DateTime, default=datetime.utcnow)
+    content = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<HRReport {self.title}>"
