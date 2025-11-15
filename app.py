@@ -354,13 +354,171 @@ def index():
         }
 
         # Small placeholder graphs: prefer analytics precomputed graphs if present
-        sales_trend_graph_local = sales_trend_graph or {"data": [], "layout": {}}
-        customers = goods_performance_pie_chart or {"data": [], "layout": {}}
-        product_performance_graph = goods_performance_pie_chart or {"data": [], "layout": {}}
-        inventory_status_graph = {"data": [], "layout": {}}
-        order_status_graph = {"data": [], "layout": {}}
-        revenue_expenses_graph = {"data": [], "layout": {}}
-        employee_status_graph = {"data": [], "layout": {}}
+        # ...existing code...
+        # --- Build visuals from DB when possible (fallbacks kept) ---
+        try:
+            # Sales trend (monthly totals) from SalesOrder (prefer 'total' then 'amount')
+            sales_trend_graph_local = {"data": [], "layout": {"title": "Sales Trend"}}
+            if 'SalesOrder' in globals() and hasattr(SalesOrder, "id"):
+                date_col = getattr(SalesOrder, "order_date", getattr(SalesOrder, "date", None))
+                value_col = getattr(SalesOrder, "total", getattr(SalesOrder, "amount", None))
+                if date_col is not None and value_col is not None:
+                    rows = (
+                        db.session.query(func.date_trunc('month', date_col).label('month'),
+                                         func.coalesce(func.sum(value_col), 0).label('total'))
+                        .group_by('month')
+                        .order_by('month')
+                        .all()
+                    )
+                    months = [r[0].strftime("%Y-%m") for r in rows if r[0] is not None]
+                    totals = [float(r[1]) for r in rows]
+                    sales_trend_graph_local = {
+                        "data": [{"x": months, "y": totals, "type": "scatter", "mode": "lines+markers", "name": "Monthly Sales"}],
+                        "layout": {"title": "Sales Trend", "xaxis": {"title": "Month"}, "yaxis": {"title": "Total"}}
+                    }
+
+            # Top customers by revenue (pie)
+            customers = {"data": [], "layout": {"title": "Top Customers"}}
+            if 'Customer' in globals() and 'SalesOrder' in globals() and hasattr(SalesOrder, "customer_id"):
+                value_col = getattr(SalesOrder, "total", getattr(SalesOrder, "amount", None))
+                if value_col is not None:
+                    rows = (
+                        db.session.query(Customer.name, func.coalesce(func.sum(value_col), 0).label('total'))
+                        .join(SalesOrder, getattr(SalesOrder, "customer_id") == getattr(Customer, "id"))
+                        .group_by(Customer.name)
+                        .order_by(func.sum(value_col).desc())
+                        .limit(10)
+                        .all()
+                    )
+                    labels = [r[0] or "Unknown" for r in rows]
+                    vals = [float(r[1]) for r in rows]
+                    if labels and vals:
+                        customers = {"data": [{"labels": labels, "values": vals, "type": "pie", "name": "Customers"}],
+                                     "layout": {"title": "Top Customers by Sales"}}
+
+            # Product performance: try SalesOrder.product / item fields then InventoryItem category
+            product_performance_graph = {"data": [], "layout": {"title": "Product Performance"}}
+            prod_field = None
+            if 'SalesOrder' in globals():
+                for cand in ("product", "product_name", "item", "sku"):
+                    if hasattr(SalesOrder, cand):
+                        prod_field = getattr(SalesOrder, cand)
+                        break
+            if prod_field is not None:
+                rows = (
+                    db.session.query(prod_field, func.count().label("cnt"))
+                    .group_by(prod_field)
+                    .order_by(func.count().desc())
+                    .limit(10)
+                    .all()
+                )
+                labels = [str(r[0]) if r[0] is not None else "Unknown" for r in rows]
+                vals = [int(r[1]) for r in rows]
+                if labels and vals:
+                    product_performance_graph = {"data": [{"labels": labels, "values": vals, "type": "pie", "name": "Products"}],
+                                                 "layout": {"title": "Top Products (by count)"}}
+            elif 'InventoryItem' in globals() and hasattr(InventoryItem, "category"):
+                rows = (
+                    db.session.query(InventoryItem.category, func.count().label("cnt"))
+                    .group_by(InventoryItem.category)
+                    .order_by(func.count().desc())
+                    .all()
+                )
+                labels = [r[0] or "Unknown" for r in rows]
+                vals = [int(r[1]) for r in rows]
+                if labels and vals:
+                    product_performance_graph = {"data": [{"labels": labels, "values": vals, "type": "pie", "name": "Inventory categories"}],
+                                                 "layout": {"title": "Inventory by Category"}}
+
+            # Inventory status counts
+            inventory_status_graph = {"data": [], "layout": {"title": "Inventory Status"}}
+            if 'InventoryItem' in globals() and hasattr(InventoryItem, "status"):
+                rows = db.session.query(InventoryItem.status, func.count().label("cnt")).group_by(InventoryItem.status).all()
+                labels = [r[0] or "Unknown" for r in rows]
+                vals = [int(r[1]) for r in rows]
+                if labels and vals:
+                    inventory_status_graph = {"data": [{"labels": labels, "values": vals, "type": "pie", "name": "Inventory Status"}],
+                                              "layout": {"title": "Inventory Status"}}
+
+            # Order status counts
+            order_status_graph = {"data": [], "layout": {"title": "Order Status"}}
+            if 'SalesOrder' in globals() and hasattr(SalesOrder, "status"):
+                rows = db.session.query(SalesOrder.status, func.count().label("cnt")).group_by(SalesOrder.status).all()
+                labels = [r[0] or "Unknown" for r in rows]
+                vals = [int(r[1]) for r in rows]
+                if labels and vals:
+                    order_status_graph = {"data": [{"labels": labels, "values": vals, "type": "pie", "name": "Order Status"}],
+                                          "layout": {"title": "Order Status"}}
+
+            # Revenue vs Expenses (monthly)
+            revenue_expenses_graph = {"data": [], "layout": {"title": "Revenue vs Expenses"}}
+            try:
+                # build monthly maps
+                revenue_map = {}
+                expense_map = {}
+                # revenue from SalesOrder
+                if 'SalesOrder' in globals() and date_col is not None and value_col is not None:
+                    rev_rows = (
+                        db.session.query(func.date_trunc('month', date_col).label('month'),
+                                         func.coalesce(func.sum(value_col), 0).label('total'))
+                        .group_by('month')
+                        .order_by('month')
+                        .all()
+                    )
+                    for r in rev_rows:
+                        if r[0] is not None:
+                            k = r[0].strftime("%Y-%m")
+                            revenue_map[k] = float(r[1])
+                # expenses from Expense.amount / date
+                if 'Expense' in globals() and hasattr(Expense, "date") and hasattr(Expense, "amount"):
+                    exp_rows = (
+                        db.session.query(func.date_trunc('month', Expense.date).label('month'),
+                                         func.coalesce(func.sum(Expense.amount), 0).label('total'))
+                        .group_by('month')
+                        .order_by('month')
+                        .all()
+                    )
+                    for r in exp_rows:
+                        if r[0] is not None:
+                            k = r[0].strftime("%Y-%m")
+                            expense_map[k] = float(r[1])
+                # unify timeline
+                months = sorted(set(list(revenue_map.keys()) + list(expense_map.keys())))
+                if months:
+                    rev_vals = [revenue_map.get(m, 0.0) for m in months]
+                    exp_vals = [expense_map.get(m, 0.0) for m in months]
+                    revenue_expenses_graph = {
+                        "data": [
+                            {"x": months, "y": rev_vals, "type": "scatter", "mode": "lines+markers", "name": "Revenue"},
+                            {"x": months, "y": exp_vals, "type": "scatter", "mode": "lines+markers", "name": "Expenses"}
+                        ],
+                        "layout": {"title": "Revenue vs Expenses", "xaxis": {"title": "Month"}, "yaxis": {"title": "Amount"}}
+                    }
+            except Exception:
+                # leave fallback empty
+                app.logger.debug("Revenue/expenses graph build failed", exc_info=True)
+
+            # Employee status
+            employee_status_graph = {"data": [], "layout": {"title": "Employee Status"}}
+            if 'Employee' in globals() and hasattr(Employee, "status"):
+                rows = db.session.query(Employee.status, func.count().label("cnt")).group_by(Employee.status).all()
+                labels = [r[0] or "Unknown" for r in rows]
+                vals = [int(r[1]) for r in rows]
+                if labels and vals:
+                    employee_status_graph = {"data": [{"labels": labels, "values": vals, "type": "pie", "name": "Employees"}],
+                                             "layout": {"title": "Employee Status"}}
+
+        except Exception:
+            # fall back to simple empty placeholders if any DB error occurs
+            app.logger.exception("Failed to build DB-backed graphs; using placeholders")
+            sales_trend_graph_local = sales_trend_graph or {"data": [], "layout": {}}
+            customers = goods_performance_pie_chart or {"data": [], "layout": {}}
+            product_performance_graph = goods_performance_pie_chart or {"data": [], "layout": {}}
+            inventory_status_graph = {"data": [], "layout": {}}
+            order_status_graph = {"data": [], "layout": {}}
+            revenue_expenses_graph = {"data": [], "layout": {}}
+            employee_status_graph = {"data": [], "layout": {}}
+# ...existing code...
 
         # recent activity: synthesize from recent orders/payments if possible
         recent_activity = []
@@ -2649,17 +2807,20 @@ async def sales_overview():
 
 @app.route('/sales-forecast')
 def sales_forecast():
-    """
-    Render sales forecast chart page (templates/sales_forecast.html).
-    Attempts to call analytics.generate_sales_forecast(); falls back harmlessly on error.
-    """
     try:
         import asyncio
-        sales_forecast_graph = asyncio.run(analytics.generate_sales_forecast())
+        sales_forecast_graph, forecast_metrics_mean, forecast_metrics_rmse, forecast_metrics_nrmse = asyncio.run(analytics.generate_sales_forecast())
+
     except Exception:
         app.logger.exception("Failed to generate sales forecast")
         sales_forecast_graph = {"data": [], "layout": {}}
-    return render_template('sales_forecast.html', sales_forecast=sales_forecast_graph)
+    
+    """
+    sales_forecast_graph = analytics.generate_forecast()
+    """
+
+
+    return render_template('sales_forecast.html', sales_forecast_graph=sales_forecast_graph, forecast_metrics_mean_=forecast_metrics_mean, forecast_metrics_rmse=forecast_metrics_rmse, forecast_metrics_nrmse=forecast_metrics_nrmse)
 
 if __name__ == '__main__':
      # Ensure DB tables exist (create missing tables from models.py)

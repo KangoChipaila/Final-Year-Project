@@ -5,12 +5,11 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.utils import PlotlyJSONEncoder
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_absolute_error, mean_squared_error
 import glob
 import matplotlib.pyplot as plt
-
-train_data = pd.read_csv("./data/train.csv", encoding="cp1252")
-test_data = pd.read_csv("./data/test.csv", encoding="cp1252")
+from prophet import Prophet
+from prophet.plot import plot_plotly
 
 directory = "./spreadsheet_datasets"
 
@@ -102,7 +101,7 @@ def generate_customer_expenditure_distribution_pchart():
 
     return fig.to_plotly_json()
 
-def generate_sales_forecast(extracted_data=None, forecast_periods: int = 12, min_history: int = 40):
+async def enerate_sales_forecast(extracted_data=None, forecast_periods: int = 12, min_history: int = 40):
     """
     Adaptive sales forecast.
     - If daily coverage < 0.6, switch to weekly aggregation (forecast_periods then means weeks).
@@ -439,284 +438,117 @@ def quick_sales_data_audit(df):
 
     return out
 
-"""def generate_sales_forecast(extracted_data=None, forecast_periods: int = 12, min_history: int = 30, top_segments: int = 6):
-   
-    Per PRODUCTLINE hierarchical forecast aggregated to total.
-    - Select top N segments by total sales.
-    - Forecast each (weekly if sparse, else daily).
-    - Sum future predictions; compute global walk-forward error.
-    Returns Plotly figure (dict).
+async def generatesales_forecast():
+
+    extracted_data["ORDERDATE"] = pd.to_datetime(extracted_data["ORDERDATE"], errors = "coerce")
+
+    extracted_data["Week"] = extracted_data["ORDERDATE"].dt.to_period("W")
+
+    # Grouping data by Week-Month and calculating total sales
+    weekly_sales = extracted_data.groupby("Week")["SALES"].sum().reset_index()
+
+    weekly_sales.columns = ["ds", "y"]
+    weekly_sales["ds"] = weekly_sales["ds"].to_list()
+    weekly_sales["y"] = weekly_sales["y"].to_list()
+
+    weekly_sales["ds"] = weekly_sales["ds"].dt.to_timestamp()
+
+    train_data = weekly_sales[["ds","y"]].iloc[:100]
+    test_data = weekly_sales[["ds","y"]].iloc[100:]
+
+    model = Prophet(
+        changepoint_prior_scale=0.02,
+        seasonality_prior_scale=3.0,
+        interval_width = 0.95,
+        growth = 'linear',
+        daily_seasonality = True,
+        weekly_seasonality = True,
+        yearly_seasonality = True,
+        seasonality_mode = 'additive'
+    )
+
+    model.fit(train_data)
+
+    future_pd = model.make_future_dataframe(
+        periods = len(test_data),
+        freq ='W',
+        include_history = True
+    )
+
+    # predict over the dataset
+    forecast_pd = model.predict(future_pd)
     
-    if extracted_data is None:
-        extracted_data = globals().get("extracted_data")
-        if extracted_data is None:
-            fig = go.Figure()
-            fig.update_layout(title="Segment Forecast (no data)")
-            return json.loads(json.dumps(fig, cls=PlotlyJSONEncoder))
+    fig = plot_plotly(model, forecast_pd)
 
-    if "ORDERDATE" not in extracted_data.columns or "SALES" not in extracted_data.columns or "PRODUCTLINE" not in extracted_data.columns:
-        fig = go.Figure()
-        fig.update_layout(title="Segment Forecast (missing columns)")
-        return json.loads(json.dumps(fig, cls=PlotlyJSONEncoder))
+    print(len(test_data))
+    
+    forecast_test = forecast_pd.iloc[-len(test_data["y"]):]
 
-    df = extracted_data.copy()
-    df["ORDERDATE"] = pd.to_datetime(df["ORDERDATE"], errors="coerce")
-    df = df.dropna(subset=["ORDERDATE"])
-    df["SALES"] = (
-        df["SALES"].astype(str)
-        .str.replace(r"[^\d\.-]", "", regex=True)
-        .replace("", "0")
-    )
-    df["SALES"] = pd.to_numeric(df["SALES"], errors="coerce").fillna(0.0)
+    rmse = np.sqrt(mean_squared_error(test_data['y'], forecast_test['yhat']))
+    mean = test_data['y'].mean()
+    nrmse = (rmse/mean)*100
 
-    seg_totals = (
-        df.groupby("PRODUCTLINE")["SALES"]
-        .sum()
-        .sort_values(ascending=False)
-        .head(top_segments)
-    )
-    segments = seg_totals.index.tolist()
-    if not segments:
-        fig = go.Figure()
-        fig.update_layout(title="Segment Forecast (no segments)")
-        return json.loads(json.dumps(fig, cls=PlotlyJSONEncoder))
+    """mae = mean_absolute_error(test_data['y'], forecast_test['yhat'])"""
+    #print(df_cv.head())
 
-    try:
-        import lightgbm as lgb
-        GB = lgb.LGBMRegressor
-        gb_params = dict(n_estimators=500, learning_rate=0.05, subsample=0.8, colsample_bytree=0.8, random_state=42)
-        model_label = "LightGBM"
-    except ImportError:
-        from sklearn.ensemble import HistGradientBoostingRegressor
-        GB = HistGradientBoostingRegressor
-        gb_params = dict(max_depth=None, learning_rate=0.05, max_iter=400, random_state=42)
-        model_label = "HistGB"
+    return fig.to_html(full_html = False), mean, rmse, nrmse
 
-    total_future_sum = np.zeros(forecast_periods)
-    segment_traces = []
-    metrics_rows = []
-    global_actual = []
-    global_pred = []
+sales_data = pd.read_csv("./data/train.csv", encoding="cp1252")
+#sales_test_data = pd.read_csv("./data/test.csv", encoding="cp1252")
 
-    for seg in segments:
-        seg_df = df[df["PRODUCTLINE"] == seg].copy()
-        daily = (
-            seg_df.assign(ds=seg_df["ORDERDATE"].dt.normalize())
-            .groupby("ds", as_index=False)["SALES"]
-            .sum()
-            .rename(columns={"SALES": "y"})
-            .sort_values("ds")
-        )
-        if daily.empty or len(daily) < min_history:
-            continue
+sales_data = sales_data[["date","sales"]]
+sales_data.dropna()
+sales_data["date"] = pd.to_datetime(sales_data["date"], errors="coerce")
 
-        full_range = pd.date_range(daily["ds"].min(), daily["ds"].max(), freq="D")
-        coverage = len(daily) / len(full_range)
-        use_weekly = coverage < 0.6
+sales_data.columns=["ds", "y"]
 
-        daily = daily.set_index("ds").reindex(full_range)
-        daily.index.name = "ds"
-        daily["y"] = daily["y"].fillna(0.0)
+sales_data = sales_data.groupby("ds")["y"].sum().reset_index()
 
-        # Outlier cap
-        q1, q3 = daily["y"].quantile([0.25, 0.75])
-        iqr = q3 - q1
-        upper_cap = q3 + 1.5 * iqr
-        daily["y"] = np.clip(daily["y"], 0, upper_cap)
+#sales_data["ds"] = sales_data["ds"].dt.to_period("W")
 
-        if use_weekly:
-            freq_label = "Weekly"
-            series = (
-                daily.resample("W-MON")["y"]
-                .sum()
-                .to_frame()
-                .reset_index()
-                .rename(columns={"ds": "date", "y": "value"})
-            )
-        else:
-            freq_label = "Daily"
-            series = daily.reset_index().rename(columns={"ds": "date", "y": "value"})
+sales_data["ds"] = sales_data["ds"].to_list()
+sales_data["y"] = sales_data["y"].to_list()
 
-        if len(series) < min_history:
-            continue
 
-        # Features (lags selection)
-        lags = [1,2,3,7] if not use_weekly else [1,2,3]
-        for lag in lags:
-            series[f"lag_{lag}"] = series["value"].shift(lag)
+train_data = sales_data.iloc[:1000]
+test_data = sales_data.iloc[1000:]
 
-        series["roll_mean_short"] = series["value"].rolling(7 if not use_weekly else 2).mean()
-        series["roll_mean_long"]  = series["value"].rolling(14 if not use_weekly else 4).mean()
+#print(len(sales_data))
 
-        if use_weekly:
-            weeknum = series["date"].dt.isocalendar().week.astype(int)
-            series["week_sin"] = np.sin(2 * np.pi * weeknum / 52)
-            series["week_cos"] = np.cos(2 * np.pi * weeknum / 52)
-            time_feats = ["week_sin", "week_cos"]
-        else:
-            dow = series["date"].dt.dayofweek
-            month = series["date"].dt.month
-            series["dow_sin"] = np.sin(2 * np.pi * dow / 7)
-            series["dow_cos"] = np.cos(2 * np.pi * dow / 7)
-            series["month_sin"] = np.sin(2 * np.pi * month / 12)
-            series["month_cos"] = np.cos(2 * np.pi * month / 12)
-            time_feats = ["dow_sin","dow_cos","month_sin","month_cos"]
+async def generate_sales_forecast():
 
-        series["time_idx"] = np.arange(len(series))/max(1,len(series))
-
-        series = series.dropna().copy()
-        feat_cols = [f"lag_{l}" for l in lags] + ["roll_mean_short","roll_mean_long","time_idx"] + time_feats
-        if len(series) < min_history or any(c not in series.columns for c in feat_cols):
-            continue
-
-        y_log = np.log1p(series["value"].values)
-        X = series[feat_cols].values
-        dates = series["date"].tolist()
-
-        split = int(len(series)*0.8)
-        split = max(split, max(lags)+2)
-        preds_log = []
-        actual_log = []
-        test_dates = []
-        residuals_log = []
-
-        for i in range(split, len(series)):
-            m = GB(**gb_params)
-            m.fit(X[:i], y_log[:i])
-            p = float(m.predict(X[i].reshape(1,-1))[0])
-            preds_log.append(p)
-            actual_log.append(float(y_log[i]))
-            test_dates.append(dates[i])
-            residuals_log.append(y_log[i]-p)
-
-        if preds_log:
-            seg_preds = np.expm1(np.array(preds_log))
-            seg_actual = np.expm1(np.array(actual_log))
-            seg_rmse = math.sqrt(mean_squared_error(seg_actual, seg_preds))
-            seg_mean = float(seg_actual.mean())
-            seg_nrmse = seg_rmse/seg_mean if seg_mean>0 else None
-            resid_std_log = np.std(residuals_log, ddof=1) if len(residuals_log)>1 else 0.0
-        else:
-            seg_rmse = None
-            seg_mean = None
-            seg_nrmse = None
-            resid_std_log = 0.0
-
-        final_model = GB(**gb_params)
-        final_model.fit(X, y_log)
-
-        last_date = dates[-1]
-        synthetic = list(np.expm1(y_log))
-        future_dates = []
-        future_vals = []
-        for step in range(1, forecast_periods+1):
-            next_date = last_date + (pd.Timedelta(weeks=step) if use_weekly else pd.Timedelta(days=step))
-            future_dates.append(next_date)
-            recent_log = np.log1p(synthetic)
-            feat = []
-            for lag in lags:
-                feat.append(recent_log[-lag] if len(recent_log)>=lag else recent_log[-1])
-            rs = np.mean(synthetic[-(7 if not use_weekly else 2):])
-            rl = np.mean(synthetic[-(14 if not use_weekly else 4):]) if len(synthetic)> (14 if not use_weekly else 4) else rs
-            feat.extend([np.log1p(rs), np.log1p(rl)])
-            feat.append((len(series)+step-1)/max(1,len(series)))
-            if use_weekly:
-                wn = next_date.isocalendar().week
-                feat.extend([math.sin(2*math.pi*wn/52), math.cos(2*math.pi*wn/52)])
-            else:
-                dow_f = next_date.dayofweek
-                month_f = next_date.month
-                feat.extend([
-                    math.sin(2*math.pi*dow_f/7),
-                    math.cos(2*math.pi*dow_f/7),
-                    math.sin(2*math.pi*month_f/12),
-                    math.cos(2*math.pi*month_f/12)
-                ])
-            pred_log_future = float(final_model.predict(np.array(feat).reshape(1,-1))[0])
-            pred_future = float(np.expm1(pred_log_future))
-            future_vals.append(pred_future)
-            synthetic.append(pred_future)
-
-        total_future_sum += np.array(future_vals)
-
-        # Collect global test metrics contribution
-        if preds_log:
-            global_actual.extend(seg_actual)
-            global_pred.extend(seg_preds)
-
-        segment_traces.append(dict(
-            name=f"{seg} ({freq_label})",
-            dates_hist=[d.strftime("%Y-%m-%d") for d in dates],
-            values_hist=[float(v) for v in np.expm1(y_log)],
-            dates_future=[d.strftime("%Y-%m-%d") for d in future_dates],
-            values_future=[float(v) for v in future_vals],
-            rmse=seg_rmse,
-            nrmse=seg_nrmse
-        ))
-
-        # Safely format metric strings (seg_nrmse may be None)
-        if seg_rmse is not None:
-            seg_rmse_str = f"{seg_rmse:.2f}"
-            seg_nrmse_str = f"{seg_nrmse:.3f}" if seg_nrmse is not None else "N/A"
-            metrics_rows.append(f"{seg}: RMSE={seg_rmse_str} NRMSE={seg_nrmse_str}")
-        else:
-            metrics_rows.append(f"{seg}: RMSE=N/A NRMSE=N/A")
-
-    if global_pred and global_actual:
-        agg_rmse = math.sqrt(mean_squared_error(global_actual, global_pred))
-        agg_mean = float(np.mean(global_actual))
-        agg_nrmse = agg_rmse/agg_mean if agg_mean>0 else None
-    else:
-        agg_rmse = None
-        agg_nrmse = None
-
-    fig = go.Figure()
-    # Plot aggregated future forecast
-    if future_dates:
-        fig.add_trace(go.Scatter(
-            x=[d.strftime("%Y-%m-%d") for d in future_dates],
-            y=[float(v) for v in total_future_sum],
-            mode="lines+markers",
-            name="Total Forecast",
-            line=dict(color="blue", dash="dash")
-        ))
-
-    # Add each segment future (faded)
-    for t in segment_traces:
-        fig.add_trace(go.Scatter(
-            x=t["dates_future"],
-            y=t["values_future"],
-            mode="lines",
-            name=t["name"] + " forecast",
-            line=dict(width=1),
-            opacity=0.5
-        ))
-
-    fig.update_layout(
-        title="Hierarchical Sales Forecast (PRODUCTLINE)",
-        xaxis_title="Date",
-        yaxis_title="Sales",
-        hovermode="x unified",
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        annotations=[dict(
-            xref="paper", yref="paper", x=1.02, y=0.98,
-            xanchor="left", yanchor="top",
-            text="<br>".join(
-                ["Model: "+model_label,
-                 f"Segments: {len(segment_traces)}",
-                 f"Aggregate RMSE: {agg_rmse:.2f}" if agg_rmse else "Aggregate RMSE: N/A",
-                 f"Aggregate NRMSE: {agg_nrmse:.3f}" if agg_nrmse else "Aggregate NRMSE: N/A"] + metrics_rows[:10]
-            ),
-            showarrow=False,
-            align="left",
-            bordercolor="rgba(0,0,0,0.15)",
-            borderwidth=1,
-            bgcolor="rgba(255,255,255,0.95)",
-            font=dict(size=11)
-        )],
-        margin=dict(r=250)
+    model = Prophet(
+        changepoint_prior_scale=0.02,
+        seasonality_prior_scale=3.0,
+        interval_width = 0.95,
+        growth = 'linear',
+        daily_seasonality = True,
+        weekly_seasonality = True,
+        yearly_seasonality = True,
+        seasonality_mode = 'additive'
     )
 
-    return json.loads(json.dumps(fig, cls=PlotlyJSONEncoder))
-"""
-print(quick_sales_data_audit(extracted_data))
+    model.fit(train_data)
+
+    future_pd = model.make_future_dataframe(
+        periods = len(test_data),
+        include_history = True
+    )
+
+    # predict over the dataset
+    forecast_pd = model.predict(future_pd)
+    
+    fig = plot_plotly(model, forecast_pd)
+
+    print(len(test_data))
+    
+    forecast_test = forecast_pd.iloc[-len(test_data["y"]):]
+
+    rmse = np.sqrt(mean_squared_error(test_data['y'], forecast_test['yhat']))
+    mean = test_data['y'].mean()
+    nrmse = (rmse/mean)*100
+
+    """mae = mean_absolute_error(test_data['y'], forecast_test['yhat'])"""
+    #print(df_cv.head())
+
+    return fig.to_html(full_html = False), mean, rmse, nrmse

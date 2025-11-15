@@ -2,24 +2,21 @@
 {% block title %}Sales Forecast{% endblock %}
 
 {% block content %}
-<div class="container mx-auto max-w-4xl px-4 py-8 bg-white rounded-lg shadow">
+<div class="container mx-auto w-fit-content px-4 py-8 bg-white rounded-lg shadow">
   <header class="mb-4">
     <h1 class="text-2xl font-bold text-gray-800">Sales Forecast</h1>
     <p class="text-sm text-gray-500">Interactive Prophet forecast and metrics.</p>
   </header>
 
-  <section id="forecast-area" class="mb-4 w-full">
-      <div id="sales-forecast">{{ sales_forecast_graph | safe}}</div>
+  <section id="forecast-area" class="mb-4 w-fit-content">
+      <div id="sales-forecast">{{ sales_forecast_graph | safe }}</div>
   </section>
 
   <section id="forecast-metrics" class="text-sm text-gray-700 bg-gray-50 p-3 rounded border">
-    {% if forecast_metrics is defined %}
-      <div><strong>Mean:</strong> {{ forecast_metrics.mean }}</div>
-      <div><strong>RMSE:</strong> {{ forecast_metrics.rmse }}</div>
-      <div><strong>NRMSE:</strong> {{ forecast_metrics.nrmse_pct }}%</div>
-      {% if forecast_metrics.cv_mean_rmse is defined %}
-        <div><strong>CV mean RMSE:</strong> {{ forecast_metrics.cv_mean_rmse }}</div>
-      {% endif %}
+    {% if forecast_metrics_mean_ is defined %}
+      <div><strong>Mean:</strong> {{ forecast_metrics_mean_ }}</div>
+      <div><strong>RMSE:</strong> {{ forecast_metrics_rmse }}</div>
+      <div><strong>NRMSE:</strong> {{ forecast_metrics_nrmse }}%</div>
     {% else %}
       <div>No metrics available</div>
     {% endif %}

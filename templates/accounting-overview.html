@@ -105,7 +105,7 @@
                     {% for vendor in top_vendors %}
                     <tr class="border-b">
                         <td class="py-2 px-4">{{ vendor.name }}</td>
-                        <td class="py-2 px-4">${{ vendor.total_paid }}</td>
+                        <td class="py-2 px-4">K{{ vendor.total_paid }}</td>
                     </tr>
                     {% else %}
                     <tr>
@@ -131,7 +131,7 @@
                     <tr class="border-b">
                         <td class="py-2 px-4">{{ txn.date }}</td>
                         <td class="py-2 px-4">{{ txn.description }}</td>
-                        <td class="py-2 px-4">${{ txn.amount }}</td>
+                        <td class="py-2 px-4">K{{ txn.amount }}</td>
                         <td class="py-2 px-4">
                             {% if txn.type == "Credit" %}
                                 <span class="inline-block px-2 py-1 rounded bg-green-100 text-green-700 font-semibold text-xs">{{ txn.type }}</span>
