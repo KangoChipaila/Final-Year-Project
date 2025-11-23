@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Edit Shipment{% endblock %}
+
+{% block content %}
+<div class="container mx-auto max-w-3xl px-4 py-8">
+  <div class="bg-white rounded-xl shadow-md border p-6">
+    <h2 class="text-xl font-semibold mb-4">Edit Shipment</h2>
+
+    <form method="POST" action="{{ url_for('edit_shipment', id=shipment.id) }}">
+      <div class="mb-3">
+        <label class="block text-sm">Shipment #</label>
+        <input type="text" name="shipment_id" class="w-full border rounded px-3 py-2 bg-gray-100" value="{{ shipment.shipment_id }}" readonly>
+      </div>
+
+      <div class="mb-3">
+        <label class="block text-sm">Date</label>
+        <input type="date" name="date" class="w-full border rounded px-3 py-2" value="{{ shipment.date|string }}">
+      </div>
+
+      <div class="mb-3">
+        <label class="block text-sm">Carrier</label>
+        <input type="text" name="carrier" class="w-full border rounded px-3 py-2" value="{{ shipment.carrier or '' }}">
+      </div>
+
+      <div class="mb-3">
+        <label class="block text-sm">Destination</label>
+        <input type="text" name="destination" class="w-full border rounded px-3 py-2" value="{{ shipment.destination or '' }}">
+      </div>
+
+      <div class="mb-3">
+        <label class="block text-sm">Status</label>
+        <select name="status" class="w-full border rounded px-3 py-2">
+          {% set s = shipment.status or '' %}
+          <option value="Pending"   {{ 'selected' if s=='Pending'   else '' }}>Pending</option>
+          <option value="Shipped"   {{ 'selected' if s=='Shipped'   else '' }}>Shipped</option>
+          <option value="Delivered" {{ 'selected' if s=='Delivered' else '' }}>Delivered</option>
+          <option value="Cancelled" {{ 'selected' if s=='Cancelled' else '' }}>Cancelled</option>
+        </select>
+      </div>
+
+      <div class="flex justify-end gap-3 mt-4">
+        <a href="{{ url_for('distribution_overview') }}" class="px-4 py-2 rounded border">Cancel</a>
+        <button type="submit" class="px-4 py-2 rounded bg-blue-600 text-white">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

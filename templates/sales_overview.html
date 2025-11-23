@@ -62,8 +62,12 @@
     <section class="mb-10">
         <div class="text-xl font-semibold mb-4 text-gray-700">Quick Access</div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button id="open-new-sale" class="flex items-center gap-2 bg-green-700 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-green-800 transition">
+                <span>New Sale</span>
+            </button>
             <a href="/sales-forecast" class="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-blue-800 transition">
                 <span>Sales Forecasting</span>
+            </a>
             <a href="/cutomers-overview" class="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-yellow-700 transition">
                 <span>Customers</span>
             </a>
@@ -76,16 +80,116 @@
         </div>
     </section>
 </div>
+
+<!-- New Sale Modal -->
+<div id="new-sale-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-50">
+  <div class="bg-white rounded-lg p-6 w-full max-w-lg mx-4">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-lg font-semibold">Create New Sale</h3>
+      <button id="close-new-sale" class="text-gray-600 hover:text-gray-900">&times;</button>
+    </div>
+
+    <form id="new-sale-form">
+      <div class="mb-3">
+        <label class="block text-sm">Customer</label>
+        <select id="ns-customer" name="customer_id" required class="w-full border rounded px-3 py-2">
+          <option value="">Select customer</option>
+          {% for c in customers %}
+          <option value="{{ c.id }}">{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label class="block text-sm">Product</label>
+        <select id="ns-product" name="inventory_id" required class="w-full border rounded px-3 py-2">
+          <option value="">Select product</option>
+          {% for it in inventory %}
+          <option value="{{ it.id }}" data-qty="{{ it.quantity }}" data-unit="{{ it.unit_cost }}">{{ it.product }} (stock: {{ it.quantity|round(2) }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label class="block text-sm">Quantity</label>
+        <input id="ns-quantity" name="quantity" type="number" step="0.01" min="0.01" required class="w-full border rounded px-3 py-2" />
+      </div>
+
+      <div id="ns-feedback" class="text-sm text-red-600 mb-3 hidden"></div>
+
+      <div class="flex gap-3 justify-end">
+        <button type="button" id="ns-cancel" class="px-4 py-2 rounded border">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded bg-green-700 text-white">Create Sale</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
+{{ super() }}
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+(function(){
+  // create sale modal behavior
+  const openBtn = document.getElementById('open-new-sale');
+  const modal = document.getElementById('new-sale-modal');
+  const closeBtn = document.getElementById('close-new-sale');
+  const cancelBtn = document.getElementById('ns-cancel');
+  const form = document.getElementById('new-sale-form');
+  const feedback = document.getElementById('ns-feedback');
+
+  function showModal(){ modal.classList.remove('hidden'); modal.classList.add('flex'); feedback.classList.add('hidden'); feedback.textContent=''; }
+  function hideModal(){ modal.classList.add('hidden'); modal.classList.remove('flex'); form.reset(); }
+
+  openBtn && openBtn.addEventListener('click', (e)=>{ e.preventDefault(); showModal(); });
+  closeBtn && closeBtn.addEventListener('click', hideModal);
+  cancelBtn && cancelBtn.addEventListener('click', hideModal);
+  modal && modal.addEventListener('click', (e)=>{ if(e.target===modal) hideModal(); });
+
+  form && form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    feedback.classList.add('hidden');
+    const customer_id = form.customer_id.value;
+    const inventory_id = form.inventory_id.value;
+    const quantity = parseFloat(form.quantity.value);
+
+    if(!customer_id || !inventory_id || !quantity){ feedback.textContent = 'Please fill all fields'; feedback.classList.remove('hidden'); return; }
+
+    // client-side quick inventory check
+    const selectedOpt = document.querySelector('#ns-product option[value="'+inventory_id+'"]');
+    const available = selectedOpt ? parseFloat(selectedOpt.dataset.qty || 0) : 0;
+    if(quantity > available){
+      feedback.textContent = 'Insufficient stock for selected product'; feedback.classList.remove('hidden'); return;
+    }
+
+    try {
+      const res = await fetch('/create_sale', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customer_id, inventory_id, quantity })
+      });
+      const j = await res.json();
+      if(!res.ok || j.ok === false){
+        feedback.textContent = j.error || 'Failed to create sale'; feedback.classList.remove('hidden');
+        return;
+      }
+      // success: reload page to refresh KPIs/inventory
+      window.location.reload();
+    } catch (err){
+      console.error(err);
+      feedback.textContent = 'Server error creating sale'; feedback.classList.remove('hidden');
+    }
+  });
+})();
+</script>
+
 <script>
     var salesTrendGraph = {{ sales_trend_graph | tojson }};
     var goodsPerformancePieChart = {{ goods_performance_pie_chart | tojson }};
     var customerExpenditurePieChart = {{ customer_expenditure_pie_chart | tojson }};
     
-
     Plotly.newPlot('sales-trend-graph', salesTrendGraph.data, salesTrendGraph.layout);
     Plotly.newPlot('goods-performance-pie-chart', goodsPerformancePieChart.data, goodsPerformancePieChart.layout);
     Plotly.newPlot('customers-by-expenditure-pie-chart', customerExpenditurePieChart.data, customerExpenditurePieChart.layout);

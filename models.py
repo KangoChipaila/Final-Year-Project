@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import datetime, timezone
+from sqlalchemy import func
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.postgresql import JSON
 
@@ -16,7 +17,7 @@ class Customer(db.Model):
     email = db.Column(db.String(255), nullable=True)
     phone = db.Column(db.String(50), nullable=True)
     status = db.Column(db.String(50), nullable=True)  # Active / Inactive
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
@@ -30,7 +31,7 @@ class SalesOrder(db.Model):
     date = db.Column(db.Date, nullable=True)
     amount = db.Column(db.Numeric(12, 2), nullable=True)
     status = db.Column(db.String(50), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     customer = db.relationship("Customer", backref="sales_orders", lazy=True)
 
@@ -45,7 +46,7 @@ class SalesForecast(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=True)
     payload = db.Column(db.JSON, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     def to_dict(self):
         return {"id": self.id, "name": self.name, "payload": self.payload, "created_at": self.created_at.isoformat()}
@@ -63,8 +64,9 @@ class InventoryItem(db.Model):
     quantity = db.Column(db.Integer, default=0)
     reorder_level = db.Column(db.Integer, default=0)
     status = db.Column(db.String(50), nullable=True)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
-
+    updated_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
+    unit_cost = db.Column(db.Float, nullable=True, default=0.0)
+    
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
@@ -77,7 +79,7 @@ class Shipment(db.Model):
     carrier = db.Column(db.String(255), nullable=True)
     destination = db.Column(db.String(255), nullable=True)
     status = db.Column(db.String(50), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
@@ -94,7 +96,7 @@ class Payment(db.Model):
     due_date = db.Column(db.Date, nullable=True)
     amount = db.Column(db.Numeric(12, 2), nullable=True)
     status = db.Column(db.String(50), nullable=True)  # Paid / Pending
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
@@ -108,7 +110,7 @@ class CashFlowRecord(db.Model):
     inflow = db.Column(db.Numeric(12, 2), nullable=True)
     outflow = db.Column(db.Numeric(12, 2), nullable=True)
     balance = db.Column(db.Numeric(12, 2), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
@@ -128,7 +130,7 @@ class Employee(db.Model):
     phone = db.Column(db.String(50), nullable=True)
     status = db.Column(db.String(50), nullable=True)  # Active / On Leave / Inactive
     hire_date = db.Column(db.Date, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
@@ -141,7 +143,7 @@ class AttendanceRecord(db.Model):
     date = db.Column(db.Date, nullable=True)
     status = db.Column(db.String(50), nullable=True)  # Present / Absent / Leave
     note = db.Column(db.String(512), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     employee = db.relationship("Employee", backref="attendance", lazy=True)
 
@@ -160,7 +162,7 @@ class PayrollRecord(db.Model):
     gross_pay = db.Column(db.Numeric(12, 2), nullable=True)
     net_pay = db.Column(db.Numeric(12, 2), nullable=True)
     paid = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     employee = db.relationship("Employee", backref="payrolls", lazy=True)
 
@@ -179,7 +181,7 @@ class LeaveRequest(db.Model):
     end_date = db.Column(db.Date, nullable=True)
     days = db.Column(db.Integer, nullable=True)
     status = db.Column(db.String(50), nullable=True)  # Pending / Approved / Denied
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     employee = db.relationship("Employee", backref="leave_requests", lazy=True)
 
@@ -201,7 +203,7 @@ class PurchaseRequest(db.Model):
     item = db.Column(db.String(255), nullable=True)
     quantity = db.Column(db.Integer, nullable=True)
     status = db.Column(db.String(50), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
@@ -217,7 +219,7 @@ class PurchaseOrder(db.Model):
     quantity = db.Column(db.Integer, nullable=True)
     amount = db.Column(db.Numeric(12, 2), nullable=True)
     status = db.Column(db.String(50), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
@@ -231,7 +233,7 @@ class Supplier(db.Model):
     email = db.Column(db.String(255), nullable=True)
     phone = db.Column(db.String(50), nullable=True)
     status = db.Column(db.String(50), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
@@ -249,7 +251,7 @@ class ProductionOrder(db.Model):
     start_date = db.Column(db.Date, nullable=True)
     end_date = db.Column(db.Date, nullable=True)
     status = db.Column(db.String(50), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
@@ -262,7 +264,7 @@ class BillOfMaterials(db.Model):
     component = db.Column(db.String(255), nullable=True)
     quantity_required = db.Column(db.Integer, nullable=True)
     unit = db.Column(db.String(50), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
@@ -275,7 +277,7 @@ class WorkCenter(db.Model):
     current_task = db.Column(db.String(255), nullable=True)
     status = db.Column(db.String(50), nullable=True)  # Running / Idle
     operator = db.Column(db.String(255), nullable=True)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
@@ -293,7 +295,7 @@ class Asset(db.Model):
     value = db.Column(db.Numeric(12, 2), nullable=True)
     depreciation_rate = db.Column(db.Float, nullable=True)
     status = db.Column(db.String(50), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
@@ -314,7 +316,7 @@ class User(db.Model):
     role = db.Column(db.String(50), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     last_login = db.Column(db.DateTime, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def set_password(self, password):
@@ -347,7 +349,7 @@ class Account(db.Model):
     balance = db.Column(db.Numeric(18, 2), default=0)
     currency = db.Column(db.String(10), default="USD")
     status = db.Column(db.String(50), default="active")
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
     updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
 
     def __repr__(self):
@@ -363,7 +365,7 @@ class Invoice(db.Model):
     amount = db.Column(db.Numeric(18, 2), default=0)
     currency = db.Column(db.String(10), default="USD")
     status = db.Column(db.String(50), default="draft")
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     def __repr__(self):
         return f"<Invoice {self.invoice_id or self.id}>"
@@ -377,7 +379,7 @@ class Expense(db.Model):
     amount = db.Column(db.Numeric(18, 2), default=0)
     category = db.Column(db.String(120))
     status = db.Column(db.String(50), default="recorded")
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     def __repr__(self):
         return f"<Expense {self.id} {self.amount}>"
@@ -391,7 +393,7 @@ class JournalEntry(db.Model):
     debit_account_id = db.Column(db.Integer, nullable=True)
     credit_account_id = db.Column(db.Integer, nullable=True)
     amount = db.Column(db.Numeric(18, 2), default=0)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     def __repr__(self):
         return f"<JournalEntry {self.entry_id or self.id}>"
@@ -403,7 +405,7 @@ class FinancialSummaryLine(db.Model):
     value_amount = db.Column(db.Numeric(18, 2), default=0)
     currency = db.Column(db.String(10), default="USD")
     period = db.Column(db.String(50))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     def __repr__(self):
         return f"<FinancialSummaryLine {self.label}: {self.value_amount}>"
@@ -415,7 +417,7 @@ class IncomeStatementLine(db.Model):
     category = db.Column(db.String(200))
     amount = db.Column(db.Numeric(18, 2), default=0)
     line_type = db.Column(db.String(50))  # e.g. 'income' or 'expense'
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     def __repr__(self):
         return f"<IncomeStatementLine {self.category} {self.amount}>"
@@ -428,7 +430,7 @@ class OutstandingPayment(db.Model):
     due_date = db.Column(db.DateTime, nullable=True)
     amount = db.Column(db.Numeric(18, 2), default=0)
     status = db.Column(db.String(50), default="open")
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     def __repr__(self):
         return f"<OutstandingPayment {self.payment_id} {self.amount}>"
@@ -439,7 +441,7 @@ class FinanceChartData(db.Model):
     chart_id = db.Column(db.String(100), unique=True, index=True)
     name = db.Column(db.String(200))
     chart_json = db.Column(JSON, nullable=True)  # uses Postgres JSON if available
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     def __repr__(self):
         return f"<FinanceChartData {self.chart_id}>"
@@ -450,7 +452,7 @@ class HRReport(db.Model):
     title = db.Column(db.String(250), nullable=False)
     date = db.Column(db.DateTime, default=datetime.utcnow)
     content = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     def __repr__(self):
         return f"<HRReport {self.title}>"

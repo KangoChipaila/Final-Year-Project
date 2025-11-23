@@ -36,7 +36,7 @@
         </div>
     </section>
     
-    <!-- Alerts & Notifications (example) -->
+    <!-- Alerts & Notifications -->
     {% if alerts %}
     <section class="mb-8">
         <div class="font-bold mb-2 text-red-700 text-lg flex items-center gap-2">
@@ -144,9 +144,9 @@
     </div>
 
     <!-- Asset Distribution Chart -->
-    <section class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8">
-        <h2 class="text-xl font-semibold mb-4 text-gray-700">Asset Category Distribution</h2>
-        <div id="asset-distribution-chart" style="height:400px;"></div>
+    <section class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8 flex">
+        <div class="w-1/2" id="asset-distribution-chart" style="height:400px;"></div>
+        <div class= "w-1/2" id="asset-status-chart" style="height:400px;"></div>
     </section>
 
     <!-- Recent Asset Activity (example) -->
@@ -186,7 +186,10 @@
     }
 </script>
 <script>
-    const chartData = {{ asset_chart_data | safe }};
-    Plotly.newPlot('asset-distribution-chart', chartData.data, chartData.layout);
+    const assetCategoryChartData = {{ asset_chart_data | safe }};
+    Plotly.newPlot('asset-distribution-chart', assetCategoryChartData.data, assetCategoryChartData.layout);
+
+    const assetStatusChartData = {{ asset_status_chart_data | safe }};
+    Plotly.newPlot('asset-status-chart', assetStatusChartData.data, assetStatusChartData.layout);
 </script>
 {% endblock %}

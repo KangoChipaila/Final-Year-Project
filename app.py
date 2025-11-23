@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, Response, send_file, request, redirect, url_for, json, flash, make_response
+from flask import Flask, render_template, jsonify, Response, send_file, request, redirect, url_for, json, flash, make_response, abort
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
 from werkzeug.utils import secure_filename
@@ -13,12 +13,13 @@ import subprocess
 from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user, login_required
 from datetime import datetime
 import pdfkit
-from sqlalchemy import text
+from sqlalchemy import text, func
 from sqlalchemy.exc import OperationalError, DataError
 from flask_migrate import Migrate
 from routes.assets_upload import bp as assets_upload_bp
 from plotly.utils import PlotlyJSONEncoder
 import csv
+import json
 
 from models import (
     db, register_extensions,
@@ -296,8 +297,6 @@ def index():
             return default
 
     try:
-        from sqlalchemy import func
-
         # KPIs
         total_orders = db.session.query(func.count()).select_from(SalesOrder).scalar() or 0
         total_customers = db.session.query(func.count()).select_from(Customer).scalar() or 0
@@ -313,9 +312,10 @@ def index():
         else:
             total_revenue = 0.0
 
-        # Recent orders (safely pick a date/identifier/total if available)
         recent_q = db.session.query(SalesOrder).order_by(getattr(SalesOrder, "id", SalesOrder)).limit(5)
+
         recent_orders_rows = recent_q.all()
+
         recent_orders = []
         for o in recent_orders_rows:
             recent_orders.append({
@@ -324,38 +324,133 @@ def index():
                 "date": (safe_get(o, "order_date") or safe_get(o, "created_at") or safe_get(o, "date") or ""),
                 "total": float(safe_get(o, "total") or safe_get(o, "amount") or 0.0)
             })
-
-        # Top customers by total order value (best-effort)
-        top_customers = []
+        recent_orders = []
         try:
-            # attempt join and aggregation if SalesOrder has customer_id and total-like column
-            if hasattr(SalesOrder, "customer_id") and revenue_col is not None:
+            # Prefer a DB join between SalesOrder and Customer for accurate recent orders
+            if 'Customer' in globals() and 'SalesOrder' in globals() and hasattr(SalesOrder, "customer_id") and hasattr(Customer, "id"):
                 rows = (
-                    db.session.query(Customer.name, func.coalesce(func.sum(revenue_col), 0).label("total"))
-                    .join(SalesOrder, getattr(SalesOrder, "customer_id") == getattr(Customer, "id"))
-                    .group_by(Customer.name)
-                    .order_by(func.sum(revenue_col).desc())
+                    db.session.query(SalesOrder, Customer)
+                    .join(Customer, getattr(SalesOrder, "customer_id") == getattr(Customer, "id"))
+                    .order_by(getattr(SalesOrder, "id", SalesOrder).desc())
                     .limit(5)
                     .all()
                 )
-                top_customers = [{"name": r[0], "total": float(r[1])} for r in rows]
+                for so, cust in rows:
+                    date_val = getattr(so, "order_date", None) or getattr(so, "created_at", None) or getattr(so, "date", None)
+                    if hasattr(date_val, "isoformat"):
+                        date_val = date_val.isoformat()
+                    total_val = getattr(so, "total", None) or getattr(so, "amount", None) or 0.0
+                    try:
+                        total_val = float(total_val)
+                    except Exception:
+                        total_val = 0.0
+                    recent_orders.append({
+                        "order_id": getattr(so, "id", None),
+                        "customer": getattr(cust, "name", "") or getattr(cust, "customer_name", "") or "",
+                        "date": date_val or "",
+                        "total": total_val,
+                        "status": getattr(so, "status", "") or ""
+                    })
             else:
-                # fallback: list a few customers
-                cust_rows = db.session.query(Customer).limit(5).all()
-                top_customers = [{"name": safe_get(c, "name", ""), "total": 0.0} for c in cust_rows]
+                # fallback: get recent orders from SalesOrder only
+                recent_q = db.session.query(SalesOrder).order_by(getattr(SalesOrder, "id", SalesOrder).desc()).limit(5)
+                recent_orders_rows = recent_q.all()
+                for o in recent_orders_rows:
+                    date_val = getattr(o, "order_date", None) or getattr(o, "created_at", None) or getattr(o, "date", None)
+                    if hasattr(date_val, "isoformat"):
+                        date_val = date_val.isoformat()
+                    total_val = getattr(o, "total", None) or getattr(o, "amount", None) or 0.0
+                    try:
+                        total_val = float(total_val)
+                    except Exception:
+                        total_val = 0.0
+                    # try relationship or stored customer name
+                    cust_name = getattr(o, "customer_name", None) or getattr(o, "customer", None)
+                    if hasattr(cust_name, "name"):
+                        cust_name = getattr(cust_name, "name")
+                    recent_orders.append({
+                        "id": getattr(o, "id", None),
+                        "customer": cust_name or "",
+                        "date": date_val or "",
+                        "total": total_val
+                    })
         except Exception:
-            top_customers = []
+            app.logger.exception("Failed to build recent_orders")
+            recent_orders = []
 
-        # Small KPI dict to pass to template (mirrors previous file-based shape)
+        top_customers = []
+        try:
+            if hasattr(SalesOrder, "customer_id"):
+                # choose the value column (total or amount)
+                value_col = getattr(SalesOrder, "total", None) or getattr(SalesOrder, "amount", None)
+                if value_col is not None:
+                    rows = (
+                        db.session.query(
+                            Customer.id.label("customer_id"),
+                            Customer.name.label("customer_name"),
+                            func.coalesce(func.sum(value_col), 0).label("total")
+                        )
+                        .join(SalesOrder, SalesOrder.customer_id == Customer.id)
+                        .group_by(Customer.id, Customer.name)
+                        .order_by(func.sum(value_col).desc())
+                        .limit(5)
+                        .all()
+                    )
+                    top_customers = [
+                        {"name": r.customer_name or "Unknown", "total": float(r.total or 0)}
+                        for r in rows
+                    ]
+                else:
+                    # no numeric order value column; fall back to listing customers
+                    cust_rows = db.session.query(Customer).limit(5).all()
+                    top_customers = [{"name": getattr(c, "name", ""), "total": 0.0} for c in cust_rows]
+            else:
+                cust_rows = db.session.query(Customer).limit(5).all()
+                top_customers = [{"name": getattr(c, "name", ""), "total": 0.0} for c in cust_rows]
+        except Exception:
+            app.logger.exception("Failed to compute top_customers")
+            top_customers = []
+        
+        t_customers = []
+
+        top_cust = db.session.query(Customer).all()
+        #Total inventory value
+        try:
+            # prefer DB-side aggregate since columns are known: quantity (int) and unit_cost (float)
+            if 'InventoryItem' in globals():
+                total_inventory_value = float(
+                    db.session.query(
+                        func.coalesce(func.sum(InventoryItem.quantity * InventoryItem.unit_cost), 0)
+                    ).scalar() or 0.0
+                )
+                print("Yay")
+            else:
+                print("nay")
+                # fallback: compute in Python row-wise
+                rows = db.session.query(InventoryItem).all()
+                s = 0.0
+                for r in rows:
+                    try:
+                        qty = int(getattr(r, "quantity", 0) or 0)
+                        cost = float(getattr(r, "unit_cost", 0.0) or 0.0)
+                        s += qty * cost
+                    except Exception:
+                        continue
+                total_inventory_value = float(s)
+        except Exception:
+            print(Exception)
+            app.logger.exception("Failed to compute total_inventory_value")
+            total_inventory_value = 0.0
+
+
+
         kpi = {
             "total_orders": int(total_orders),
             "total_customers": int(total_customers),
-            "total_revenue": total_revenue
+            "total_revenue": f"{float(total_revenue):,.2f}",
+            "inventory_value": f"{total_inventory_value:,.2f}"
         }
 
-        # Small placeholder graphs: prefer analytics precomputed graphs if present
-        # ...existing code...
-        # --- Build visuals from DB when possible (fallbacks kept) ---
         try:
             # Sales trend (monthly totals) from SalesOrder (prefer 'total' then 'amount')
             sales_trend_graph_local = {"data": [], "layout": {"title": "Sales Trend"}}
@@ -396,7 +491,9 @@ def index():
                         customers = {"data": [{"labels": labels, "values": vals, "type": "pie", "name": "Customers"}],
                                      "layout": {"title": "Top Customers by Sales"}}
 
-            # Product performance: try SalesOrder.product / item fields then InventoryItem category
+
+            
+            # Product performance: prefer join SalesOrder.inventory_id -> InventoryItem.id to get product names
             product_performance_graph = {"data": [], "layout": {"title": "Product Performance"}}
             prod_field = None
             if 'SalesOrder' in globals():
@@ -429,6 +526,63 @@ def index():
                 if labels and vals:
                     product_performance_graph = {"data": [{"labels": labels, "values": vals, "type": "pie", "name": "Inventory categories"}],
                                                  "layout": {"title": "Inventory by Category"}}
+            product_performance_graph = {"data": [], "layout": {"title": "Product Performance"}}
+            try:
+                # Prefer a join from SalesOrder.inventory_id -> InventoryItem.id to get product names
+                if 'SalesOrder' in globals() and 'InventoryItem' in globals() and hasattr(SalesOrder, "inventory_id") and hasattr(InventoryItem, "id"):
+                    # choose best product/name column on InventoryItem
+                    prod_col = getattr(InventoryItem, "product", None) or getattr(InventoryItem, "name", None) or getattr(InventoryItem, "item", None)
+                    if prod_col is not None:
+                        rows = (
+                            db.session.query(prod_col.label("product"), func.count().label("cnt"))
+                            .join(SalesOrder, getattr(SalesOrder, "inventory_id") == getattr(InventoryItem, "id"))
+                            .group_by(prod_col)
+                            .order_by(func.count().desc())
+                            .limit(10)
+                            .all()
+                        )
+                        labels = [str(r.product) if getattr(r, "product", None) is not None else "Unknown" for r in rows]
+                        vals = [int(r.cnt) for r in rows]
+                        if labels and vals:
+                            product_performance_graph = {"data": [{"labels": labels, "values": vals, "type": "pie", "name": "Products"}],
+                                                         "layout": {"title": "Top Products (by order count)"}}
+                # fallback: try SalesOrder product-like fields
+                if not product_performance_graph["data"]:
+                    prod_field = None
+                    if 'SalesOrder' in globals():
+                        for cand in ("product", "product_name", "item", "sku"):
+                            if hasattr(SalesOrder, cand):
+                                prod_field = getattr(SalesOrder, cand)
+                                break
+                    if prod_field is not None:
+                        rows = (
+                            db.session.query(prod_field, func.count().label("cnt"))
+                            .group_by(prod_field)
+                            .order_by(func.count().desc())
+                            .limit(10)
+                            .all()
+                        )
+                        labels = [str(r[0]) if r[0] is not None else "Unknown" for r in rows]
+                        vals = [int(r[1]) for r in rows]
+                        if labels and vals:
+                            product_performance_graph = {"data": [{"labels": labels, "values": vals, "type": "pie", "name": "Products"}],
+                                                         "layout": {"title": "Top Products (by count)"}}
+                # final fallback: aggregate by InventoryItem.category if available
+                if not product_performance_graph["data"] and 'InventoryItem' in globals() and hasattr(InventoryItem, "category"):
+                    rows = (
+                        db.session.query(InventoryItem.category, func.count().label("cnt"))
+                        .group_by(InventoryItem.category)
+                        .order_by(func.count().desc())
+                        .all()
+                    )
+                    labels = [r[0] or "Unknown" for r in rows]
+                    vals = [int(r[1]) for r in rows]
+                    if labels and vals:
+                        product_performance_graph = {"data": [{"labels": labels, "values": vals, "type": "pie", "name": "Inventory categories"}],
+                                                     "layout": {"title": "Inventory by Category"}}
+            except Exception:
+                app.logger.exception("Failed to build product_performance_graph using inventory join/fallbacks")
+ 
 
             # Inventory status counts
             inventory_status_graph = {"data": [], "layout": {"title": "Inventory Status"}}
@@ -518,7 +672,7 @@ def index():
             order_status_graph = {"data": [], "layout": {}}
             revenue_expenses_graph = {"data": [], "layout": {}}
             employee_status_graph = {"data": [], "layout": {}}
-# ...existing code...
+
 
         # recent activity: synthesize from recent orders/payments if possible
         recent_activity = []
@@ -671,7 +825,7 @@ def get_outstanding_invoices_data():
         "layout": {"title": "Outstanding Invoices"}
     }
 
-# ...existing code...
+
 @app.route("/accounting-overview")
 @login_required
 def accounting_overview():
@@ -958,6 +1112,7 @@ def asset_overview():
                 "status": getattr(a, "status", "") or ""
             }
 
+       
         assets = [asset_to_dict(a) for a in assets_rows]
         categories = sorted({a["category"] for a in assets if a["category"]})
 
@@ -968,13 +1123,52 @@ def asset_overview():
         assets = assets_data
         categories = sorted(list(set([a["category"] for a in assets])))
 
+        # build Plotly pie chart JSON for asset categories
+    try:
+        # category chart
+        cat_counts = {}
+        status_counts = {}
+        for a in assets:
+            cat = a.get("category") or "Uncategorized"
+            cat_counts[cat] = cat_counts.get(cat, 0) + 1
+            st = a.get("status") or "Unknown"
+            status_counts[st] = status_counts.get(st, 0) + 1
+
+        labels_cat = list(cat_counts.keys())
+        vals_cat = [cat_counts[k] for k in labels_cat]
+
+        labels_status = list(status_counts.keys())
+        vals_status = [status_counts[k] for k in labels_status]
+
+        asset_chart = {
+            "data": [
+                {"labels": labels_cat, "values": vals_cat, "type": "pie", "name": "Asset Categories"}
+            ],
+            "layout": {"title": "Asset Category Distribution", "height": 380}
+        }
+        asset_status_chart = {
+            "data": [
+                {"labels": labels_status, "values": vals_status, "type": "pie", "name": "Asset Statuses"}
+            ],
+            "layout": {"title": "Asset Status Distribution", "height": 380}
+        }
+
+        asset_chart_data = json.dumps(asset_chart, cls=PlotlyJSONEncoder)
+        asset_status_chart_data = json.dumps(asset_status_chart, cls=PlotlyJSONEncoder)
+    except Exception:
+        app.logger.exception("Failed to build asset charts")
+        asset_chart_data = json.dumps({"data": [], "layout": {}})
+        asset_status_chart_data = json.dumps({"data": [], "layout": {}})
+
     return render_template(
         "assets-overview.html",
         assets=assets,
         categories=categories,
         query=query,
         selected_category=category,
-        selected_status=status
+        selected_status=status,
+        asset_chart_data=asset_chart_data,
+        asset_status_chart_data=asset_status_chart_data
     )
 
 @app.route('/detailed-assets-analysis')
@@ -1355,23 +1549,70 @@ def distribution_overview():
         shipments = []
         for s in shipments_rows:
             shipments.append(row_to_dict(s, [
+                "id" if hasattr(Shipment, "id") else "",
                 "shipment_id" if hasattr(Shipment, "shipment_id") else ("id" if hasattr(Shipment, "id") else "shipment"),
                 "date" if hasattr(Shipment, "date") else ("shipped_at" if hasattr(Shipment, "shipped_at") else "created_at"),
                 "carrier" if hasattr(Shipment, "carrier") else "carrier_name",
                 "destination" if hasattr(Shipment, "destination") else "dest",
                 "status" if hasattr(Shipment, "status") else "state"
             ]))
-
+            
         orders = []
-        for o in orders_rows:
-            orders.append(row_to_dict(o, [
-                "order_id" if hasattr(SalesOrder, "order_id") else ("id" if hasattr(SalesOrder, "id") else "order"),
-                "customer_id" if hasattr(SalesOrder, "customer_id") else ("customer" if hasattr(SalesOrder, "customer") else "customer_name"),
-                "date" if hasattr(SalesOrder, "date") else ("order_date" if hasattr(SalesOrder, "order_date") else "created_at"),
-                "total" if hasattr(SalesOrder, "total") else ("amount" if hasattr(SalesOrder, "amount") else "value"),
-                "status" if hasattr(SalesOrder, "status") else "state"
-            ]))
-
+        try:
+            if 'Customer' in globals() and hasattr(SalesOrder, "customer_id"):
+                rows = (
+                    db.session.query(SalesOrder, Customer)
+                    .outerjoin(Customer, getattr(SalesOrder, "customer_id") == getattr(Customer, "id"))
+                    .order_by(getattr(SalesOrder, "id", SalesOrder))
+                    .all()
+                )
+                for so, cust in rows:
+                    od = row_to_dict(so, [
+                        "order_id" if hasattr(SalesOrder, "order_id") else ("id" if hasattr(SalesOrder, "id") else "order"),
+                        "customer_id",
+                        "date" if hasattr(SalesOrder, "date") else ("order_date" if hasattr(SalesOrder, "order_date") else "created_at"),
+                        "total" if hasattr(SalesOrder, "total") else ("amount" if hasattr(SalesOrder, "amount") else "value"),
+                        "status" if hasattr(SalesOrder, "status") else "state"
+                    ])
+                    # attach best-effort customer name from joined Customer row
+                    if cust is not None:
+                        od["customer_name"] = getattr(cust, "name", None) or getattr(cust, "customer_name", None) or getattr(cust, "full_name", None) or ""
+                    else:
+                        od["customer_name"] = ""
+                    orders.append(od)
+            else:
+                # Fallback: no Customer model or no customer_id field — read orders only and try relationship if present
+                orders_rows = db.session.query(SalesOrder).order_by(getattr(SalesOrder, "id", SalesOrder)).all()
+                for o in orders_rows:
+                    od = row_to_dict(o, [
+                        "order_id" if hasattr(SalesOrder, "order_id") else ("id" if hasattr(SalesOrder, "id") else "order"),
+                        "customer_id" if hasattr(SalesOrder, "customer_id") else ("customer" if hasattr(SalesOrder, "customer") else "customer_name"),
+                        "date" if hasattr(SalesOrder, "date") else ("order_date" if hasattr(SalesOrder, "order_date") else "created_at"),
+                        "total" if hasattr(SalesOrder, "total") else ("amount" if hasattr(SalesOrder, "amount") else "value"),
+                        "status" if hasattr(SalesOrder, "status") else "state"
+                    ])
+                    # if SalesOrder has a relationship attribute 'customer', use it
+                    cust_obj = getattr(o, "customer", None)
+                    if cust_obj is not None:
+                        od["customer_name"] = getattr(cust_obj, "name", None) or getattr(cust_obj, "customer_name", None) or ""
+                    else:
+                        od["customer_name"] = ""
+                    orders.append(od)
+        except Exception:
+            app.logger.exception("Failed to load orders with customer join; falling back to simple orders list")
+            orders = []
+            orders_rows = db.session.query(SalesOrder).order_by(getattr(SalesOrder, "id", SalesOrder)).all()
+            for o in orders_rows:
+                od = row_to_dict(o, [
+                    "order_id" if hasattr(SalesOrder, "order_id") else ("id" if hasattr(SalesOrder, "id") else "order"),
+                    "customer_id" if hasattr(SalesOrder, "customer_id") else ("customer" if hasattr(SalesOrder, "customer") else "customer_name"),
+                    "date" if hasattr(SalesOrder, "date") else ("order_date" if hasattr(SalesOrder, "order_date") else "created_at"),
+                    "total" if hasattr(SalesOrder, "total") else ("amount" if hasattr(SalesOrder, "amount") else "value"),
+                    "status" if hasattr(SalesOrder, "status") else "state"
+                ])
+                od["customer_name"] = getattr(o, "customer_name", "") or getattr(o, "customer", "") or ""
+                orders.append(od)
+        
         return render_template(
             'distribution-overview.html',
             inventory=inventory,
@@ -1381,6 +1622,47 @@ def distribution_overview():
     except Exception:
         app.logger.exception("DB unavailable for distribution overview")
         
+@app.route('/edit_shipment/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_shipment(id):
+    if 'Shipment' not in globals():
+        abort(404)
+    sh = db.session.get(Shipment, id)
+    if not sh:
+        abort(404)
+
+    if request.method == 'POST':
+        try:
+            form = request.form
+            # date: try parse YYYY-MM-DD -> date object; otherwise set raw value
+            date_val = form.get('date')
+            if date_val:
+                try:
+                    parsed = datetime.strptime(date_val, '%Y-%m-%d').date()
+                    _set_attr_if_exists(sh, 'date', parsed, date_try=True)
+                except Exception:
+                    _set_attr_if_exists(sh, 'date', date_val)
+
+            _set_attr_if_exists(sh, 'carrier', form.get('carrier'))
+            _set_attr_if_exists(sh, 'destination', form.get('destination'))
+            _set_attr_if_exists(sh, 'status', form.get('status'))
+
+            db.session.add(sh)
+            db.session.commit()
+            # redirect back to distribution overview
+            return redirect(url_for('distribution_overview'))
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            app.logger.exception("Failed to save shipment edits")
+            # show edit page again with 500 status
+            return render_template('edit_shipment.html', shipment=sh), 500
+
+    # GET
+    return render_template('edit_shipment.html', shipment=sh)
+
 
 @app.route('/add_shipment', methods=['GET', 'POST'])
 def add_shipment():
@@ -1453,6 +1735,7 @@ def receive_inventory():
         quantity = request.form.get('quantity', '')
         reorder_level = request.form.get('reorder_level', '')
         status = request.form.get('status', '')
+        unit_cost = request.form.get('unit_cost', '')
 
         try:
             item = InventoryItem()
@@ -1467,6 +1750,7 @@ def receive_inventory():
             _set_attr_if_exists(item, "reorder_level", reorder_level, cast_float=True)
             _set_attr_if_exists(item, "reorder", reorder_level, cast_float=True)
             _set_attr_if_exists(item, "status", status)
+            _set_attr_if_exists(item, "unit_cost", unit_cost, cast_float=True)
             db.session.add(item)
             db.session.commit()
             flash('Inventory received!', 'success')
@@ -1846,8 +2130,10 @@ def add_employee():
         except Exception:
             db.session.rollback()
             app.logger.exception("Failed to add employee to DB; falling back to file")
-            return render_template('add_employee.html')
+            # fall through to render form (with flashes) so response is always returned
 
+    # If GET or POST fallback, render the form
+    return render_template('add_employee.html')
 
 @app.route('/edit_employee/<employee_id>', methods=['GET', 'POST'])
 def edit_employee(employee_id):
@@ -2794,16 +3080,216 @@ def process_payroll():
     return render_template('process_payroll.html')
 
 @app.route('/sales-overview')
-async def sales_overview():
+@login_required
+def sales_overview():
+    # existing analytics variables are produced elsewhere; keep them
+    try:
+        # gather customers and inventory for the order-entry UI (best-effort)
+        customers = []
+        if 'Customer' in globals():
+            try:
+                rows = db.session.query(Customer).order_by(getattr(Customer, "name", Customer)).all()
+                for c in rows:
+                    customers.append({"id": getattr(c, "id", None), "name": getattr(c, "name", "") or ""})
+            except Exception:
+                app.logger.exception("Failed to load customers for sales_overview")
 
-    sales_trend_graphs = sales_trend_graph
-    goods_performance_pie_charts = goods_performance_pie_chart
-    customer_expenditure_pie_charts = customer_expenditure_pie_chart
+        inventory = []
+        if 'InventoryItem' in globals():
+            try:
+                inv_rows = db.session.query(InventoryItem).order_by(getattr(InventoryItem, "product", InventoryItem)).all()
+                for it in inv_rows:
+                    inventory.append({
+                        "id": getattr(it, "id", None),
+                        "product": getattr(it, "product", None) or getattr(it, "name", "") or f"Item {getattr(it,'id', '')}",
+                        "quantity": float(getattr(it, "quantity", 0) or 0),
+                        "unit_cost": float(getattr(it, "unit_cost", 0) or 0),
+                        "reorder_level": float(getattr(it, "reorder_level", 0) or 0)
+                    })
+            except Exception:
+                app.logger.exception("Failed to load inventory for sales_overview")
 
-    return render_template('sales_overview.html',
-                           sales_trend_graph=sales_trend_graphs,
-                           goods_performance_pie_chart=goods_performance_pie_charts,
-                           customer_expenditure_pie_chart=customer_expenditure_pie_charts)
+        # reuse the precomputed graphs from module-level variables if present
+        sales_trend = globals().get("sales_trend_graph", {"data": [], "layout": {}})
+        goods_perf = globals().get("goods_performance_pie_chart", {"data": [], "layout": {}})
+        cust_expenditure = globals().get("customer_expenditure_pie_chart", {"data": [], "layout": {}})
+
+        return render_template('sales_overview.html',
+                               sales_trend_graph=sales_trend,
+                               goods_performance_pie_chart=goods_perf,
+                               customer_expenditure_pie_chart=cust_expenditure,
+                               customers=customers,
+                               inventory=inventory)
+    except Exception:
+        app.logger.exception("Failed to render sales_overview")
+        # safe fallback
+        return render_template('sales_overview.html',
+                               sales_trend_graph={"data": [], "layout": {}},
+                               goods_performance_pie_chart={"data": [], "layout": {}},
+                               customer_expenditure_pie_chart={"data": [], "layout": {}},
+                               customers=[], inventory=[])
+
+@app.route('/create_sale', methods=['POST'])
+@login_required
+def create_sale():
+    """
+    Create a sale (order) safely and always return JSON.
+    Accepts JSON or form: { customer_id, inventory_id, quantity }.
+    """
+    data = request.get_json(silent=True) or request.form or {}
+    try:
+        customer_id = int((data.get('customer_id') or 0))
+        inventory_id = int((data.get('inventory_id') or 0))
+        quantity = float((data.get('quantity') or 0))
+    except Exception:
+        return jsonify(ok=False, error="Invalid input types"), 400
+
+    if quantity <= 0:
+        return jsonify(ok=False, error="Quantity must be greater than zero"), 400
+
+    # load customer
+    cust = None
+    if 'Customer' in globals():
+        try:
+            cust = db.session.get(Customer, customer_id)
+        except Exception:
+            app.logger.exception("Customer lookup failed")
+    if cust is None:
+        return jsonify(ok=False, error="Customer not found"), 404
+
+    # load inventory item
+    item = None
+    if 'InventoryItem' in globals():
+        try:
+            item = db.session.get(InventoryItem, inventory_id)
+        except Exception:
+            app.logger.exception("Inventory lookup failed")
+    if item is None:
+        return jsonify(ok=False, error="Inventory item not found"), 404
+
+    # realtime inventory check
+    try:
+        available = float(getattr(item, "quantity", 0) or 0)
+    except Exception:
+        available = 0
+    if available < quantity:
+        return jsonify(ok=False, error="Insufficient stock"), 400
+
+    # optional credit check (best-effort)
+    try:
+        credit_limit = getattr(cust, "credit_limit", None)
+        if credit_limit is not None and 'Invoice' in globals():
+            unpaid_total = db.session.query(func.coalesce(func.sum(Invoice.amount), 0)).filter(
+                getattr(Invoice, "customer_id") == customer_id,
+                getattr(Invoice, "status") != "Paid"
+            ).scalar() or 0
+            unit_price = float(getattr(item, "unit_cost", 0) or 0)
+            order_total = unit_price * quantity
+            if (unpaid_total + order_total) > float(credit_limit):
+                return jsonify(ok=False, error="Customer credit limit exceeded"), 400
+    except Exception:
+        # IMPORTANT: Rollback to clear any aborted transaction state if the query failed
+        db.session.rollback()
+        app.logger.exception("Credit check failed; continuing without blocking")
+
+    # Perform DB transaction
+    try:
+        # Ensure we start with a clean state
+        db.session.rollback()
+
+        total = float(getattr(item, "unit_cost", 0) or 0) * quantity
+        so_id = None
+        inv_id = None
+
+        so = None
+        if 'SalesOrder' in globals():
+            so = SalesOrder()
+            # ensure order_id if DB requires it
+            if hasattr(SalesOrder, "order_id"):
+                try:
+                    next_oid = db.session.query(func.coalesce(func.max(getattr(SalesOrder, "order_id")), 0) + 1).scalar()
+                except Exception:
+                    # Rollback if ID generation query fails
+                    db.session.rollback()
+                    next_oid = None
+                if not next_oid:
+                    next_oid = int(datetime.now().timestamp())
+                _set_attr_if_exists(so, "order_id", next_oid)
+
+            _set_attr_if_exists(so, "customer_id", customer_id)
+            _set_attr_if_exists(so, "inventory_id", inventory_id)
+            _set_attr_if_exists(so, "product", getattr(item, "product", None) or getattr(item, "name", None))
+            _set_attr_if_exists(so, "quantity", quantity)
+            _set_attr_if_exists(so, "amount", total)
+            _set_attr_if_exists(so, "status", "pending")
+            _set_attr_if_exists(so, "order_date", datetime.now().date(), date_try=True)
+            db.session.add(so)
+            db.session.flush()  # populate so.id
+            so_id = getattr(so, "id", None)
+
+        # decrement inventory
+        new_qty = available - quantity
+        try:
+            if hasattr(item, "quantity"):
+                setattr(item, "quantity", new_qty)
+            else:
+                _set_attr_if_exists(item, "qty", new_qty)
+            db.session.add(item)
+            db.session.flush()
+        except Exception:
+            app.logger.exception("Failed to decrement inventory quantity; aborting")
+            raise
+
+        # create invoice if model exists
+        if 'Invoice' in globals():
+            inv = Invoice()
+            _set_attr_if_exists(inv, "customer_id", customer_id)
+            _set_attr_if_exists(inv, "customer", getattr(cust, "name", None) or customer_id)
+            _set_attr_if_exists(inv, "amount", total)
+            _set_attr_if_exists(inv, "total", total)
+            _set_attr_if_exists(inv, "status", "Unpaid")
+            _set_attr_if_exists(inv, "date", datetime.now().date(), date_try=True)
+            db.session.add(inv)
+            db.session.flush()
+            inv_id = getattr(inv, "id", None)
+
+            # link invoice to sales order if possible
+            if so is not None:
+                _set_attr_if_exists(so, "invoice_id", inv_id)
+                db.session.add(so)
+                db.session.flush()
+
+        # notify warehouse by creating Shipment record if model exists
+        if 'Shipment' in globals():
+            sh = Shipment()
+            # Generate shipment_id based on count + 1
+            try:
+                shipment_count = db.session.query(Shipment).count()
+                _set_attr_if_exists(sh, "shipment_id", shipment_count + 1)
+            except Exception:
+                app.logger.warning("Could not generate shipment_id from count")
+
+            _set_attr_if_exists(sh, "date", datetime.now().date(), date_try=True)
+            _set_attr_if_exists(sh, "carrier", "")
+            _set_attr_if_exists(sh, "destination", "")
+            _set_attr_if_exists(sh, "status", "Pending")
+            _set_attr_if_exists(sh, "order_id", so_id)
+            _set_attr_if_exists(sh, "order", so_id)
+            db.session.add(sh)
+
+        # finalize
+        db.session.commit()
+ 
+        return jsonify(ok=True, order_id=so_id or inv_id), 201
+    except Exception as exc:
+         # ensure rollback and return error JSON
+         try:
+             db.session.rollback()
+         except Exception:
+             pass
+         app.logger.exception("Failed to create sale")
+         return jsonify(ok=False, error="Failed to create sale due to server error"), 500
+
 
 @app.route('/sales-forecast')
 def sales_forecast():

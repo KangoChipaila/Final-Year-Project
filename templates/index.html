@@ -15,8 +15,8 @@
         <!-- KPI Summary Cards -->
         <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
             <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
-                <div class="text-gray-500 text-sm mb-2">Total Sales</div>
-                <div class="text-3xl font-bold text-blue-700">{{ kpi.total_sales }}</div>
+                <div class="text-gray-500 text-sm mb-2">Total Revenue</div>
+                <div class="text-3xl font-bold text-blue-700">K{{ kpi.total_revenue }}</div>
             </div>
             <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
                 <div class="text-gray-500 text-sm mb-2">Total Customers</div>
@@ -24,11 +24,11 @@
             </div>
             <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
                 <div class="text-gray-500 text-sm mb-2">Inventory Value</div>
-                <div class="text-3xl font-bold text-yellow-700">{{ kpi.inventory_value }}</div>
+                <div class="text-3xl font-bold text-yellow-700">K{{ kpi.inventory_value }}</div>
             </div>
             <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
-                <div class="text-gray-500 text-sm mb-2">Outstanding Orders</div>
-                <div class="text-3xl font-bold text-red-700">{{ kpi.outstanding_orders }}</div>
+                <div class="text-gray-500 text-sm mb-2">Total Orders</div>
+                <div class="text-3xl font-bold text-red-700">{{ kpi.total_orders }}</div>
             </div>
         </section>
 
@@ -116,7 +116,7 @@
                         {% for customer in top_customers %}
                         <tr class="border-b">
                             <td class="py-2 px-4">{{ customer.name }}</td>
-                            <td class="py-2 px-4">${{ customer.total_spent }}</td>
+                            <td class="py-2 px-4">K{{ customer.total }}</td>
                         </tr>
                         {% else %}
                         <tr>
@@ -142,7 +142,7 @@
                         <tr class="border-b">
                             <td class="py-2 px-4">{{ order.order_id }}</td>
                             <td class="py-2 px-4">{{ order.customer }}</td>
-                            <td class="py-2 px-4">${{ order.total }}</td>
+                            <td class="py-2 px-4">K{{ order.total }}</td>
                             <td class="py-2 px-4">{{ order.status }}</td>
                         </tr>
                         {% else %}
@@ -175,7 +175,7 @@
                 <div id="inventory-status-graph" class="rounded-lg shadow-md" style="height:320px; width:100%;"></div>
             </div>
             <div>
-                <div class="font-semibold mb-2 text-gray-700">Outstanding Orders Status</div>
+                <div class="font-semibold mb-2 text-gray-700">Orders Distribution</div>
                 <div id="order-status-graph" class="rounded-lg shadow-md" style="height:320px; width:100%;"></div>
             </div>
             <div>

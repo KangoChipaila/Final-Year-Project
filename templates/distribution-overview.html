@@ -22,20 +22,70 @@
             <div class="text-3xl font-bold text-green-700">{{ shipments|length }}</div>
         </div>
         <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
-            <div class="text-gray-500 text-sm mb-2">Outstanding Orders</div>
+            <div class="text-gray-500 text-sm mb-2">Total Orders</div>
             <div class="text-3xl font-bold text-yellow-700">{{ orders|length }}</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
+            <div class="text-gray-500 text-sm mb-2">Successful Orders</div>
+            <div class="text-3xl font-bold text-yellow-700">{{ orders | selectattr('status', 'in', ['Shipped', 'Delivered']) | list | length }}</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
+            <div class="text-gray-500 text-sm mb-2">Outstanding Orders</div>
+            <div class="text-3xl font-bold text-yellow-700">{{ orders | selectattr('status', 'in', ['Pending']) | list | length }}</div>
         </div>
         <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
             <div class="text-gray-500 text-sm mb-2">Low Stock Items</div>
             <div class="text-3xl font-bold text-red-700">
-                {{ inventory|selectattr('quantity', 'lt', 10)|list|length }}
+                {{ inventory|selectattr('status', 'equalto', 'Low Stock')|list|length }}
             </div>
         </div>
     </section>
 
+    <!-- Quick Actions -->
+    <div class="mb-8 bg-white shadow-md rounded-xl border border-gray-200 p-6 flex gap-4">
+        <a href="{{ url_for('add_shipment') }}">
+            <button class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-blue-800 transition">Add Shipment</button>
+        </a>
+        <a href="{{ url_for('add_order') }}">
+            <button class="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-green-800 transition">Add Order</button>
+        </a>
+        <a href="{{ url_for('receive_inventory') }}">
+            <button class="bg-gray-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-gray-800 transition">Receive Inventory</button>
+        </a>
+    </div>
+
+    <!-- Inventory Levels Chart -->
+    <div class="mb-8 bg-white shadow-md rounded-xl border border-gray-200 p-6 w-1/2">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-semibold text-gray-700">Inventory Levels</h2>
+            <div class="flex items-center gap-2">
+                <label for="inventory-filter" class="text-sm text-gray-600">View</label>
+                <select id="inventory-filter" class="border rounded px-2 py-1 text-sm">
+                    <option value="all">All items</option>
+                    <option value="in_stock">In stock (quantity &gt; reorder)</option>
+                    <option value="low_stock">Low stock (quantity &lt; reorder)</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="inventory-chart" style="width:100%;height:420px;"></div>
+        <p class="text-xs text-gray-500 mt-2">Low stock = quantity &lt; reorder_level. In stock = quantity &gt; reorder_level.</p>
+    </div>
+
     <!-- Inventory Summary Table -->
     <div class="mb-8 bg-white shadow-md rounded-xl border border-gray-200 p-6">
-        <h2 class="text-xl font-semibold mb-4 text-gray-700">Inventory Summary</h2>
+        <div class="flex flex-col md:flex-row justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold text-gray-700">Inventory Summary</h2>
+            <div class="flex gap-2 mt-2 md:mt-0">
+                <input type="text" id="inv-search" placeholder="Search Product, SKU, Warehouse..." class="border rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
+                <select id="inv-status-filter" class="border rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
+                    <option value="all">All Statuses</option>
+                    <option value="In Stock">In Stock</option>
+                    <option value="Low Stock">Low Stock</option>
+                    <option value="Out of Stock">Out of Stock</option>
+                </select>
+            </div>
+        </div>
         <table class="min-w-full bg-white rounded-lg">
             <thead>
                 <tr class="bg-black text-white text-left">
@@ -47,7 +97,7 @@
                     <th class="px-4 py-2 rounded-tr-lg">Status</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="inventory-table-body">
                 {% for item in inventory %}
                 <tr class="border-b hover:bg-gray-50 transition">
                     <td class="px-4 py-2">{{ item.product }}</td>
@@ -74,21 +124,34 @@
 
     <!-- Recent Shipments Table -->
     <div class="mb-8 bg-white shadow-md rounded-xl border border-gray-200 p-6">
-        <h2 class="text-xl font-semibold mb-4 text-gray-700">Recent Shipments</h2>
+        <div class="flex flex-col md:flex-row justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold text-gray-700">Recent Shipments</h2>
+            <div class="flex gap-2 mt-2 md:mt-0">
+                <input type="text" id="shipment-search" placeholder="Search ID, Carrier, Dest..." class="border rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
+                <select id="shipment-status-filter" class="border rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
+                    <option value="all">All Statuses</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Shipped">Shipped</option>
+                    <option value="Delivered">Delivered</option>
+                </select>
+            </div>
+        </div>
         <table class="min-w-full bg-white rounded-lg">
+            <!-- ...existing code... -->
             <thead>
                 <tr class="bg-black text-white text-left">
                     <th class="px-4 py-2 rounded-tl-lg">Shipment #</th>
                     <th class="px-4 py-2">Date</th>
                     <th class="px-4 py-2">Carrier</th>
                     <th class="px-4 py-2">Destination</th>
-                    <th class="px-4 py-2 rounded-tr-lg">Status</th>
+                    <th class="px-4 py-2">Status</th>
+                   <th class="px-4 py-2 rounded-tr-lg">Actions</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="shipments-table-body">
                 {% for shipment in shipments %}
                 <tr class="border-b hover:bg-gray-50 transition">
-                    <td class="px-4 py-2">{{ shipment.shipment_id }}</td>
+                    <td class="px-4 py-2">{{ shipment.id }}</td>
                     <td class="px-4 py-2">{{ shipment.date }}</td>
                     <td class="px-4 py-2">{{ shipment.carrier }}</td>
                     <td class="px-4 py-2">{{ shipment.destination }}</td>
@@ -99,36 +162,52 @@
                             <span class="inline-block px-2 py-1 rounded bg-yellow-100 text-yellow-700 font-semibold text-xs">{{ shipment.status }}</span>
                         {% endif %}
                     </td>
+                    <td class="px-4 py-2">
+                        <a href="{{ url_for('edit_shipment', id=shipment.id) if shipment.id else '#' }}" class="text-blue-600 hover:text-blue-800 font-medium text-sm">Edit</a>
+                    </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="5" class="text-center py-4 text-gray-500">No shipment records found.</td>
+                    <td colspan="6" class="text-center py-4 text-gray-500">No shipment records found.</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+<!-- ...existing code... -->
 
     <!-- Outstanding Orders Table -->
     <div class="mb-8 bg-white shadow-md rounded-xl border border-gray-200 p-6">
-        <h2 class="text-xl font-semibold mb-4 text-gray-700">Outstanding Orders</h2>
+        <div class="flex flex-col md:flex-row justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold text-gray-700">Outstanding Orders</h2>
+            <div class="flex gap-2 mt-2 md:mt-0">
+                <input type="text" id="order-search" placeholder="Search Order #, Customer..." class="border rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
+                <select id="order-status-filter" class="border rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
+                    <option value="all">All Statuses</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Confirmed">Confirmed</option>
+                    <option value="Shipped">Shipped</option>
+                    <option value="Delivered">Delivered</option>
+                </select>
+            </div>
+        </div>
         <table class="min-w-full bg-white rounded-lg">
             <thead>
                 <tr class="bg-black text-white text-left">
                     <th class="px-4 py-2 rounded-tl-lg">Order #</th>
                     <th class="px-4 py-2">Customer</th>
                     <th class="px-4 py-2">Date</th>
-                    <th class="px-4 py-2">Total</th>
+                    <th class="px-4 py-2">Total (ZMW)</th>
                     <th class="px-4 py-2 rounded-tr-lg">Status</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="orders-table-body">
                 {% for order in orders %}
                 <tr class="border-b hover:bg-gray-50 transition">
                     <td class="px-4 py-2">{{ order.order_id }}</td>
-                    <td class="px-4 py-2">{{ order.customer }}</td>
+                    <td class="px-4 py-2">{{ order.customer_name }}</td>
                     <td class="px-4 py-2">{{ order.date }}</td>
-                    <td class="px-4 py-2">${{ order.total }}</td>
+                    <td class="px-4 py-2">{{order.total | default('0') }}</td>
                     <td class="px-4 py-2">
                         {% if order.status == 'Shipped' %}
                             <span class="inline-block px-2 py-1 rounded bg-green-100 text-green-700 font-semibold text-xs">{{ order.status }}</span>
@@ -145,23 +224,141 @@
             </tbody>
         </table>
     </div>
-
-    <!-- Quick Actions -->
-    <div class="mb-8 bg-white shadow-md rounded-xl border border-gray-200 p-6 flex gap-4">
-        <a href="{{ url_for('add_shipment') }}">
-            <button class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-blue-800 transition">Add Shipment</button>
-        </a>
-        <a href="{{ url_for('add_order') }}">
-            <button class="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-green-800 transition">Add Order</button>
-        </a>
-        <a href="{{ url_for('receive_inventory') }}">
-            <button class="bg-gray-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-gray-800 transition">Receive Inventory</button>
-        </a>
-    </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-<!-- Add any page-specific JS here -->
+
+<script>
+(function(){
+  // inventory passed from server; ensure template provides `inventory` list of dicts
+  const inventoryData = {{ inventory | default([]) | tojson | safe }};
+
+  const chartEl = document.getElementById('inventory-chart');
+  const filterEl = document.getElementById('inventory-filter');
+
+  function buildChart(filter) {
+    if (!inventoryData || !inventoryData.length) {
+      chartEl.innerHTML = '<div class="p-6 text-gray-600">No inventory data available.</div>';
+      return;
+    }
+
+    // filter items according to spec
+    const items = inventoryData.filter(item => {
+      const qty = Number(item.quantity || 0);
+      const reorder = Number(item.reorder_level || 0);
+      if (filter === 'in_stock') return qty > reorder;
+      if (filter === 'low_stock') return qty < reorder;
+      return true;
+    });
+
+    if (!items.length) {
+      chartEl.innerHTML = '<div class="p-6 text-gray-600">No items match this filter.</div>';
+      return;
+    }
+
+    // sort by quantity descending for clearer bars
+    items.sort((a,b) => (Number(b.quantity) || 0) - (Number(a.quantity) || 0));
+
+    const x = items.map(i => i.product || i.name || i.sku || 'Unknown');
+    const y = items.map(i => Number(i.quantity) || 0);
+    const hover = items.map(i => {
+      const sku = i.sku ? `SKU: ${i.sku}<br>` : '';
+      const warehouse = i.warehouse ? `Warehouse: ${i.warehouse}<br>` : '';
+      return `${sku}${warehouse}Quantity: ${i.quantity || 0}<br>Reorder level: ${i.reorder_level || 0}`;
+    });
+
+    const colors = items.map(i => (Number(i.quantity || 0) < Number(i.reorder_level || 0) ? 'rgba(239,68,68,0.85)' : 'rgba(34,197,94,0.85)'));
+
+    const trace = {
+      x: x,
+      y: y,
+      type: 'bar',
+      marker: { color: colors },
+      hoverinfo: 'text',
+      text: hover
+    };
+
+    const layout = {
+      title: 'Inventory levels by product',
+      xaxis: { title: 'Product', automargin: true, tickangle: -45 },
+      yaxis: { title: 'Quantity' },
+      margin: { b: 150, l: 60, r: 20, t: 50 },
+      bargap: 0.2,
+      responsive: true
+    };
+
+    // render or restyle
+    Plotly.newPlot(chartEl, [trace], layout, {responsive: true});
+  }
+
+  // wire filter control
+  if (filterEl) {
+    filterEl.addEventListener('change', function(){ buildChart(this.value); });
+  }
+
+  // initial render
+  buildChart(filterEl ? filterEl.value : 'all');
+
+  // optional: redraw on window resize for better responsiveness
+  window.addEventListener('resize', function(){ Plotly.Plots.resize(chartEl); });
+
+  // --- Table Filtering Logic ---
+  function setupTableFilter(inputId, selectId, tableBodyId, textIndices, statusIndex) {
+    const input = document.getElementById(inputId);
+    const select = document.getElementById(selectId);
+    const tbody = document.getElementById(tableBodyId);
+    if (!tbody) return;
+
+    function filter() {
+        const term = input ? input.value.toLowerCase() : '';
+        const status = select ? select.value : 'all';
+        const rows = tbody.querySelectorAll('tr');
+
+        rows.forEach(row => {
+            // Skip rows that are just "No records found" messages (usually have colspan)
+            if (row.cells.length < Math.max(...textIndices, statusIndex)) return;
+
+            // Check text match in specified columns
+            let textMatch = false;
+            if (term === '') {
+                textMatch = true;
+            } else {
+                for (let i of textIndices) {
+                    if (row.cells[i] && row.cells[i].textContent.toLowerCase().includes(term)) {
+                        textMatch = true;
+                        break;
+                    }
+                }
+            }
+
+            // Check status match
+            let statusMatch = false;
+            if (status === 'all') {
+                statusMatch = true;
+            } else {
+                const rowStatus = row.cells[statusIndex].textContent.trim();
+                if (rowStatus.includes(status)) statusMatch = true;
+            }
+
+            row.style.display = (textMatch && statusMatch) ? '' : 'none';
+        });
+    }
+
+    if (input) input.addEventListener('input', filter);
+    if (select) select.addEventListener('change', filter);
+  }
+
+  // Shipments: ID(0), Carrier(2), Destination(3) are text search targets; Status is index 4
+  setupTableFilter('shipment-search', 'shipment-status-filter', 'shipments-table-body', [0, 2, 3], 4);
+
+  // Orders: Order#(0), Customer(1) are text search targets; Status is index 4
+  setupTableFilter('order-search', 'order-status-filter', 'orders-table-body', [0, 1], 4);
+
+  // Inventory: Product(0), SKU(1), Warehouse(2) are text search targets; Status is index 5
+  setupTableFilter('inv-search', 'inv-status-filter', 'inventory-table-body', [0, 1, 2], 5);
+
+})();
+</script>
 {% endblock %}
