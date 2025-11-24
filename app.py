@@ -1771,6 +1771,56 @@ def save_finance(data):
     with open(FINANCE_DATA_FILE, 'w') as f:
         json.dump(data, f, indent=2)
 
+@app.route('/finance/approve_request/<int:id>', methods=['POST'])
+@login_required
+def approve_purchase_request(id):
+    if 'PurchaseRequest' not in globals():
+        flash("PurchaseRequest model not available.", "error")
+        return redirect(url_for('finance_overview'))
+    try:
+        pr = db.session.get(PurchaseRequest, id)
+        if not pr:
+            flash("Purchase request not found.", "error")
+            return redirect(url_for('finance_overview'))
+        # set common status fields
+        if hasattr(pr, "status"):
+            setattr(pr, "status", "Approved")
+        elif hasattr(pr, "state"):
+            setattr(pr, "state", "Approved")
+        db.session.add(pr)
+        db.session.commit()
+        flash(f"Purchase request {getattr(pr, 'request_id', id)} approved.", "success")
+    except Exception:
+        db.session.rollback()
+        app.logger.exception("Failed to approve purchase request")
+        flash("Failed to approve purchase request.", "error")
+    return redirect(url_for('finance_overview'))
+
+
+@app.route('/finance/reject_request/<int:id>', methods=['POST'])
+@login_required
+def reject_purchase_request(id):
+    if 'PurchaseRequest' not in globals():
+        flash("PurchaseRequest model not available.", "error")
+        return redirect(url_for('finance_overview'))
+    try:
+        pr = db.session.get(PurchaseRequest, id)
+        if not pr:
+            flash("Purchase request not found.", "error")
+            return redirect(url_for('finance_overview'))
+        if hasattr(pr, "status"):
+            setattr(pr, "status", "Denied")
+        elif hasattr(pr, "state"):
+            setattr(pr, "state", "Denied")
+        db.session.add(pr)
+        db.session.commit()
+        flash(f"Purchase request {getattr(pr, 'request_id', id)} rejected.", "success")
+    except Exception:
+        db.session.rollback()
+        app.logger.exception("Failed to reject purchase request")
+        flash("Failed to reject purchase request.", "error")
+    return redirect(url_for('finance_overview'))
+
 @app.route('/finance-overview')
 @login_required
 def finance_overview():
@@ -1876,6 +1926,29 @@ def finance_overview():
                     parsed = {"data": [], "layout": {}}
                 finance_chart_data[name] = parsed
 
+        # --- Pending Purchase Requests for finance approval ---
+        pending_purchase_requests = []
+        if 'PurchaseRequest' in globals():
+            try:
+                any_db = True
+                status_col = getattr(PurchaseRequest, "status", None)
+                q = db.session.query(PurchaseRequest)
+                if status_col is not None:
+                    q = q.filter(func.lower(status_col) == 'pending')
+                pr_rows = q.order_by(getattr(PurchaseRequest, "id", PurchaseRequest)).all()
+                for r in pr_rows:
+                    pending_purchase_requests.append({
+                        "id": getattr(r, "id", None),
+                        "request_id": safe_get(r, "request_id", "id") or getattr(r, "id", None),
+                        "requested_by": safe_get(r, "requested_by", "requested_by_name", default=""),
+                        "date": safe_get(r, "date", "requested_on", "created_at", default=""),
+                        "item": safe_get(r, "item", "description", default=""),
+                        "estimated_cost": float(safe_get(r, "estimated_cost", "amount", "cost", default=0) or 0),
+                        "status": safe_get(r, "status", default="Pending")
+                    })
+            except Exception:
+                app.logger.exception("Failed to load pending purchase requests")
+
         if not any_db:
             raise RuntimeError("No finance DB models available")
 
@@ -1908,7 +1981,8 @@ def finance_overview():
             finance_chart_data=finance_chart_data,
             cashflow_chart=cashflow_chart,
             expense_breakdown=expense_breakdown,
-            revenue_sources=revenue_sources
+            revenue_sources=revenue_sources,
+            pending_purchase_requests=pending_purchase_requests
         )
 
     except Exception:
@@ -1924,7 +1998,8 @@ def finance_overview():
                                income_statement=income_statement,
                                cash_flow=cash_flow,
                                outstanding_payments=outstanding_payments,
-                               finance_chart_data=finance_chart_data)
+                               finance_chart_data=finance_chart_data,
+                               pending_purchase_requests=[])
 
 
 @app.route('/add_payment', methods=['GET', 'POST'])
@@ -2485,11 +2560,49 @@ def procurement_overview():
                 "status": safe_get(s, "status", default="")
             })
 
+        rq_q = (request.args.get('request_query') or '').strip().lower()
+        rq_status = (request.args.get('request_status') or '').strip()
+        ord_q = (request.args.get('order_query') or '').strip().lower()
+        ord_status = (request.args.get('order_status') or '').strip()
+        sup_q = (request.args.get('supplier_query') or '').strip().lower()
+        sup_status = (request.args.get('supplier_status') or '').strip()
+
+        def matches(item, q, status, text_fields):
+            if status and str(item.get('status','')).strip() != status:
+                return False
+            if not q:
+                return True
+            ql = q
+            for f in text_fields:
+                v = str(item.get(f, '') or '').lower()
+                if ql in v:
+                    return True
+            return False
+
+        if isinstance(purchase_requests, list):
+            purchase_requests = [
+                r for r in purchase_requests
+                if matches(r, rq_q, rq_status, ['request_id','requested_by','item'])
+            ]
+        if isinstance(purchase_orders, list):
+            purchase_orders = [
+                o for o in purchase_orders
+                if matches(o, ord_q, ord_status, ['order_id','vendor','item'])
+            ]
+        if isinstance(suppliers, list):
+            suppliers = [
+                s for s in suppliers
+                if matches(s, sup_q, sup_status, ['name','contact_person','email'])
+            ]
+
         return render_template(
             'procurement-overview.html',
             purchase_requests=purchase_requests,
             purchase_orders=purchase_orders,
-            suppliers=suppliers
+            suppliers=suppliers,
+            request_query=rq_q, request_status=rq_status,
+            order_query=ord_q, order_status=ord_status,
+            supplier_query=sup_q, supplier_status=sup_status
         )
 
     except Exception:
@@ -3079,6 +3192,7 @@ def process_payroll():
 
     return render_template('process_payroll.html')
 
+
 @app.route('/sales-overview')
 @login_required
 def sales_overview():
@@ -3114,12 +3228,52 @@ def sales_overview():
         goods_perf = globals().get("goods_performance_pie_chart", {"data": [], "layout": {}})
         cust_expenditure = globals().get("customer_expenditure_pie_chart", {"data": [], "layout": {}})
 
+        # KPI calculation (best-effort, safe fallbacks)
+        kpi = None
+        try:
+            # orders count
+            orders_count = 0
+            try:
+                orders_count = int(db.session.query(func.count()).select_from(SalesOrder).scalar() or 0)
+            except Exception:
+                orders_count = len(db.session.query(SalesOrder).all()) if 'SalesOrder' in globals() else 0
+
+            # customers count
+            customers_count = 0
+            try:
+                customers_count = int(db.session.query(func.count()).select_from(Customer).scalar() or 0)
+            except Exception:
+                customers_count = len(customers)
+
+            # revenue / total sales amount
+            total_revenue = 0.0
+            try:
+                if 'SalesOrder' in globals():
+                    value_col = getattr(SalesOrder, "total", None) or getattr(SalesOrder, "amount", None)
+                    if value_col is not None:
+                        total_revenue = float(db.session.query(func.coalesce(func.sum(value_col), 0)).scalar() or 0.0)
+            except Exception:
+                app.logger.exception("Failed to compute total_revenue for sales_overview")
+                total_revenue = 0.0
+
+            # human-friendly formatted totals
+            kpi = {
+                "total_sales": f"{total_revenue:,.2f}",
+                "orders": int(orders_count),
+                "customers": int(customers_count),
+                "revenue": f"{total_revenue:,.2f}"
+            }
+        except Exception:
+            app.logger.exception("Failed to build KPIs for sales_overview")
+            kpi = {"total_sales": "N/A", "orders": "N/A", "customers": "N/A", "revenue": "N/A"}
+
         return render_template('sales_overview.html',
                                sales_trend_graph=sales_trend,
                                goods_performance_pie_chart=goods_perf,
                                customer_expenditure_pie_chart=cust_expenditure,
                                customers=customers,
-                               inventory=inventory)
+                               inventory=inventory,
+                               kpi=kpi)
     except Exception:
         app.logger.exception("Failed to render sales_overview")
         # safe fallback
@@ -3127,7 +3281,8 @@ def sales_overview():
                                sales_trend_graph={"data": [], "layout": {}},
                                goods_performance_pie_chart={"data": [], "layout": {}},
                                customer_expenditure_pie_chart={"data": [], "layout": {}},
-                               customers=[], inventory=[])
+                               customers=[], inventory=[], kpi={"total_sales":"N/A","orders":"N/A","customers":"N/A","revenue":"N/A"})
+
 
 @app.route('/create_sale', methods=['POST'])
 @login_required

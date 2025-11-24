@@ -173,6 +173,46 @@
         </table>
     </div>
 
+    <!-- Pending Purchase Approvals (New Section) -->
+    <div class="mb-8 bg-white shadow-md rounded-xl p-6 border border-gray-200">
+        <h2 class="text-lg font-bold mb-2 text-gray-700">Pending Purchase Approvals</h2>
+        <table class="w-full text-sm text-left text-gray-800">
+            <thead class="text-xs uppercase text-white bg-black">
+                <tr>
+                    <th class="px-4 py-2">Request #</th>
+                    <th class="px-4 py-2">Requested By</th>
+                    <th class="px-4 py-2">Date</th>
+                    <th class="px-4 py-2">Item</th>
+                    <th class="px-4 py-2">Est. Cost</th>
+                    <th class="px-4 py-2">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in pending_purchase_requests %}
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="px-4 py-2">{{ req.request_id }}</td>
+                    <td class="px-4 py-2">{{ req.requested_by }}</td>
+                    <td class="px-4 py-2">{{ req.date }}</td>
+                    <td class="px-4 py-2">{{ req.item }}</td>
+                    <td class="px-4 py-2">K{{ req.estimated_cost | default('0.00') }}</td>
+                    <td class="px-4 py-2 flex gap-3">
+                        <form action="{{ url_for('approve_purchase_request', id=req.id) }}" method="POST" class="inline">
+                            <button type="submit" class="text-green-600 hover:text-green-800 font-bold text-xs uppercase tracking-wide">Approve</button>
+                        </form>
+                        <form action="{{ url_for('reject_purchase_request', id=req.id) }}" method="POST" class="inline">
+                            <button type="submit" class="text-red-600 hover:text-red-800 font-bold text-xs uppercase tracking-wide">Reject</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-gray-500">No pending purchase requests found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
     <!-- Outstanding Payments Table -->
     <div class="mb-8 bg-white shadow-md rounded-xl p-6 border border-gray-200">
         <h2 class="text-lg font-bold mb-2 text-gray-700">Outstanding Payments</h2>

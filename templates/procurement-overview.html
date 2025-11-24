@@ -23,7 +23,7 @@
             <div class="text-3xl font-bold text-blue-700">{{ purchase_requests|length }}</div>
         </div>
         <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
-            <div class="text-gray-500 text-sm mb-2">Total Orders</div>
+            <div class="text-gray-500 text-sm mb-2">Total Purchase Orders</div>
             <div class="text-3xl font-bold text-green-700">{{ purchase_orders|length }}</div>
         </div>
         <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
@@ -37,9 +37,24 @@
     </section>
 
     <!-- Purchase Requests Table -->
-    <div class="mb-8 bg-white shadow-md rounded-xl border border-gray-200 p-6">
-        <h2 class="text-xl font-semibold mb-4 text-gray-700">Purchase Requests</h2>
-        <table class="min-w-full bg-white rounded-lg">
+    <form method="GET" action="{{ url_for('procurement_overview') }}" class="proc-filter-form flex flex-wrap items-center gap-4 mb-4 bg-white rounded-md p-3">
+        <input type="text" name="request_query" placeholder="Search request #, requester, item..."
+               value="{{ request_query | default('') }}"
+               class="border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-300 focus:outline-none w-72" />
+
+        <select name="request_status" class="border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-300 focus:outline-none">
+            <option value="">All Statuses</option>
+            <option value="Pending" {% if request_status == 'Pending' %}selected{% endif %}>Pending</option>
+            <option value="Approved" {% if request_status == 'Approved' %}selected{% endif %}>Approved</option>
+            <option value="Denied" {% if request_status == 'Denied' %}selected{% endif %}>Denied</option>
+        </select>
+
+        <button type="submit" class="bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-800 transition">Filter</button>
+        <a href="{{ url_for('procurement_overview') }}" class="bg-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-300">Reset</a>
+    </form>
+     <div id="purchase-requests-section" class="mb-8 bg-white shadow-md rounded-xl border border-gray-200 p-6">
+         <h2 class="text-xl font-semibold mb-4 text-gray-700">Purchase Requests</h2>
+         <table class="min-w-full bg-white rounded-lg">
             <thead>
                 <tr class="bg-black text-white text-left">
                     <th class="py-3 px-4 rounded-tl-lg">Request #</th>
@@ -76,9 +91,24 @@
     </div>
 
     <!-- Purchase Orders Table -->
-    <div class="mb-8 bg-white shadow-md rounded-xl border border-gray-200 p-6">
-        <h2 class="text-xl font-semibold mb-4 text-gray-700">Purchase Orders</h2>
-        <table class="min-w-full bg-white rounded-lg">
+    <form method="GET" action="{{ url_for('procurement_overview') }}" class="proc-filter-form flex flex-wrap items-center gap-4 mb-4 bg-white rounded-md p-3">
+        <input type="text" name="order_query" placeholder="Search order #, vendor, item..."
+               value="{{ order_query | default('') }}"
+               class="border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-300 focus:outline-none w-72" />
+
+        <select name="order_status" class="border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-300 focus:outline-none">
+            <option value="">All Statuses</option>
+            <option value="Ordered" {% if order_status == 'Ordered' %}selected{% endif %}>Ordered</option>
+            <option value="Received" {% if order_status == 'Received' %}selected{% endif %}>Received</option>
+            <option value="Cancelled" {% if order_status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+        </select>
+
+        <button type="submit" class="bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-800 transition">Filter</button>
+        <a href="{{ url_for('procurement_overview') }}" class="bg-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-300">Reset</a>
+    </form>
+     <div id="purchase-orders-section" class="mb-8 bg-white shadow-md rounded-xl border border-gray-200 p-6">
+         <h2 class="text-xl font-semibold mb-4 text-gray-700">Purchase Orders</h2>
+         <table class="min-w-full bg-white rounded-lg">
             <thead>
                 <tr class="bg-black text-white text-left">
                     <th class="py-3 px-4 rounded-tl-lg">Order #</th>
@@ -117,9 +147,23 @@
     </div>
 
     <!-- Supplier List Table -->
-    <div class="mb-8 bg-white shadow-md rounded-xl border border-gray-200 p-6">
-        <h2 class="text-xl font-semibold mb-4 text-gray-700">Suppliers</h2>
-        <table class="min-w-full bg-white rounded-lg">
+    <form method="GET" action="{{ url_for('procurement_overview') }}" class="proc-filter-form flex flex-wrap items-center gap-4 mb-4 bg-white rounded-md p-3">
+        <input type="text" name="supplier_query" placeholder="Search supplier, contact, email..."
+               value="{{ supplier_query | default('') }}"
+               class="border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-300 focus:outline-none w-72" />
+
+        <select name="supplier_status" class="border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-300 focus:outline-none">
+            <option value="">All Statuses</option>
+            <option value="Active" {% if supplier_status == 'Active' %}selected{% endif %}>Active</option>
+            <option value="Inactive" {% if supplier_status == 'Inactive' %}selected{% endif %}>Inactive</option>
+        </select>
+
+        <button type="submit" class="bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-800 transition">Filter</button>
+        <a href="{{ url_for('procurement_overview') }}" class="bg-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-300">Reset</a>
+    </form>
+     <div id="suppliers-section" class="mb-8 bg-white shadow-md rounded-xl border border-gray-200 p-6">
+         <h2 class="text-xl font-semibold mb-4 text-gray-700">Suppliers</h2>
+         <table class="min-w-full bg-white rounded-lg">
             <thead>
                 <tr class="bg-black text-white text-left">
                     <th class="py-3 px-4 rounded-tl-lg">Supplier Name</th>
@@ -171,4 +215,50 @@
 {% block scripts %}
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <!-- Add any page-specific JS here -->
+<script>
+(function(){
+  // Save scroll position right before the form submits so it can be restored after reload
+  const forms = document.querySelectorAll('form.proc-filter-form');
+  forms.forEach(f => {
+    f.addEventListener('submit', () => {
+      try {
+        // store vertical scroll and the id of the nearest table section (so we can optionally anchor)
+        const scrollY = window.scrollY || window.pageYOffset || 0;
+        sessionStorage.setItem('procurement.scrollY', String(scrollY));
+        // find next sibling section (table container) to scroll to after load
+        const nextSection = f.nextElementSibling && f.nextElementSibling.id ? f.nextElementSibling.id : '';
+        if(nextSection) sessionStorage.setItem('procurement.anchor', nextSection);
+      } catch (e) {
+        /* ignore storage errors */
+      }
+    });
+  });
+
+  // On page load, restore the scroll position (small timeout ensures layout finished)
+  window.addEventListener('load', function(){
+    try {
+      const v = sessionStorage.getItem('procurement.scrollY');
+      const anchor = sessionStorage.getItem('procurement.anchor');
+      if (anchor) {
+        // prefer scrolling to the section so user keeps context
+        const el = document.getElementById(anchor);
+        if (el) {
+          el.scrollIntoView({behavior: 'auto', block: 'start'});
+        }
+        sessionStorage.removeItem('procurement.anchor');
+      } else if (v) {
+        const y = parseInt(v, 10);
+        if (!Number.isNaN(y)) {
+          // small timeout improves accuracy across browsers
+          setTimeout(() => window.scrollTo(0, y), 10);
+        }
+      }
+      sessionStorage.removeItem('procurement.scrollY');
+    } catch (e) {
+      /* ignore */
+    }
+  });
+
+})();
+</script>
 {% endblock %}
