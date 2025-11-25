@@ -204,6 +204,7 @@ class PurchaseRequest(db.Model):
     quantity = db.Column(db.Integer, nullable=True)
     status = db.Column(db.String(50), nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
+    approved_by = db.Column(db.String(), nullable=True)
 
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
@@ -456,3 +457,50 @@ class HRReport(db.Model):
 
     def __repr__(self):
         return f"<HRReport {self.title}>"
+
+# --------------------
+# Logging / Audit tables
+# --------------------
+class AuthLog(db.Model):
+    __tablename__ = "auth_logs"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, nullable=True, index=True)
+    event_type = db.Column(db.String(100), nullable=False)  # login, logout, failed_login, mfa_success...
+    success = db.Column(db.Boolean, nullable=True)
+    ip_address = db.Column(db.String(100), nullable=True)
+    user_agent = db.Column(db.String(1024), nullable=True)
+    meta = db.Column(JSON, nullable=True)  # extra context (jsonb)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now(), index=True)
+
+    def to_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+
+class AuditLog(db.Model):
+    __tablename__ = "audit_logs"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, nullable=True, index=True)
+    action = db.Column(db.String(100), nullable=False)         # create/update/delete/approve/reject
+    resource_type = db.Column(db.String(100), nullable=True)   # e.g. PurchaseRequest
+    resource_id = db.Column(db.String(100), nullable=True)     # resource identifier (string to be flexible)
+    before = db.Column(JSON, nullable=True)                    # snapshot before change
+    after = db.Column(JSON, nullable=True)                     # snapshot after change
+    reason = db.Column(db.String(512), nullable=True)
+    meta = db.Column(JSON, nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now(), index=True)
+
+    def to_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+
+class ErrorLog(db.Model):
+    __tablename__ = "error_logs"
+    id = db.Column(db.Integer, primary_key=True)
+    level = db.Column(db.String(50), nullable=False)           # ERROR, WARN, INFO, DEBUG
+    message = db.Column(db.String(1024), nullable=False)
+    stacktrace = db.Column(db.Text, nullable=True)
+    context = db.Column(JSON, nullable=True)                   # request, user, extra info
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now(), index=True)
+
+    def to_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}

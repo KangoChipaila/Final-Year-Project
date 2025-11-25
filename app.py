@@ -20,6 +20,7 @@ from routes.assets_upload import bp as assets_upload_bp
 from plotly.utils import PlotlyJSONEncoder
 import csv
 import json
+import traceback
 
 from models import (
     db, register_extensions,
@@ -30,7 +31,8 @@ from models import (
     Asset, SalesOrder, SalesForecast, Payment, User, LeaveRequest,
     CashFlowRecord, AttendanceRecord, PayrollRecord, HRReport, Account,
     OutstandingPayment, FinanceChartData, FinancialSummaryLine, JournalEntry,
-    Expense, Invoice, IncomeStatementLine
+    Expense, Invoice, IncomeStatementLine,
+    AuthLog, AuditLog, ErrorLog
 )
 
 CashFlowEntry = CashFlowRecord
@@ -60,6 +62,22 @@ migrate = Migrate(app, db)
 
 
 config = pdfkit.configuration(wkhtmltopdf=r'C:\Progra~1\wkhtmltopdf\bin\wkhtmltopdf.exe')
+
+# Global error handler to persist uncaught exceptions to DB (best-effort)
+@app.errorhandler(Exception)
+def handle_uncaught_exception(e):
+    try:
+        stack = traceback.format_exc()
+        ctx = {
+            "path": request.path if request else None,
+            "method": request.method if request else None,
+            "user_id": _current_user_id()
+        }
+        log_error(level="ERROR", message=str(e), stacktrace=stack, context=ctx)
+    except Exception:
+        app.logger.exception("Failed to persist ErrorLog")
+    # re-raise default behavior for debug mode; return a 500 page in production
+    return render_template('500.html'), 500
 
 # ------------------- Login Manager Setup -------------------
 login_manager = LoginManager()
@@ -127,6 +145,80 @@ def load_user(user_id):
     if user_id in USERS:
         return AuthUser(FallbackUser(user_id))
     return None"""
+
+
+# --- Logging helpers (persist to DB tables: auth_logs, audit_logs, error_logs) ---
+def _current_user_id():
+    try:
+        m = getattr(current_user, "model", None)
+        if m is not None:
+            return getattr(m, "id", None)
+        # fallback if current_user is a plain object
+        return getattr(current_user, "id", None)
+    except Exception:
+        return None
+
+def log_auth(event_type, success=True, user_id=None, ip=None, user_agent=None, meta=None):
+    """Append to auth_logs (best-effort)."""
+    try:
+        uid = user_id if user_id is not None else _current_user_id()
+        al = AuthLog(
+            user_id=uid,
+            event_type=event_type,
+            success=bool(success),
+            ip_address=ip or request.remote_addr if request else None,
+            user_agent=user_agent or (request.headers.get("User-Agent") if request else None),
+            meta=meta or {}
+        )
+        db.session.add(al)
+        db.session.commit()
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        app.logger.exception("Failed to write AuthLog")
+
+def log_audit(action, resource_type=None, resource_id=None, before=None, after=None, reason=None, user_id=None, meta=None):
+    """Append to audit_logs (best-effort)."""
+    try:
+        uid = user_id if user_id is not None else _current_user_id()
+        al = AuditLog(
+            user_id=uid,
+            action=action,
+            resource_type=resource_type,
+            resource_id=str(resource_id) if resource_id is not None else None,
+            before=(before if isinstance(before, (dict, list)) else (before.to_dict() if hasattr(before, "to_dict") else None)),
+            after=(after if isinstance(after, (dict, list)) else (after.to_dict() if hasattr(after, "to_dict") else None)),
+            reason=reason,
+            meta=meta or {}
+        )
+        db.session.add(al)
+        db.session.commit()
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        app.logger.exception("Failed to write AuditLog")
+
+def log_error(level, message, stacktrace=None, context=None):
+    """Append to error_logs (best-effort)."""
+    try:
+        el = ErrorLog(
+            level=(level or "ERROR"),
+            message=str(message)[:1024],
+            stacktrace=(stacktrace or "")[:65536],
+            context=context or {}
+        )
+        db.session.add(el)
+        db.session.commit()
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        app.logger.exception("Failed to write ErrorLog")
 
 # ------------------- Admin: Create user -------------------
 @app.route("/admin/users/create", methods=["POST"])
@@ -196,6 +288,11 @@ def admin_create_user():
         db.session.add(new_user)
         db.session.commit()
         flash(f"User '{username}' created.", "success")
+        # audit
+        try:
+            log_audit(action="create_user", resource_type="User", resource_id=getattr(new_user, "id", None), after=new_user)
+        except Exception:
+            app.logger.debug("Audit log failed for create_user", exc_info=True)
     except Exception as e:
         db.session.rollback()
         app.logger.exception("Admin create user failed")
@@ -229,8 +326,12 @@ def login():
 
             if ok:
                 login_user(AuthUser(user))
+                # record successful login
+                log_auth(event_type="login", success=True, user_id=getattr(user, "id", None))
                 return redirect(url_for("index"))
             else:
+                # record failed login attempt (no user id)
+                log_auth(event_type="login_failed", success=False, user_id=None, meta={"username": username})
                 return render_template("login.html", error="Invalid username or password")
         except (OperationalError, DataError):
             # DB not available — try in-memory
@@ -254,6 +355,10 @@ def inject_globals():
 @app.route("/logout", methods=["POST"])
 @login_required
 def logout():
+    try:
+        log_auth(event_type="logout", success=True)
+    except Exception:
+        app.logger.debug("Auth log for logout failed", exc_info=True)
     logout_user()
     return redirect(url_for("login"))
 
@@ -1016,6 +1121,13 @@ def edit_asset(asset_id):
         asset["depreciation_rate"] = float(depreciation_rate or 0)
         asset["status"] = status
 
+        # audit log update
+        try:
+            log_audit(action="update", resource_type="Asset", resource_id=asset_id, before=before, after=asset)
+        except Exception:
+            app.logger.debug("Audit log failed for edit_asset", exc_info=True)
+
+
         flash(f"Asset '{name}' updated successfully!", "success")
         return redirect(url_for("asset_overview"))
 
@@ -1033,6 +1145,16 @@ def delete_asset(asset_id):
         flash("Asset not found.", "error")
         return redirect(url_for("asset_overview"))
 
+    # capture before snapshot for audit
+    before = asset.copy()
+    assets_data = [a for a in assets_data if a["id"] != asset_id]
+
+    # audit log delete
+    try:
+        log_audit(action="delete", resource_type="Asset", resource_id=asset_id, before=before, after=None)
+    except Exception:
+        app.logger.debug("Audit log failed for delete_asset", exc_info=True)
+        
     assets_data = [a for a in assets_data if a["id"] != asset_id]
 
     flash(f"Asset '{asset['name']}' deleted successfully!", "success")
@@ -1067,6 +1189,12 @@ def add_asset():
         }
 
         assets_data.append(new_asset)
+        # audit log create
+        try:
+            log_audit(action="create", resource_type="Asset", resource_id=new_asset["id"], after=new_asset)
+        except Exception:
+            app.logger.debug("Audit log failed for add_asset", exc_info=True)
+
         flash(f"Asset '{name}' added successfully!", "success")
         return redirect(url_for("asset_overview"))
 
@@ -1115,6 +1243,18 @@ def asset_overview():
        
         assets = [asset_to_dict(a) for a in assets_rows]
         categories = sorted({a["category"] for a in assets if a["category"]})
+
+        # audit: record that current user viewed the assets list (include filters)
+        try:
+            log_audit(
+                action="view",
+                resource_type="Asset",
+                resource_id=None,
+                after={"query": query, "category": category, "status": status},
+                meta={"count": len(assets)}
+            )
+        except Exception:
+            app.logger.debug("Asset list audit logging failed", exc_info=True)
 
     except Exception as exc:
         app.logger.exception("Failed to load assets from DB, falling back to in-memory list")
@@ -1790,6 +1930,10 @@ def approve_purchase_request(id):
         db.session.add(pr)
         db.session.commit()
         flash(f"Purchase request {getattr(pr, 'request_id', id)} approved.", "success")
+        try:
+            log_audit(action="approve", resource_type="PurchaseRequest", resource_id=getattr(pr, "id", None), after=pr)
+        except Exception:
+            app.logger.debug("Audit log failed for approve_purchase_request", exc_info=True)
     except Exception:
         db.session.rollback()
         app.logger.exception("Failed to approve purchase request")
@@ -1815,6 +1959,10 @@ def reject_purchase_request(id):
         db.session.add(pr)
         db.session.commit()
         flash(f"Purchase request {getattr(pr, 'request_id', id)} rejected.", "success")
+        try:
+            log_audit(action="reject", resource_type="PurchaseRequest", resource_id=getattr(pr, "id", None), after=pr)
+        except Exception:
+            app.logger.debug("Audit log failed for reject_purchase_request", exc_info=True)
     except Exception:
         db.session.rollback()
         app.logger.exception("Failed to reject purchase request")
@@ -2634,6 +2782,10 @@ def add_purchase_request():
             db.session.add(pr)
             db.session.commit()
             flash('Purchase request added!', 'success')
+            try:
+                log_audit(action="create", resource_type="PurchaseRequest", resource_id=getattr(pr, "id", None), after=pr)
+            except Exception:
+                app.logger.debug("Audit log failed for add_purchase_request", exc_info=True)
             return redirect(url_for('procurement_overview'))
         except Exception:
             db.session.rollback()
@@ -2702,6 +2854,45 @@ def add_supplier():
             return redirect(url_for('procurement_overview'))
     
     return render_template('add_supplier.html')
+
+@app.route('/supplier/update_status/<int:id>', methods=['POST'])
+@login_required
+def update_supplier_status(id):
+    if 'Supplier' not in globals():
+        flash("Supplier model not available.", "error")
+        return redirect(url_for('procurement_overview'))
+
+    try:
+        sup = db.session.get(Supplier, id)
+        if not sup:
+            flash("Supplier not found.", "error")
+            return redirect(url_for('procurement_overview'))
+
+        new_status = (request.form.get('status') or '').strip()
+        if new_status:
+            before = sup.to_dict() if hasattr(sup, "to_dict") else None
+            if hasattr(sup, "status"):
+                setattr(sup, "status", new_status)
+            elif hasattr(sup, "state"):
+                setattr(sup, "state", new_status)
+            db.session.add(sup)
+            db.session.commit()
+            flash(f"Supplier status updated to {new_status}.", "success")
+            try:
+                log_audit(action="update", resource_type="Supplier", resource_id=getattr(sup, "id", None), before=before, after=sup)
+            except Exception:
+                app.logger.debug("Audit log failed for update_supplier_status", exc_info=True)
+        else:
+            flash("No status selected.", "warning")
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        app.logger.exception("Failed to update supplier status")
+        flash("Failed to update supplier status.", "error")
+
+    return redirect(url_for('procurement_overview'))
 
 PRODUCTION_DATA_FILE = 'static/js/test_production_data.json'
 
@@ -3030,8 +3221,6 @@ GROUPS = {
 # standardized roles list
 ROLES = ["pending_user", "admin", "manager", "finance", "hr", "it", "logistics"]
 
-# NOTE: removed stray/duplicated code blocks and stray 'return' statements that caused syntax errors.
-
 @app.route("/admin-users")
 @login_required
 def admin_users():
@@ -3089,6 +3278,10 @@ def admin_update_user(user_id):
         db.session.add(user)
         db.session.commit()
         flash(f"Updated {getattr(user, 'username', 'user')}.", "success")
+        try:
+            log_audit(action="update_user", resource_type="User", resource_id=getattr(user, "id", None), after=user)
+        except Exception:
+            app.logger.debug("Audit log failed for update_user", exc_info=True)
     except Exception as e:
         db.session.rollback()
         app.logger.exception("Failed to update user")
