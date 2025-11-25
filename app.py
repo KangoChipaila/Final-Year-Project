@@ -1102,6 +1102,8 @@ def edit_asset(asset_id):
         return redirect(url_for("asset_overview"))
 
     if request.method == "POST":
+        # capture before snapshot for audit
+        before = asset.copy()
         name = request.form.get("name")
         category = request.form.get("category")
         purchase_date = request.form.get("purchase_date")
@@ -1154,7 +1156,7 @@ def delete_asset(asset_id):
         log_audit(action="delete", resource_type="Asset", resource_id=asset_id, before=before, after=None)
     except Exception:
         app.logger.debug("Audit log failed for delete_asset", exc_info=True)
-        
+
     assets_data = [a for a in assets_data if a["id"] != asset_id]
 
     flash(f"Asset '{asset['name']}' deleted successfully!", "success")
@@ -1753,11 +1755,45 @@ def distribution_overview():
                 od["customer_name"] = getattr(o, "customer_name", "") or getattr(o, "customer", "") or ""
                 orders.append(od)
         
+        # --- Build pie charts: shipment status distribution and order status distribution ---
+        try:
+            # Shipments status counts
+            ship_status_counts = {}
+            for s in shipments:
+                st = (s.get("status") or s.get("state") or "Unknown")
+                ship_status_counts[st] = ship_status_counts.get(st, 0) + 1
+            ship_labels = list(ship_status_counts.keys())
+            ship_vals = list(ship_status_counts.values())
+            ship_chart = {
+                "data": [{"labels": ship_labels, "values": ship_vals, "type": "pie", "name": "Shipment Status"}],
+                "layout": {"title": "Shipment Status Distribution", "height": 380}
+            }
+            shipments_status_chart_data = json.dumps(ship_chart, cls=PlotlyJSONEncoder)
+
+            # Orders status counts
+            order_status_counts = {}
+            for o in orders:
+                st = (o.get("status") or o.get("state") or "Unknown")
+                order_status_counts[st] = order_status_counts.get(st, 0) + 1
+            order_labels = list(order_status_counts.keys())
+            order_vals = list(order_status_counts.values())
+            order_chart = {
+                "data": [{"labels": order_labels, "values": order_vals, "type": "pie", "name": "Order Status"}],
+                "layout": {"title": "Order Status Distribution", "height": 380}
+            }
+            orders_status_chart_data = json.dumps(order_chart, cls=PlotlyJSONEncoder)
+        except Exception:
+            app.logger.exception("Failed to build distribution pie charts")
+            shipments_status_chart_data = json.dumps({"data": [], "layout": {}}, cls=PlotlyJSONEncoder)
+            orders_status_chart_data = json.dumps({"data": [], "layout": {}}, cls=PlotlyJSONEncoder)
+
         return render_template(
             'distribution-overview.html',
             inventory=inventory,
             shipments=shipments,
-            orders=orders
+            orders=orders,
+            shipments_status_chart_data=shipments_status_chart_data,
+            orders_status_chart_data=orders_status_chart_data
         )
     except Exception:
         app.logger.exception("DB unavailable for distribution overview")

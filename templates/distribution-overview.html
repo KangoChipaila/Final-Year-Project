@@ -55,7 +55,7 @@
     </div>
 
     <!-- Inventory Levels Chart -->
-    <div class="mb-8 bg-white shadow-md rounded-xl border border-gray-200 p-6 w-1/2">
+    <div class="mb-8 bg-white shadow-md rounded-xl border border-gray-200 p-6 w-full">
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-xl font-semibold text-gray-700">Inventory Levels</h2>
             <div class="flex items-center gap-2">
@@ -70,6 +70,12 @@
 
         <div id="inventory-chart" style="width:100%;height:420px;"></div>
         <p class="text-xs text-gray-500 mt-2">Low stock = quantity &lt; reorder_level. In stock = quantity &gt; reorder_level.</p>
+    </div>
+
+    <!-- Status distribution pie charts for Shipments and Orders -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <div id="shipments-status-chart" class="bg-white shadow-md rounded-xl border border-gray-200 p-4" style="min-height:320px;"></div>
+        <div id="orders-status-chart" class="bg-white shadow-md rounded-xl border border-gray-200 p-4" style="min-height:320px;"></div>
     </div>
 
     <!-- Inventory Summary Table -->
@@ -109,7 +115,7 @@
                         {% if item.status == 'In Stock' %}
                             <span class="inline-block px-2 py-1 rounded bg-green-100 text-green-700 font-semibold text-xs">{{ item.status }}</span>
                         {% else %}
-                            <span class="inline-block px-2 py-1 rounded bg-yellow-100 text-yellow-700 font-semibold text-xs">{{ item.status }}</span>
+                            <span class="inline-block px-2 py-1 rounded bg-red-100 text-red-700 font-semibold text-xs">{{ item.status }}</span>
                         {% endif %}
                     </td>
                 </tr>
@@ -137,7 +143,6 @@
             </div>
         </div>
         <table class="min-w-full bg-white rounded-lg">
-            <!-- ...existing code... -->
             <thead>
                 <tr class="bg-black text-white text-left">
                     <th class="px-4 py-2 rounded-tl-lg">Shipment #</th>
@@ -158,6 +163,8 @@
                     <td class="px-4 py-2">
                         {% if shipment.status == 'Delivered' %}
                             <span class="inline-block px-2 py-1 rounded bg-green-100 text-green-700 font-semibold text-xs">{{ shipment.status }}</span>
+                        {% elif shipment.status == 'Cancelled' %}
+                            <span class="inline-block px-2 py-1 rounded bg-red-100 text-red-700 font-semibold text-xs">{{ shipment.status }}</span>
                         {% else %}
                             <span class="inline-block px-2 py-1 rounded bg-yellow-100 text-yellow-700 font-semibold text-xs">{{ shipment.status }}</span>
                         {% endif %}
@@ -174,7 +181,6 @@
             </tbody>
         </table>
     </div>
-<!-- ...existing code... -->
 
     <!-- Outstanding Orders Table -->
     <div class="mb-8 bg-white shadow-md rounded-xl border border-gray-200 p-6">
@@ -210,7 +216,11 @@
                     <td class="px-4 py-2">{{order.total | default('0') }}</td>
                     <td class="px-4 py-2">
                         {% if order.status == 'Shipped' %}
+                            <span class="inline-block px-2 py-1 rounded bg-purple-100 text-purple-700 font-semibold text-xs">{{ order.status }}</span>
+                        {% elif order.status == 'Delivered' %}
                             <span class="inline-block px-2 py-1 rounded bg-green-100 text-green-700 font-semibold text-xs">{{ order.status }}</span>
+                        {% elif order.status == 'Cancelled' %}
+                            <span class="inline-block px-2 py-1 rounded bg-red-100 text-red-700 font-semibold text-xs">{{ order.status }}</span>
                         {% else %}
                             <span class="inline-block px-2 py-1 rounded bg-yellow-100 text-yellow-700 font-semibold text-xs">{{ order.status }}</span>
                         {% endif %}
@@ -358,6 +368,29 @@
 
   // Inventory: Product(0), SKU(1), Warehouse(2) are text search targets; Status is index 5
   setupTableFilter('inv-search', 'inv-status-filter', 'inventory-table-body', [0, 1, 2], 5);
+
+  // --- Render distribution pie charts (server passes JSON strings) ---
+  try {
+      // server provides pre-serialized JSON objects as strings; output them raw
+      const shipmentsChartPayload = {{ shipments_status_chart_data | default('{}') | safe }};
+      const ordersChartPayload    = {{ orders_status_chart_data    | default('{}') | safe }};
+
+      // helper to safely extract data/layout
+      function renderPie(targetId, payload) {
+        if (!payload || !payload.data || !payload.data.length) {
+          const el = document.getElementById(targetId);
+          if (el) el.innerHTML = '<div class="p-6 text-gray-600">No data available.</div>';
+          return;
+        }
+        const layout = payload.layout || { height: 320, margin: { t: 40, b: 40 } };
+        Plotly.newPlot(targetId, payload.data, layout, {responsive: true});
+      }
+
+      renderPie('shipments-status-chart', shipmentsChartPayload);
+      renderPie('orders-status-chart', ordersChartPayload);
+  } catch (e) {
+      console && console.error && console.error("Failed to render distribution charts", e);
+  }
 
 })();
 </script>
