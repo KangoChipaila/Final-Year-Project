@@ -47,7 +47,8 @@
                     <th class="py-3 px-4">Quantity</th>
                     <th class="py-3 px-4">Start Date</th>
                     <th class="py-3 px-4">End Date</th>
-                    <th class="py-3 px-4 rounded-tr-lg">Status</th>
+                    <th class="py-3 px-4">Status</th>
+                    <th class="py-3 px-4 rounded-tr-lg">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -65,10 +66,18 @@
                             <span class="inline-block px-2 py-1 rounded bg-green-100 text-green-700 font-semibold text-xs">{{ order.status }}</span>
                         {% endif %}
                     </td>
+                    <td class="py-2 px-4">
+                        <div class="flex gap-2">
+                            <a href="{{ url_for('edit_production_order', id=order.id) }}" class="text-sm bg-gray-200 px-2 py-1 rounded hover:bg-gray-300">Edit</a>
+                            <form method="POST" action="{{ url_for('delete_production_order', id=order.id) }}" onsubmit="return confirm('Delete production order {{ order.order_id }}?');">
+                                <button type="submit" class="text-sm bg-red-600 text-white px-2 py-1 rounded hover:bg-red-800">Delete</button>
+                            </form>
+                        </div>
+                    </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="6" class="text-center py-4 text-gray-500">No production orders found.</td>
+                    <td colspan="7" class="text-center py-4 text-gray-500">No production orders found.</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -84,7 +93,8 @@
                     <th class="py-3 px-4 rounded-tl-lg">Product</th>
                     <th class="py-3 px-4">Component</th>
                     <th class="py-3 px-4">Quantity Required</th>
-                    <th class="py-3 px-4 rounded-tr-lg">Unit</th>
+                    <th class="py-3 px-4">Unit</th>
+                    <th class="py-3 px-4 rounded-tr-lg">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -94,10 +104,18 @@
                     <td class="py-2 px-4">{{ bom.component }}</td>
                     <td class="py-2 px-4">{{ bom.quantity_required }}</td>
                     <td class="py-2 px-4">{{ bom.unit }}</td>
+                    <td class="py-2 px-4">
+                        <div class="flex gap-2">
+                            <a href="{{ url_for('edit_bom', id=bom.id) }}" class="text-sm bg-gray-200 px-2 py-1 rounded hover:bg-gray-300">Edit</a>
+                            <form method="POST" action="{{ url_for('delete_bom', id=bom.id) }}" onsubmit="return confirm('Delete BOM for {{ bom.product }} - {{ bom.component }}?');">
+                                <button type="submit" class="text-sm bg-red-600 text-white px-2 py-1 rounded hover:bg-red-800">Delete</button>
+                            </form>
+                        </div>
+                    </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="4" class="text-center py-4 text-gray-500">No BOM records found.</td>
+                    <td colspan="5" class="text-center py-4 text-gray-500">No BOM records found.</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -113,7 +131,8 @@
                     <th class="py-3 px-4 rounded-tl-lg">Work Center</th>
                     <th class="py-3 px-4">Current Task</th>
                     <th class="py-3 px-4">Status</th>
-                    <th class="py-3 px-4 rounded-tr-lg">Operator</th>
+                    <th class="py-3 px-4">Operator</th>
+                    <th class="py-3 px-4 rounded-tr-lg">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -129,10 +148,18 @@
                         {% endif %}
                     </td>
                     <td class="py-2 px-4">{{ wc.operator }}</td>
+                    <td class="py-2 px-4">
+                        <div class="flex gap-2">
+                            <a href="{{ url_for('edit_work_center', id=wc.id) }}" class="text-sm bg-gray-200 px-2 py-1 rounded hover:bg-gray-300">Edit</a>
+                            <form method="POST" action="{{ url_for('delete_work_center', id=wc.id) }}" onsubmit="return confirm('Delete work center {{ wc.name }}?');">
+                                <button type="submit" class="text-sm bg-red-600 text-white px-2 py-1 rounded hover:bg-red-800">Delete</button>
+                            </form>
+                        </div>
+                    </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="4" class="text-center py-4 text-gray-500">No work center records found.</td>
+                    <td colspan="5" class="text-center py-4 text-gray-500">No work center records found.</td>
                 </tr>
                 {% endfor %}
             </tbody>

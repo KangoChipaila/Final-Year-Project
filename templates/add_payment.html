@@ -5,7 +5,7 @@
     <h2 class="text-xl font-bold mb-4">Add Payment</h2>
     <form method="POST">
         <div class="mb-4">
-            <label class="block mb-1 font-medium">Vendor/Customer</label>
+            <label class="block mb-1 font-medium">Vendor</label>
             <input type="text" name="party" required class="w-full border rounded px-3 py-2">
         </div>
         <div class="mb-4">
@@ -20,7 +20,7 @@
             <label class="block mb-1 font-medium">Status</label>
             <select name="status" class="w-full border rounded px-3 py-2">
                 <option value="Pending">Pending</option>
-                <option value="Received">Received</option>
+                <option value="Paid">Paid</option>
             </select>
         </div>
         <button type="submit" class="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800">Add Payment</button>

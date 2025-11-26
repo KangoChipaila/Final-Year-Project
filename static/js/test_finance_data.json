@@ -51,6 +51,13 @@
       "party": "Acme Corp",
       "payment_id": "2",
       "status": "Received"
+    },
+    {
+      "payment_id": "OP-0003",
+      "party": "ZESCO",
+      "due_date": "2025-11-26",
+      "amount": 10000.0,
+      "status": "Paid"
     }
   ]
 }

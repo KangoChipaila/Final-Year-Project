@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Add Attendance{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-lg">
+    <h1 class="text-2xl font-bold mb-6">Add Attendance Record</h1>
+    <form method="POST" class="bg-white p-6 rounded shadow-md">
+        <div class="mb-4">
+            <label class="block text-gray-700 font-bold mb-2">Employee ID</label>
+            <input type="text" name="employee_id" class="w-full border rounded px-3 py-2" required>
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 font-bold mb-2">Date</label>
+            <input type="date" name="date" class="w-full border rounded px-3 py-2" required>
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 font-bold mb-2">Status</label>
+            <select name="status" class="w-full border rounded px-3 py-2">
+                <option value="Present">Present</option>
+                <option value="Absent">Absent</option>
+                <option value="Late">Late</option>
+                <option value="Excused">Excused</option>
+            </select>
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 font-bold mb-2">Check In</label>
+            <input type="time" name="check_in" class="w-full border rounded px-3 py-2">
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 font-bold mb-2">Check Out</label>
+            <input type="time" name="check_out" class="w-full border rounded px-3 py-2">
+        </div>
+        <div class="flex justify-end gap-4">
+            <a href="{{ url_for('attendance_overview') }}" class="text-gray-600 hover:text-gray-800 px-4 py-2">Cancel</a>
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Save</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

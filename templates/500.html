@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-3xl mx-auto py-12 text-center">
+  <h1 class="text-3xl font-bold mb-4">500 – Internal Server Error</h1>
+  <p class="text-gray-600 mb-6">Something went wrong. The incident has been logged.</p>
+  <a href="{{ url_for('index') }}" class="bg-blue-600 text-white px-4 py-2 rounded">Return Home</a>
+</div>
+{% endblock %}

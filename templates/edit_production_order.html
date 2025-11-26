@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Edit Production Order{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-lg">
+    <h1 class="text-2xl font-bold mb-6">Edit Production Order</h1>
+    <form method="POST" class="bg-white p-6 rounded shadow-md">
+        <div class="mb-4">
+            <label class="block text-gray-700 font-bold mb-2">Order ID</label>
+            <input type="text" name="order_id" value="{{ order.order_id }}" class="w-full border rounded px-3 py-2">
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 font-bold mb-2">Product</label>
+            <input type="text" name="product" value="{{ order.product }}" class="w-full border rounded px-3 py-2" required>
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 font-bold mb-2">Quantity</label>
+            <input type="number" step="any" name="quantity" value="{{ order.quantity }}" class="w-full border rounded px-3 py-2" required>
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 font-bold mb-2">Start Date</label>
+            <input type="date" name="start_date" value="{{ order.start_date }}" class="w-full border rounded px-3 py-2">
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 font-bold mb-2">End Date</label>
+            <input type="date" name="end_date" value="{{ order.end_date }}" class="w-full border rounded px-3 py-2">
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 font-bold mb-2">Status</label>
+            <select name="status" class="w-full border rounded px-3 py-2">
+                <option value="Planned" {% if order.status == 'Planned' %}selected{% endif %}>Planned</option>
+                <option value="In Progress" {% if order.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                <option value="Completed" {% if order.status == 'Completed' %}selected{% endif %}>Completed</option>
+                <option value="Cancelled" {% if order.status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+            </select>
+        </div>
+        <div class="flex justify-end gap-4">
+            <a href="{{ url_for('production_overview') }}" class="text-gray-600 hover:text-gray-800 px-4 py-2">Cancel</a>
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Update</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

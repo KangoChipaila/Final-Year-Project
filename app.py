@@ -21,6 +21,7 @@ from plotly.utils import PlotlyJSONEncoder
 import csv
 import json
 import traceback
+from types import SimpleNamespace
 
 from models import (
     db, register_extensions,
@@ -76,6 +77,7 @@ def handle_uncaught_exception(e):
         log_error(level="ERROR", message=str(e), stacktrace=stack, context=ctx)
     except Exception:
         app.logger.exception("Failed to persist ErrorLog")
+
     # re-raise default behavior for debug mode; return a 500 page in production
     return render_template('500.html'), 500
 
@@ -516,9 +518,6 @@ def index():
             app.logger.exception("Failed to compute top_customers")
             top_customers = []
         
-        t_customers = []
-
-        top_cust = db.session.query(Customer).all()
         #Total inventory value
         try:
             # prefer DB-side aggregate since columns are known: quantity (int) and unit_cost (float)
@@ -528,9 +527,7 @@ def index():
                         func.coalesce(func.sum(InventoryItem.quantity * InventoryItem.unit_cost), 0)
                     ).scalar() or 0.0
                 )
-                print("Yay")
             else:
-                print("nay")
                 # fallback: compute in Python row-wise
                 rows = db.session.query(InventoryItem).all()
                 s = 0.0
@@ -930,6 +927,216 @@ def get_outstanding_invoices_data():
         "layout": {"title": "Outstanding Invoices"}
     }
 
+@app.route('/add_payment', methods=['GET', 'POST'])
+@login_required
+def add_payment():
+    """
+    Create a payment record.
+    If status is 'Paid', save to Payment table (History).
+    If status is 'Pending', save to OutstandingPayment table (Liabilities).
+    """
+    if request.method == 'POST':
+        party = request.form.get('party', '').strip()
+        due_date = request.form.get('due_date', '').strip()
+        amount = request.form.get('amount', '').strip()
+        status = request.form.get('status', '').strip()
+
+        # Try DB first
+        try:
+            # Check status to determine destination table
+            if status.lower() == 'paid':
+                print(status.lower())
+                # Save to Payment (History)
+                if 'Payment' in globals():
+                    p = Payment()
+                    _set_attr_if_exists(p, "party", party)
+                    # For paid items, the due_date is effectively the payment date
+                    _set_attr_if_exists(p, "due_date", due_date, date_try=True)
+                    _set_attr_if_exists(p, "amount", amount, cast_float=True)
+                    _set_attr_if_exists(p, "status", status)
+                    db.session.add(p)
+                    db.session.commit()
+                    flash('Payment recorded successfully!', 'success')
+                    return redirect(url_for('accounting_overview'))
+            else:
+                # Save to OutstandingPayment (Liability)
+                if 'OutstandingPayment' in globals():
+                    op = OutstandingPayment()
+                    _set_attr_if_exists(op, "party", party)
+                    _set_attr_if_exists(op, "due_date", due_date, date_try=True)
+                    _set_attr_if_exists(op, "amount", amount, cast_float=True)
+                    _set_attr_if_exists(op, "status", status)
+                    db.session.add(op)
+                    db.session.commit()
+                    flash('Bill recorded successfully!', 'success')
+                    return redirect(url_for('accounting_overview'))
+
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Failed to insert payment into DB; falling back to file")
+
+        # File fallback
+        try:
+            data = load_finance()
+            payments = data.get('outstanding_payments', [])
+            new_id = 1
+            if payments:
+                try:
+                    numeric_ids = [int(''.join(filter(str.isdigit, (p.get('payment_id') or '')))) for p in payments if p.get('payment_id')]
+                    if numeric_ids:
+                        new_id = max(numeric_ids) + 1
+                except Exception:
+                    new_id = len(payments) + 1
+            new_payment = {
+                'payment_id': f"OP-{new_id:04d}",
+                'party': party,
+                'due_date': due_date,
+                'amount': float(amount or 0),
+                'status': status
+            }
+            payments.append(new_payment)
+            data['outstanding_payments'] = payments
+            save_finance(data)
+            flash('Payment added (file fallback).', 'success')
+        except Exception:
+            app.logger.exception("Failed to append payment to finance JSON")
+            flash('Failed to add payment.', 'error')
+
+        return redirect(url_for('accounting_overview'))
+
+    return render_template('add_payment.html')
+# ...existing code...
+@app.route('/add_expense', methods=['GET', 'POST'])
+@login_required
+def add_expense():
+    """
+    Record an operational expense.
+    Redirects to accounting_overview.
+    """
+    if request.method == 'POST':
+        date_val = request.form.get('date', '').strip()
+        description = request.form.get('description', '').strip()
+        category = request.form.get('category', '').strip()
+        amount = request.form.get('amount', '').strip()
+        account_id = request.form.get('account_id', '').strip()
+
+        try:
+            if 'Expense' in globals():
+                exp = Expense()
+                _set_attr_if_exists(exp, "date", date_val, date_try=True)
+                _set_attr_if_exists(exp, "description", description)
+                _set_attr_if_exists(exp, "category", category)
+                _set_attr_if_exists(exp, "amount", amount, cast_float=True)
+                if account_id and account_id.isdigit():
+                    _set_attr_if_exists(exp, "account_id", int(account_id))
+                
+                db.session.add(exp)
+                db.session.commit()
+                flash('Expense recorded successfully!', 'success')
+                return redirect(url_for('accounting_overview'))
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Failed to add expense")
+            flash('Failed to add expense.', 'error')
+
+    # Load accounts for the dropdown if available
+    accounts = []
+    if 'Account' in globals():
+        try:
+            accounts = db.session.query(Account).all()
+        except:
+            pass
+
+    return render_template('add_expense.html', accounts=accounts)
+
+@app.route('/add_journal_entry', methods=['GET', 'POST'])
+@login_required
+def add_journal_entry():
+    """
+    Record a manual journal entry (General Ledger).
+    Redirects to accounting_overview.
+    """
+    if request.method == 'POST':
+        date_val = request.form.get('date', '').strip()
+        description = request.form.get('description', '').strip()
+        debit_account = request.form.get('debit_account_id', '').strip()
+        credit_account = request.form.get('credit_account_id', '').strip()
+        amount = request.form.get('amount', '').strip()
+
+        try:
+            if 'JournalEntry' in globals():
+                je = JournalEntry()
+                _set_attr_if_exists(je, "date", date_val, date_try=True)
+                _set_attr_if_exists(je, "description", description)
+                _set_attr_if_exists(je, "amount", amount, cast_float=True)
+                
+                if debit_account.isdigit():
+                    _set_attr_if_exists(je, "debit_account_id", int(debit_account))
+                if credit_account.isdigit():
+                    _set_attr_if_exists(je, "credit_account_id", int(credit_account))
+
+                db.session.add(je)
+                db.session.commit()
+                flash('Journal entry recorded.', 'success')
+                return redirect(url_for('accounting_overview'))
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Failed to add journal entry")
+            flash('Failed to add journal entry.', 'error')
+
+    # Load accounts for dropdowns
+    accounts = []
+    if 'Account' in globals():
+        try:
+            accounts = db.session.query(Account).all()
+        except:
+            pass
+
+    return render_template('add_journal_entry.html', accounts=accounts)
+
+@app.route('/add_invoice', methods=['GET', 'POST'])
+@login_required
+def add_invoice():
+    """
+    Manually create an invoice.
+    Redirects to accounting_overview.
+    """
+    if request.method == 'POST':
+        customer_id = request.form.get('customer_id', '').strip()
+        date_val = request.form.get('date', '').strip()
+        due_date = request.form.get('due_date', '').strip()
+        amount = request.form.get('amount', '').strip()
+        status = request.form.get('status', 'Unpaid').strip()
+
+        try:
+            if 'Invoice' in globals():
+                inv = Invoice()
+                if customer_id.isdigit():
+                    _set_attr_if_exists(inv, "customer_id", int(customer_id))
+                _set_attr_if_exists(inv, "date", date_val, date_try=True)
+                _set_attr_if_exists(inv, "due_date", due_date, date_try=True)
+                _set_attr_if_exists(inv, "amount", amount, cast_float=True)
+                _set_attr_if_exists(inv, "total", amount, cast_float=True)
+                _set_attr_if_exists(inv, "status", status)
+                
+                db.session.add(inv)
+                db.session.commit()
+                flash('Invoice created successfully!', 'success')
+                return redirect(url_for('accounting_overview'))
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Failed to add invoice")
+            flash('Failed to add invoice.', 'error')
+
+    # Load customers
+    customers = []
+    if 'Customer' in globals():
+        try:
+            customers = db.session.query(Customer).all()
+        except:
+            pass
+
+    return render_template('add_invoice.html', customers=customers)
 
 @app.route("/accounting-overview")
 @login_required
@@ -957,6 +1164,7 @@ def accounting_overview():
         payments = []
         expenses = []
         journal_entries = []
+        outstanding_payments = [] # Initialize list for AP
 
         # Accounts
         if 'Account' in globals():
@@ -999,6 +1207,18 @@ def accounting_overview():
                     "status": getattr(p, "status", "") or ""
                 })
 
+        # Outstanding Payments (Accounts Payable) - Added for Accounting Module
+        if 'OutstandingPayment' in globals():
+            op_rows = db.session.query(OutstandingPayment).order_by(getattr(OutstandingPayment, "due_date", OutstandingPayment)).all()
+            for r in op_rows:
+                outstanding_payments.append({
+                    "payment_id": safe_get(r, "payment_id", "id"),
+                    "party": safe_get(r, "party", "payee", ""),
+                    "due_date": safe_get(r, "due_date", "date"),
+                    "amount": float(safe_get(r, "amount", default=0) or 0),
+                    "status": safe_get(r, "status", "")
+                })
+
         # Expenses
         if 'Expense' in globals():
             exp_rows = db.session.query(Expense).order_by(getattr(Expense, "id", Expense)).all()
@@ -1027,7 +1247,7 @@ def accounting_overview():
                 })
 
         # If no DB data found, fall through to file fallback
-        any_db_data = any([accounts, invoices, payments, expenses, journal_entries])
+        any_db_data = any([accounts, invoices, payments, expenses, journal_entries, outstanding_payments])
         if not any_db_data:
             raise RuntimeError("No accounting models present in globals() or no rows returned")
 
@@ -1083,11 +1303,14 @@ def accounting_overview():
             cashflow_data=cashflow_data,
             expense_breakdown_data=expense_breakdown_data,
             revenue_sources_data={"data": [], "layout": {}},
-            outstanding_invoices_data={"data": [], "layout": {}}
+            outstanding_invoices_data={"data": [], "layout": {}},
+            outstanding_payments=outstanding_payments,
+            payments=payments
         )
 
     except Exception:
         app.logger.exception("DB unavailable or accounting models missing; falling back to file-based finance data")
+
 
 @app.route("/assets/edit/<int:asset_id>", methods=["GET", "POST"])
 @login_required
@@ -1201,7 +1424,7 @@ def add_asset():
         return redirect(url_for("asset_overview"))
 
     # If GET: render the form
-    return render_template("add-asset.html")
+    return render_template("add_asset.html")
 
 @app.route("/assets-overview", methods=["GET"])
 @login_required
@@ -1754,6 +1977,27 @@ def distribution_overview():
                 ])
                 od["customer_name"] = getattr(o, "customer_name", "") or getattr(o, "customer", "") or ""
                 orders.append(od)
+        alerts = []
+        
+        # 1. Low Stock Alerts
+        for item in inventory:
+            try:
+                qty = item['quantity']
+                reorder = item['reorder_level']
+                if qty < reorder:
+                    alerts.append(f"Low Stock Alert: {item['product']} is below reorder level ({int(qty)} < {int(reorder)}).")
+            except (ValueError, TypeError):
+                continue
+
+        # 2. Pending Shipments Notification
+        pending_shipments_count = sum(1 for s in shipments if s.get('status') == 'Pending')
+        if pending_shipments_count > 0:
+            alerts.append(f"Action Required: {pending_shipments_count} shipment(s) are pending dispatch.")
+
+        # 3. Outstanding Orders Notification
+        pending_orders_count = sum(1 for o in orders if o.get('status') == 'Pending')
+        if pending_orders_count > 0:
+            alerts.append(f"Notification: {pending_orders_count} sales order(s) are pending processing.")
         
         # --- Build pie charts: shipment status distribution and order status distribution ---
         try:
@@ -1792,6 +2036,7 @@ def distribution_overview():
             inventory=inventory,
             shipments=shipments,
             orders=orders,
+            alerts=alerts,
             shipments_status_chart_data=shipments_status_chart_data,
             orders_status_chart_data=orders_status_chart_data
         )
@@ -2150,6 +2395,55 @@ def finance_overview():
                 {"label": "Total Expenses", "value": f"{total_expenses:.2f}"}
             ]
 
+        # --- NEW DYNAMIC ALERTS FOR FINANCE ---
+        alerts = []
+
+        # Derive outstanding_invoices_count from outstanding_payments if available
+        outstanding_invoices_count = 0
+        try:
+            outstanding_invoices_count = sum(
+                1 for p in (outstanding_payments or []) if str(p.get('status', '')).lower() != 'paid'
+            )
+        except Exception:
+            outstanding_invoices_count = 0
+
+        if outstanding_invoices_count > 0:
+            alerts.append(f"Attention: {outstanding_invoices_count} invoices are currently unpaid.")
+
+        # Check for pending purchase requests
+        pending_pr_count = len(pending_purchase_requests or [])
+        if pending_pr_count > 0:
+            alerts.append(f"Action Required: {pending_pr_count} purchase requests await approval.")
+
+        # Build accounts list (best-effort from DB) so we can check balances
+        accounts = []
+        if 'Account' in globals():
+            try:
+                acc_rows = db.session.query(Account).order_by(getattr(Account, "id", Account)).all()
+                for a in acc_rows:
+                    try:
+                        accounts.append({
+                            "id": getattr(a, "id", None),
+                            "name": getattr(a, "name", "") or "",
+                            "type": getattr(a, "type", "") or "",
+                            "balance": float(getattr(a, "balance", 0) or 0),
+                            "currency": getattr(a, "currency", "") or "",
+                            "status": getattr(a, "status", "") or ""
+                        })
+                    except Exception:
+                        # skip malformed account row
+                        continue
+            except Exception:
+                app.logger.exception("Failed to load accounts for alerts")
+
+        # Check for low account balances (example threshold 1000)
+        for acc in accounts:
+            try:
+                if float(acc.get('balance', 0) or 0) < 1000:
+                    alerts.append(f"Low Balance: Account '{acc.get('name')}' is below 1,000.")
+            except Exception:
+                continue
+
         # Basic charts extraction
         cashflow_chart = finance_chart_data.get("monthly_cashflow") or {"data": [], "layout": {}}
         expense_breakdown = finance_chart_data.get("expense_breakdown") or {"data": [], "layout": {}}
@@ -2166,7 +2460,8 @@ def finance_overview():
             cashflow_chart=cashflow_chart,
             expense_breakdown=expense_breakdown,
             revenue_sources=revenue_sources,
-            pending_purchase_requests=pending_purchase_requests
+            pending_purchase_requests=pending_purchase_requests,
+            alerts=alerts
         )
 
     except Exception:
@@ -2184,81 +2479,6 @@ def finance_overview():
                                outstanding_payments=outstanding_payments,
                                finance_chart_data=finance_chart_data,
                                pending_purchase_requests=[])
-
-
-@app.route('/add_payment', methods=['GET', 'POST'])
-@login_required
-def add_payment():
-    """
-    Create an outstanding payment record in the DB when model exists; otherwise fallback to file.
-    """
-    if request.method == 'POST':
-        party = request.form.get('party', '').strip()
-        due_date = request.form.get('due_date', '').strip()
-        amount = request.form.get('amount', '').strip()
-        status = request.form.get('status', '').strip()
-
-        # Try DB first (prefer OutstandingPayment model)
-        try:
-            if 'OutstandingPayment' in globals():
-                op = OutstandingPayment()
-                _set_attr_if_exists(op, "payment_id", request.form.get('payment_id', None))
-                _set_attr_if_exists(op, "party", party)
-                _set_attr_if_exists(op, "due_date", due_date, date_try=True)
-                _set_attr_if_exists(op, "amount", amount, cast_float=True)
-                _set_attr_if_exists(op, "status", status)
-                db.session.add(op)
-                db.session.commit()
-                flash('Payment added successfully!', 'success')
-                return redirect(url_for('finance_overview'))
-
-            # fallback to generic Payment model if available
-            if 'Payment' in globals():
-                p = Payment()
-                _set_attr_if_exists(p, "party", party)
-                _set_attr_if_exists(p, "date", due_date, date_try=True)
-                _set_attr_if_exists(p, "amount", amount, cast_float=True)
-                _set_attr_if_exists(p, "status", status)
-                db.session.add(p)
-                db.session.commit()
-                flash('Payment added successfully!', 'success')
-                return redirect(url_for('finance_overview'))
-        except Exception:
-            db.session.rollback()
-            app.logger.exception("Failed to insert payment into DB; falling back to file")
-
-        # File fallback
-        try:
-            data = load_finance()
-            payments = data.get('outstanding_payments', [])
-            new_id = 1
-            # compute numeric suffix if payment_id present
-            if payments:
-                try:
-                    # attempt to parse last numeric suffix
-                    numeric_ids = [int(''.join(filter(str.isdigit, (p.get('payment_id') or '')))) for p in payments if p.get('payment_id')]
-                    if numeric_ids:
-                        new_id = max(numeric_ids) + 1
-                except Exception:
-                    new_id = len(payments) + 1
-            new_payment = {
-                'payment_id': f"OP-{new_id:04d}",
-                'party': party,
-                'due_date': due_date,
-                'amount': float(amount or 0),
-                'status': status
-            }
-            payments.append(new_payment)
-            data['outstanding_payments'] = payments
-            save_finance(data)
-            flash('Payment added (file fallback).', 'success')
-        except Exception:
-            app.logger.exception("Failed to append payment to finance JSON")
-            flash('Failed to add payment.', 'error')
-
-        return redirect(url_for('finance_overview'))
-
-    return render_template('add_payment.html')
 
 
 @app.route('/add_receipt', methods=['GET', 'POST'])
@@ -2504,32 +2724,238 @@ def departments_overview():
     ]
     return render_template('departments_overview.html', departments=department_stats)
 
-#Fix this
+def _is_hr_or_admin(user=None):
+    """Return True if user is HR or Admin (legacy checks: role string or group_id==0)."""
+    u = user or current_user
+    try:
+        m = getattr(u, "model", None)
+        if not m:
+            return False
+        role = (getattr(m, "role", "") or "").lower()
+        if role in ("hr", "admin"):
+            return True
+        if getattr(m, "group_id", None) == 0:
+            return True
+        return False
+    except Exception:
+        return False
+
 @app.route('/attendance_overview')
+@login_required
 def attendance_overview():
     """
-    Prefer DB Attendance table when available; otherwise use HR JSON 'attendance'.
+    List attendance records with filters and pagination.
+    Query params: employee_id, date_from (YYYY-MM-DD), date_to (YYYY-MM-DD), status, page, per_page
     """
+    def safe_get(row, *candidates, default=None):
+        for c in candidates:
+            if hasattr(row, c):
+                try:
+                    val = getattr(row, c)
+                    if hasattr(val, "isoformat"):
+                        return val.isoformat()
+                    return val
+                except Exception:
+                    continue
+        return default
+
+    employee_id = request.args.get('employee_id', '').strip()
+    date_from = request.args.get('date_from', '').strip()
+    date_to = request.args.get('date_to', '').strip()
+    status = request.args.get('status', '').strip()
+    try:
+        page = max(1, int(request.args.get('page', 1)))
+    except Exception:
+        page = 1
+    try:
+        per_page = max(10, int(request.args.get('per_page', 20)))
+    except Exception:
+        per_page = 20
+
     try:
         if 'Attendance' in globals():
-            att_rows = db.session.query(Attendance).order_by(getattr(Attendance, "date", Attendance)).all()
+            q = db.session.query(Attendance)
+            # date column handling
+            date_col = getattr(Attendance, "date", None)
+            if employee_id:
+                if hasattr(Attendance, "employee_id"):
+                    try:
+                        q = q.filter(getattr(Attendance, "employee_id") == int(employee_id))
+                    except Exception:
+                        q = q.filter(getattr(Attendance, "employee_id") == employee_id)
+                elif hasattr(Attendance, "employee"):
+                    q = q.filter(getattr(Attendance, "employee") == employee_id)
+            if status:
+                if hasattr(Attendance, "status"):
+                    q = q.filter(getattr(Attendance, "status") == status)
+            # date range
+            if date_from and date_col is not None:
+                try:
+                    df = datetime.fromisoformat(date_from)
+                    q = q.filter(date_col >= df)
+                except Exception:
+                    pass
+            if date_to and date_col is not None:
+                try:
+                    dt = datetime.fromisoformat(date_to)
+                    q = q.filter(date_col <= dt)
+                except Exception:
+                    pass
+
+            total = q.count()
+            rows = q.order_by(getattr(Attendance, "date", Attendance).desc()).offset((page - 1) * per_page).limit(per_page).all()
+
             attendance_records = []
-            for a in att_rows:
+            for r in rows:
                 attendance_records.append({
-                    'id': getattr(a, 'id', None),
-                    'employee_id': getattr(a, 'employee_id', None),
-                    'date': getattr(a, 'date', None),
-                    'status': getattr(a, 'status', None),
-                    'check_in': getattr(a, 'check_in', None),
-                    'check_out': getattr(a, 'check_out', None)
+                    "id": safe_get(r, "id"),
+                    "employee_id": safe_get(r, "employee_id", "employee"),
+                    "date": safe_get(r, "date"),
+                    "status": safe_get(r, "status"),
+                    "check_in": safe_get(r, "check_in"),
+                    "check_out": safe_get(r, "check_out"),
+                    # preserve model instance where useful
+                    "_model": r
                 })
-            return render_template('attendance_overview.html', attendance_records=attendance_records)
+
+            # Audit: record view (best-effort)
+            try:
+                log_audit(action="view", resource_type="Attendance", resource_id=None,
+                          after={"filters": {"employee_id": employee_id, "date_from": date_from, "date_to": date_to, "status": status, "page": page, "per_page": per_page}, "count": len(attendance_records)})
+            except Exception:
+                app.logger.debug("Attendance view audit failed", exc_info=True)
+
+            pagination = {"page": page, "per_page": per_page, "total": total}
+            return render_template('attendance_overview.html', attendance_records=attendance_records, pagination=pagination, filters={"employee_id": employee_id, "date_from": date_from, "date_to": date_to, "status": status})
     except Exception:
         app.logger.exception("DB unavailable for attendance_overview; falling back to file")
 
-    # file fallback
+    # file fallback (existing behavior)
     attendance_records = ('attendance', [])
-    return render_template('attendance_overview.html', attendance_records=attendance_records)
+    return render_template('attendance_overview.html', attendance_records=attendance_records, pagination={"page":1,"per_page":len(attendance_records),"total":len(attendance_records)}, filters={})
+
+@app.route('/attendance/add', methods=['GET', 'POST'])
+@login_required
+def add_attendance():
+    """
+    Add an attendance record. POST: employee_id, date (YYYY-MM-DD), status, check_in, check_out
+    """
+    if request.method == 'POST':
+        employee_id = request.form.get('employee_id', '').strip()
+        date_val = request.form.get('date', '').strip()
+        status = request.form.get('status', '').strip() or 'Present'
+        check_in = request.form.get('check_in', '').strip()
+        check_out = request.form.get('check_out', '').strip()
+
+        try:
+            if 'Attendance' in globals():
+                a = Attendance()
+                _set_attr_if_exists(a, "employee_id", int(employee_id) if employee_id.isdigit() else employee_id)
+                _set_attr_if_exists(a, "employee", employee_id)
+                _set_attr_if_exists(a, "date", date_val, date_try=True)
+                _set_attr_if_exists(a, "status", status)
+                _set_attr_if_exists(a, "check_in", check_in)
+                _set_attr_if_exists(a, "check_out", check_out)
+                db.session.add(a)
+                db.session.commit()
+                try:
+                    log_audit(action="create", resource_type="Attendance", resource_id=getattr(a, "id", None), after=a)
+                except Exception:
+                    app.logger.debug("Audit log failed for add_attendance", exc_info=True)
+                flash("Attendance record added.", "success")
+                return redirect(url_for('attendance_overview'))
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Failed to add attendance to DB")
+            flash("Failed to add attendance record.", "error")
+            return redirect(url_for('attendance_overview'))
+
+    return render_template('add_attendance.html')
+
+@app.route('/attendance/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_attendance(id):
+    """
+    Edit an attendance record by id.
+    """
+    if 'Attendance' not in globals():
+        flash("Attendance model not available.", "error")
+        return redirect(url_for('attendance_overview'))
+
+    rec = db.session.get(Attendance, id)
+    if not rec:
+        flash("Attendance record not found.", "error")
+        return redirect(url_for('attendance_overview'))
+
+    if request.method == 'POST':
+        try:
+            before = rec.to_dict() if hasattr(rec, "to_dict") else None
+            _set_attr_if_exists(rec, "employee_id", request.form.get('employee_id'))
+            _set_attr_if_exists(rec, "employee", request.form.get('employee_id'))
+            _set_attr_if_exists(rec, "date", request.form.get('date'), date_try=True)
+            _set_attr_if_exists(rec, "status", request.form.get('status'))
+            _set_attr_if_exists(rec, "check_in", request.form.get('check_in'))
+            _set_attr_if_exists(rec, "check_out", request.form.get('check_out'))
+            db.session.add(rec)
+            db.session.commit()
+            try:
+                log_audit(action="update", resource_type="Attendance", resource_id=getattr(rec, "id", None), before=before, after=rec)
+            except Exception:
+                app.logger.debug("Audit log failed for edit_attendance", exc_info=True)
+            flash("Attendance updated.", "success")
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Failed to update attendance")
+            flash("Failed to update attendance.", "error")
+        return redirect(url_for('attendance_overview'))
+
+    # GET: prepare dict for template
+    rec_dict = {
+        "id": getattr(rec, "id", None),
+        "employee_id": getattr(rec, "employee_id", None) or getattr(rec, "employee", ""),
+        "date": getattr(rec, "date", None),
+        "status": getattr(rec, "status", None),
+        "check_in": getattr(rec, "check_in", None),
+        "check_out": getattr(rec, "check_out", None)
+    }
+    try:
+        return render_template('edit_attendance.html', attendance=rec_dict)
+    except Exception:
+        return redirect(url_for('attendance_overview'))
+
+@app.route('/attendance/delete/<int:id>', methods=['POST'])
+@login_required
+def delete_attendance(id):
+    """
+    Delete attendance record. Only HR or Admin allowed.
+    """
+    if not _is_hr_or_admin():
+        return render_template("403.html"), 403
+
+    if 'Attendance' not in globals():
+        flash("Attendance model not available.", "error")
+        return redirect(url_for('attendance_overview'))
+
+    rec = db.session.get(Attendance, id)
+    if not rec:
+        flash("Attendance record not found.", "error")
+        return redirect(url_for('attendance_overview'))
+
+    try:
+        before = rec.to_dict() if hasattr(rec, "to_dict") else None
+        db.session.delete(rec)
+        db.session.commit()
+        try:
+            log_audit(action="delete", resource_type="Attendance", resource_id=id, before=before)
+        except Exception:
+            app.logger.debug("Audit log failed for delete_attendance", exc_info=True)
+        flash("Attendance record deleted.", "success")
+    except Exception:
+        db.session.rollback()
+        app.logger.exception("Failed to delete attendance")
+        flash("Failed to delete attendance record.", "error")
+
+    return redirect(url_for('attendance_overview'))
 
 #Fix this
 @app.route('/payroll_overview')
@@ -2605,83 +3031,201 @@ def hr_reports():
 
 
 @app.route('/human_resources_overview')
+@login_required
 def human_resources_overview():
-    """
-    Load HR overview preferentially from PostgreSQL Employee table, with safe fallbacks.
-    """
+    query = request.args.get("query", "").strip()
+    selected_department = request.args.get("department", "").strip()
+    selected_status = request.args.get("status", "").strip()
+
     try:
-        # Try DB employees first
-        if 'Employee' in globals():
-            q = db.session.query(Employee)
-            query = request.args.get('query', '').strip()
-            selected_department = request.args.get('department', '')
-            selected_status = request.args.get('status', '')
+        employees_query = Employee.query
 
-            if query:
-                # try to match name or email fields if present
-                if hasattr(Employee, "name"):
-                    q = q.filter(getattr(Employee, "name").ilike(f"%{query}%"))
-                elif hasattr(Employee, "email"):
-                    q = q.filter(getattr(Employee, "email").ilike(f"%{query}%"))
+        if query:
+            like_value = f"%{query}%"
+            employees_query = employees_query.filter(Employee.name.ilike(like_value))
 
-            if selected_department and hasattr(Employee, "department"):
-                q = q.filter(getattr(Employee, "department") == selected_department)
-            if selected_status and hasattr(Employee, "status"):
-                q = q.filter(getattr(Employee, "status") == selected_status)
+        if selected_department:
+            employees_query = employees_query.filter(Employee.department == selected_department)
 
-            rows = q.order_by(getattr(Employee, "id", Employee)).all()
-            employees = []
-            for e in rows:
-                employees.append({
-                    "id": getattr(e, "id", None),
-                    "name": getattr(e, "name", "") or "",
-                    "department": getattr(e, "department", "") or "",
-                    "role": getattr(e, "role", "") or "",
-                    "email": getattr(e, "email", "") or "",
-                    "phone": getattr(e, "phone", "") or "",
-                    "status": getattr(e, "status", "") or ""
-                })
+        if selected_status:
+            employees_query = employees_query.filter(Employee.status == selected_status)
 
-            alerts = []  # could be populated from DB if available
-            recent_activity = []  # optionally synthesize from audit logs/payroll/leave tables
+        employees = employees_query.order_by(Employee.id.asc()).all()
 
-            hr_summary = [
-                {'label': 'Total Employees', 'value': len(employees)},
-                {'label': 'Active', 'value': sum(1 for ev in employees if ev.get('status') == 'Active')},
-                {'label': 'On Leave', 'value': sum(1 for ev in employees if ev.get('status') == 'On Leave')},
-                {'label': 'Inactive', 'value': sum(1 for ev in employees if ev.get('status') == 'Inactive')}
-            ]
-            departments = sorted(set(ev.get('department') for ev in employees if ev.get('department')))
+        department_rows = (
+            db.session.query(Employee.department)
+            .filter(Employee.department.isnot(None))
+            .distinct()
+            .all()
+        )
+        departments = sorted({dept for (dept,) in department_rows if dept})
 
-            filtered_employees = employees
-            return render_template(
-                'human-resources-overview.html',
-                alerts=alerts,
-                hr_summary=hr_summary,
-                departments=departments,
-                selected_department=request.args.get('department', ''),
-                selected_status=request.args.get('status', ''),
-                query=request.args.get('query', ''),
-                employees=filtered_employees,
-                recent_activity=recent_activity,
-                hr_chart_data={
-                    "data": [
-                        {
-                            "labels": ["Active", "On Leave", "Inactive"],
-                            "values": [
-                                sum(1 for ev in employees if ev.get('status') == 'Active'),
-                                sum(1 for ev in employees if ev.get('status') == 'On Leave'),
-                                sum(1 for ev in employees if ev.get('status') == 'Inactive')
-                            ],
-                            "type": "pie",
-                            "name": "Employee Status"
-                        }
-                    ],
-                    "layout": {"title": "Employee Status Distribution"}
+        total_employees = db.session.query(func.count(Employee.id)).scalar() or 0
+        active_employees = (
+            db.session.query(func.count(Employee.id))
+            .filter(Employee.status == "Active")
+            .scalar()
+            or 0
+        )
+        inactive_employees = max(total_employees - active_employees, 0)
+
+        hr_summary = [
+            {"label": "Total Employees", "value": total_employees},
+            {"label": "Active Employees", "value": active_employees},
+            {"label": "Inactive Employees", "value": inactive_employees},
+            {"label": "Departments", "value": len(departments)},
+        ]
+
+        alerts = []
+        if total_employees == 0:
+            alerts.append("No employees found in the system. Add employee records to get started.")
+        if inactive_employees > 0:
+            alerts.append(f"{inactive_employees} employees are currently marked as inactive.")
+        if query and not employees:
+            alerts.append("No employees matched your current filters.")
+
+        recent_activity = []
+        try:
+            recent_logs = AuditLog.query.order_by(AuditLog.id.desc()).limit(5).all()
+            for log in recent_logs:
+                action = getattr(log, "action", "HR activity")
+                resource_type = getattr(log, "resource_type", None)
+                resource_id = getattr(log, "resource_id", None)
+                parts = [action]
+                if resource_type:
+                    parts.append(resource_type)
+                if resource_id:
+                    parts.append(f"(ID {resource_id})")
+                recent_activity.append(" ".join(parts))
+        except Exception:
+            recent_activity = []
+
+        status_counts = (
+            db.session.query(Employee.status, func.count(Employee.id))
+            .group_by(Employee.status)
+            .all()
+        )
+        if status_counts:
+            labels = [label or "Unspecified" for label, _ in status_counts]
+            values = [count for _, count in status_counts]
+        else:
+            labels = ["No Data"]
+            values = [1]
+
+        hr_chart_data = {
+            "data": [
+                {
+                    "type": "pie",
+                    "labels": labels,
+                    "values": values,
+                    "hole": 0.35,
+                    "textinfo": "label+percent",
                 }
-            )
-    except Exception:
-        app.logger.exception("DB unavailable for human_resources_overview")
+            ],
+            "layout": {
+                "margin": {"l": 10, "r": 10, "t": 30, "b": 10},
+                "showlegend": True,
+            },
+        }
+        hr_chart_data_json = json.dumps(hr_chart_data, cls=PlotlyJSONEncoder)
+
+    except (OperationalError, DataError):
+        fallback_employees = [
+            {
+                "id": 1,
+                "name": "Alice Banda",
+                "department": "HR",
+                "role": "HR Manager",
+                "email": "alice.banda@example.com",
+                "phone": "+260-971-000-001",
+                "status": "Active",
+            },
+            {
+                "id": 2,
+                "name": "Brian Mwale",
+                "department": "Finance",
+                "role": "Accountant",
+                "email": "brian.mwale@example.com",
+                "phone": "+260-971-000-002",
+                "status": "Active",
+            },
+            {
+                "id": 3,
+                "name": "Chipo Zulu",
+                "department": "Logistics",
+                "role": "Coordinator",
+                "email": "chipo.zulu@example.com",
+                "phone": "+260-971-000-003",
+                "status": "Inactive",
+            },
+        ]
+
+        def _matches_filters(record):
+            if query and query.lower() not in record["name"].lower():
+                return False
+            if selected_department and record["department"] != selected_department:
+                return False
+            if selected_status and record["status"] != selected_status:
+                return False
+            return True
+
+        filtered_records = [rec for rec in fallback_employees if _matches_filters(rec)]
+        employees = [SimpleNamespace(**rec) for rec in filtered_records]
+
+        departments = sorted({rec["department"] for rec in fallback_employees if rec.get("department")})
+
+        total_employees = len(fallback_employees)
+        active_employees = len([rec for rec in fallback_employees if rec["status"] == "Active"])
+        inactive_employees = total_employees - active_employees
+
+        hr_summary = [
+            {"label": "Total Employees", "value": total_employees},
+            {"label": "Active Employees", "value": active_employees},
+            {"label": "Inactive Employees", "value": inactive_employees},
+            {"label": "Departments", "value": len(departments)},
+        ]
+
+        alerts = ["Showing fallback HR data because the primary data source is unavailable."]
+        if not employees:
+            alerts.append("No employees matched your current filters in the fallback dataset.")
+
+        recent_activity = ["Fallback: Unable to load HR activity because the database query failed."]
+
+        status_totals = {}
+        for rec in fallback_employees:
+            status_totals[rec["status"]] = status_totals.get(rec["status"], 0) + 1
+        labels = list(status_totals.keys()) or ["No Data"]
+        values = list(status_totals.values()) or [1]
+
+        hr_chart_data = {
+            "data": [
+                {
+                    "type": "pie",
+                    "labels": labels,
+                    "values": values,
+                    "hole": 0.35,
+                    "textinfo": "label+percent",
+                }
+            ],
+            "layout": {
+                "margin": {"l": 10, "r": 10, "t": 30, "b": 10},
+                "showlegend": True,
+            },
+        }
+        hr_chart_data_json = json.dumps(hr_chart_data, cls=PlotlyJSONEncoder)
+
+    return render_template(
+        "human-resources-overview.html",
+        employees=employees,
+        hr_summary=hr_summary,
+        alerts=alerts,
+        departments=departments,
+        selected_department=selected_department,
+        selected_status=selected_status,
+        query=query,
+        recent_activity=recent_activity,
+        hr_chart_data=hr_chart_data_json,
+    )
 
 #PROCUREMENT
 
@@ -2744,6 +3288,32 @@ def procurement_overview():
                 "status": safe_get(s, "status", default="")
             })
 
+        # --- NEW ALERTS LOGIC ---
+        alerts = []
+        
+        # 1. Pending Requests Alert
+        pending_requests = sum(1 for r in purchase_requests if r.get('status', '').lower() == 'pending')
+        if pending_requests > 0:
+            alerts.append(f"Action Required: {pending_requests} purchase request(s) are waiting for approval.")
+
+        # 2. Late Delivery Alert (Simple check against current date)
+        today_str = datetime.now().strftime('%Y-%m-%d')
+        late_orders = 0
+        for po in purchase_orders:
+            # Assuming 'date' is order date, real ERPs would have 'expected_delivery_date'
+            # Here we just check if status is 'Pending' and order is older than 7 days (example)
+            po_date = po.get('date', '')
+            po_status = po.get('status', '').lower()
+            if po_status == 'pending' and po_date < today_str:
+                # This is a simplification; ideally check specific delivery deadlines
+                pass 
+        
+        # 3. Supplier Status Alert
+        inactive_suppliers = sum(1 for s in suppliers if s.get('status', '').lower() in ['inactive', 'blacklisted'])
+        if inactive_suppliers > 0:
+            alerts.append(f"Notice: {inactive_suppliers} supplier(s) are marked as Inactive/Blacklisted.")
+
+
         rq_q = (request.args.get('request_query') or '').strip().lower()
         rq_status = (request.args.get('request_status') or '').strip()
         ord_q = (request.args.get('order_query') or '').strip().lower()
@@ -2786,7 +3356,8 @@ def procurement_overview():
             suppliers=suppliers,
             request_query=rq_q, request_status=rq_status,
             order_query=ord_q, order_status=ord_status,
-            supplier_query=sup_q, supplier_status=sup_status
+            supplier_query=sup_q, supplier_status=sup_status,
+            alerts=alerts
         )
 
     except Exception:
@@ -3089,6 +3660,230 @@ def update_work_center():
 
     return render_template("update_work_center.html", work_centers=work_centers)
 
+
+@app.route('/production/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_production_order(id):
+    if 'ProductionOrder' not in globals():
+        flash("ProductionOrder model not available.", "error")
+        return redirect(url_for('production_overview'))
+    po = db.session.get(ProductionOrder, id)
+    if not po:
+        flash("Production order not found.", "error")
+        return redirect(url_for('production_overview'))
+
+    if request.method == 'POST':
+        try:
+            form = request.form
+            _set_attr_if_exists(po, "order_id", form.get("order_id"))
+            _set_attr_if_exists(po, "product", form.get("product"))
+            _set_attr_if_exists(po, "product_name", form.get("product"))
+            _set_attr_if_exists(po, "quantity", form.get("quantity"), cast_float=True)
+            _set_attr_if_exists(po, "qty", form.get("quantity"), cast_float=True)
+            _set_attr_if_exists(po, "start_date", form.get("start_date"), date_try=True)
+            _set_attr_if_exists(po, "end_date", form.get("end_date"), date_try=True)
+            _set_attr_if_exists(po, "status", form.get("status"))
+            db.session.add(po)
+            db.session.commit()
+            try:
+                log_audit(action="update", resource_type="ProductionOrder", resource_id=getattr(po, "id", None), after=po)
+            except Exception:
+                app.logger.debug("Audit log failed for edit_production_order", exc_info=True)
+            flash("Production order updated.", "success")
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Failed to update production order")
+            flash("Failed to update production order.", "error")
+        return redirect(url_for('production_overview'))
+
+    # GET: prepare dict for template; render edit page if exists
+    po_dict = {
+        "id": getattr(po, "id", None),
+        "order_id": getattr(po, "order_id", None) or getattr(po, "id", None),
+        "product": getattr(po, "product", "") or getattr(po, "product_name", "") or "",
+        "quantity": getattr(po, "quantity", "") or getattr(po, "qty", ""),
+        "start_date": getattr(po, "start_date", "") or "",
+        "end_date": getattr(po, "end_date", "") or "",
+        "status": getattr(po, "status", "") or getattr(po, "state", "") or ""
+    }
+    # render edit template if available, otherwise redirect back
+    try:
+        return render_template('edit_production_order.html', order=po_dict)
+    except Exception:
+        return redirect(url_for('production_overview'))
+
+
+@app.route('/production/delete/<int:id>', methods=['POST'])
+@login_required
+def delete_production_order(id):
+    if 'ProductionOrder' not in globals():
+        flash("ProductionOrder model not available.", "error")
+        return redirect(url_for('production_overview'))
+    po = db.session.get(ProductionOrder, id)
+    if not po:
+        flash("Production order not found.", "error")
+        return redirect(url_for('production_overview'))
+    try:
+        before = po.to_dict() if hasattr(po, "to_dict") else None
+        db.session.delete(po)
+        db.session.commit()
+        try:
+            log_audit(action="delete", resource_type="ProductionOrder", resource_id=id, before=before)
+        except Exception:
+            app.logger.debug("Audit log failed for delete_production_order", exc_info=True)
+        flash("Production order deleted.", "success")
+    except Exception:
+        db.session.rollback()
+        app.logger.exception("Failed to delete production order")
+        flash("Failed to delete production order.", "error")
+    return redirect(url_for('production_overview'))
+
+
+@app.route('/bom/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_bom(id):
+    if 'BillOfMaterials' not in globals():
+        flash("BillOfMaterials model not available.", "error")
+        return redirect(url_for('production_overview'))
+    bom = db.session.get(BillOfMaterials, id)
+    if not bom:
+        flash("BOM entry not found.", "error")
+        return redirect(url_for('production_overview'))
+
+    if request.method == 'POST':
+        try:
+            form = request.form
+            _set_attr_if_exists(bom, "product", form.get("product"))
+            _set_attr_if_exists(bom, "product_name", form.get("product"))
+            _set_attr_if_exists(bom, "component", form.get("component"))
+            _set_attr_if_exists(bom, "component_name", form.get("component"))
+            _set_attr_if_exists(bom, "quantity_required", form.get("quantity_required"), cast_float=True)
+            _set_attr_if_exists(bom, "qty", form.get("quantity_required"), cast_float=True)
+            _set_attr_if_exists(bom, "unit", form.get("unit"))
+            db.session.add(bom)
+            db.session.commit()
+            try:
+                log_audit(action="update", resource_type="BillOfMaterials", resource_id=getattr(bom, "id", None), after=bom)
+            except Exception:
+                app.logger.debug("Audit log failed for edit_bom", exc_info=True)
+            flash("BOM updated.", "success")
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Failed to update BOM")
+            flash("Failed to update BOM.", "error")
+        return redirect(url_for('production_overview'))
+
+    bom_dict = {
+        "id": getattr(bom, "id", None),
+        "product": getattr(bom, "product", "") or getattr(bom, "product_name", ""),
+        "component": getattr(bom, "component", "") or getattr(bom, "component_name", ""),
+        "quantity_required": getattr(bom, "quantity_required", "") or getattr(bom, "quantity", "") or getattr(bom, "qty", ""),
+        "unit": getattr(bom, "unit", "") or getattr(bom, "uom", "")
+    }
+    try:
+        return render_template('edit_bom.html', bom=bom_dict)
+    except Exception:
+        return redirect(url_for('production_overview'))
+
+
+@app.route('/bom/delete/<int:id>', methods=['POST'])
+@login_required
+def delete_bom(id):
+    if 'BillOfMaterials' not in globals():
+        flash("BillOfMaterials model not available.", "error")
+        return redirect(url_for('production_overview'))
+    bom = db.session.get(BillOfMaterials, id)
+    if not bom:
+        flash("BOM entry not found.", "error")
+        return redirect(url_for('production_overview'))
+    try:
+        before = bom.to_dict() if hasattr(bom, "to_dict") else None
+        db.session.delete(bom)
+        db.session.commit()
+        try:
+            log_audit(action="delete", resource_type="BillOfMaterials", resource_id=id, before=before)
+        except Exception:
+            app.logger.debug("Audit log failed for delete_bom", exc_info=True)
+        flash("BOM entry deleted.", "success")
+    except Exception:
+        db.session.rollback()
+        app.logger.exception("Failed to delete BOM")
+        flash("Failed to delete BOM.", "error")
+    return redirect(url_for('production_overview'))
+
+
+@app.route('/workcenter/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_work_center(id):
+    if 'WorkCenter' not in globals():
+        flash("WorkCenter model not available.", "error")
+        return redirect(url_for('production_overview'))
+    wc = db.session.get(WorkCenter, id)
+    if not wc:
+        flash("Work center not found.", "error")
+        return redirect(url_for('production_overview'))
+
+    if request.method == 'POST':
+        try:
+            form = request.form
+            _set_attr_if_exists(wc, "name", form.get("name"))
+            _set_attr_if_exists(wc, "current_task", form.get("current_task"))
+            _set_attr_if_exists(wc, "task", form.get("current_task"))
+            _set_attr_if_exists(wc, "status", form.get("status"))
+            _set_attr_if_exists(wc, "state", form.get("status"))
+            _set_attr_if_exists(wc, "operator", form.get("operator"))
+            _set_attr_if_exists(wc, "assigned_to", form.get("operator"))
+            db.session.add(wc)
+            db.session.commit()
+            try:
+                log_audit(action="update", resource_type="WorkCenter", resource_id=getattr(wc, "id", None), after=wc)
+            except Exception:
+                app.logger.debug("Audit log failed for edit_work_center", exc_info=True)
+            flash("Work center updated.", "success")
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Failed to update work center")
+            flash("Failed to update work center.", "error")
+        return redirect(url_for('production_overview'))
+
+    wc_dict = {
+        "id": getattr(wc, "id", None),
+        "name": getattr(wc, "name", "") or "",
+        "current_task": getattr(wc, "current_task", "") or getattr(wc, "task", "") or "",
+        "status": getattr(wc, "status", "") or getattr(wc, "state", "") or "",
+        "operator": getattr(wc, "operator", "") or getattr(wc, "assigned_to", "") or ""
+    }
+    try:
+        return render_template('edit_work_center.html', work_center=wc_dict)
+    except Exception:
+        return redirect(url_for('production_overview'))
+
+
+@app.route('/workcenter/delete/<int:id>', methods=['POST'])
+@login_required
+def delete_work_center(id):
+    if 'WorkCenter' not in globals():
+        flash("WorkCenter model not available.", "error")
+        return redirect(url_for('production_overview'))
+    wc = db.session.get(WorkCenter, id)
+    if not wc:
+        flash("Work center not found.", "error")
+        return redirect(url_for('production_overview'))
+    try:
+        before = wc.to_dict() if hasattr(wc, "to_dict") else None
+        db.session.delete(wc)
+        db.session.commit()
+        try:
+            log_audit(action="delete", resource_type="WorkCenter", resource_id=id, before=before)
+        except Exception:
+            app.logger.debug("Audit log failed for delete_work_center", exc_info=True)
+        flash("Work center deleted.", "success")
+    except Exception:
+        db.session.rollback()
+        app.logger.exception("Failed to delete work center")
+        flash("Failed to delete work center.", "error")
+    return redirect(url_for('production_overview'))
+
 @app.route('/production-overview')
 def production_overview():
     """
@@ -3115,7 +3910,7 @@ def production_overview():
         production_orders = []
         for r in prod_rows:
             production_orders.append({
-                "id": safe_get(r, "id", "order_id"),
+                "id": safe_get(r, "id"),
                 "order_id": safe_get(r, "order_id", "id"),
                 "product": safe_get(r, "product", "product_name", "name"),
                 "quantity": float(safe_get(r, "quantity", "qty", "amount", default=0) or 0),
@@ -3146,11 +3941,32 @@ def production_overview():
                 "throughput_per_hour": float(safe_get(r, "throughput_per_hour", "throughput", default=0) or 0)
             })
 
+        # --- NEW ALERTS LOGIC ---
+        alerts = []
+
+        # 1. Work Center Maintenance Alert
+        down_centers = [wc['name'] for wc in work_centers if wc.get('status', '').lower() in ['maintenance', 'broken', 'inactive']]
+        if down_centers:
+            alerts.append(f"Critical: The following work centers are down: {', '.join(down_centers)}.")
+
+        # 2. Overdue Production Orders
+        today_iso = datetime.now().date().isoformat()
+        overdue_orders = 0
+        for po in production_orders:
+            end_date = po.get('end_date')
+            status = po.get('status', '').lower()
+            if status not in ['completed', 'cancelled'] and end_date and end_date < today_iso:
+                overdue_orders += 1
+        
+        if overdue_orders > 0:
+            alerts.append(f"Warning: {overdue_orders} production order(s) are past their scheduled end date.")
+        
         return render_template(
             'production-overview.html',
             production_orders=production_orders,
             bill_of_materials=bill_of_materials,
-            work_centers=work_centers
+            work_centers=work_centers,
+            alerts=alerts
         )
 
     except Exception:
@@ -3451,6 +4267,18 @@ def sales_overview():
                     })
             except Exception:
                 app.logger.exception("Failed to load inventory for sales_overview")
+            
+        # --- NEW ALERTS LOGIC ---
+        alerts = []
+        stockouts = [item['product'] for item in inventory if item['quantity'] <= 0]
+        if stockouts:
+            # Limit to first 3 to avoid cluttering the UI
+            display_stockouts = stockouts[:3]
+            msg = f"Stockout Alert: {', '.join(display_stockouts)}"
+            if len(stockouts) > 3:
+                msg += f" and {len(stockouts) - 3} others"
+            msg += " are out of stock."
+            alerts.append(msg)
 
         # reuse the precomputed graphs from module-level variables if present
         sales_trend = globals().get("sales_trend_graph", {"data": [], "layout": {}})
@@ -3502,7 +4330,8 @@ def sales_overview():
                                customer_expenditure_pie_chart=cust_expenditure,
                                customers=customers,
                                inventory=inventory,
-                               kpi=kpi)
+                               kpi=kpi,
+                               alerts=alerts)
     except Exception:
         app.logger.exception("Failed to render sales_overview")
         # safe fallback

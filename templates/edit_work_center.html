@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Edit Work Center{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-lg">
+    <h1 class="text-2xl font-bold mb-6">Edit Work Center</h1>
+    <form method="POST" class="bg-white p-6 rounded shadow-md">
+        <div class="mb-4">
+            <label class="block text-gray-700 font-bold mb-2">Name</label>
+            <input type="text" name="name" value="{{ work_center.name }}" class="w-full border rounded px-3 py-2" required>
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 font-bold mb-2">Current Task</label>
+            <input type="text" name="current_task" value="{{ work_center.current_task }}" class="w-full border rounded px-3 py-2">
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 font-bold mb-2">Status</label>
+            <select name="status" class="w-full border rounded px-3 py-2">
+                <option value="Active" {% if work_center.status == 'Active' %}selected{% endif %}>Active</option>
+                <option value="Idle" {% if work_center.status == 'Idle' %}selected{% endif %}>Idle</option>
+                <option value="Maintenance" {% if work_center.status == 'Maintenance' %}selected{% endif %}>Maintenance</option>
+            </select>
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 font-bold mb-2">Operator</label>
+            <input type="text" name="operator" value="{{ work_center.operator }}" class="w-full border rounded px-3 py-2">
+        </div>
+        <div class="flex justify-end gap-4">
+            <a href="{{ url_for('production_overview') }}" class="text-gray-600 hover:text-gray-800 px-4 py-2">Cancel</a>
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Update</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

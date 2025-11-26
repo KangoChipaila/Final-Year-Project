@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Edit BOM{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-lg">
+    <h1 class="text-2xl font-bold mb-6">Edit Bill of Materials</h1>
+    <form method="POST" class="bg-white p-6 rounded shadow-md">
+        <div class="mb-4">
+            <label class="block text-gray-700 font-bold mb-2">Product</label>
+            <input type="text" name="product" value="{{ bom.product }}" class="w-full border rounded px-3 py-2" required>
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 font-bold mb-2">Component</label>
+            <input type="text" name="component" value="{{ bom.component }}" class="w-full border rounded px-3 py-2" required>
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 font-bold mb-2">Quantity Required</label>
+            <input type="number" step="any" name="quantity_required" value="{{ bom.quantity_required }}" class="w-full border rounded px-3 py-2" required>
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 font-bold mb-2">Unit</label>
+            <input type="text" name="unit" value="{{ bom.unit }}" class="w-full border rounded px-3 py-2">
+        </div>
+        <div class="flex justify-end gap-4">
+            <a href="{{ url_for('production_overview') }}" class="text-gray-600 hover:text-gray-800 px-4 py-2">Cancel</a>
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Update</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -7,9 +7,8 @@
     <section class="flex justify-between items-center mb-8">
         <div>
             <h1 class="text-3xl font-bold text-blue-700 tracking-tight">Accounting Overview</h1>
-            <p class="text-gray-500 mt-2">Financial summary and insights for your organization</p>
+            <p class="text-gray-500 mt-2">General Ledger, Payables, Receivables, and Expenses</p>
         </div>
-        
     </section>
 
     <!-- KPI Summary Cards -->
@@ -22,127 +21,108 @@
         {% endfor %}
     </section>
 
-    <!-- Quick Navigation Links -->
+    <!-- Transaction Actions -->
     <section class="mb-10">
-        <div class="text-xl font-semibold mb-4 text-gray-700">Quick Access</div>
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            <a href="{{ url_for('sales_overview') }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-blue-800 transition">Sales</a>
-            <a href="{{ url_for('customer_overview') }}" class="bg-green-600 text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-green-800 transition">Customers</a>
-            <a href="{{ url_for('distribution_overview') }}" class="bg-yellow-600 text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-yellow-700 transition">Inventory</a>
-            <a href="{{ url_for('procurement_overview') }}" class="bg-purple-600 text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-purple-800 transition">Procurement</a>
-            <a href="{{ url_for('human_resources_overview') }}" class="bg-pink-600 text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-pink-800 transition">HR</a>
-            <a href="{{ url_for('finance_overview') }}" class="bg-gray-700 text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-gray-800 transition">Finance</a>
+        <div class="text-xl font-semibold mb-4 text-gray-700">Record Transactions</div>
+        <div class="flex flex-wrap gap-4">
+            <a href="{{ url_for('add_invoice') }}" class="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-indigo-700 transition">
+                <span>+</span> Create Invoice
+            </a>
+            <a href="{{ url_for('add_payment') }}" class="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-red-700 transition">
+                <span>+</span> Record Bill / Payment
+            </a>
+            <a href="{{ url_for('add_expense') }}" class="flex items-center gap-2 bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-orange-700 transition">
+                <span>+</span> Record Expense
+            </a>
+            <a href="{{ url_for('add_journal_entry') }}" class="flex items-center gap-2 bg-gray-700 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-gray-800 transition">
+                <span>+</span> Journal Entry
+            </a>
         </div>
     </section>
 
-    <!-- Alerts & Notifications and Recent Activity -->
-    <section class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-        <!-- Alerts & Notifications -->
-        {% if alerts %}
-        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-            <div class="font-bold mb-4 text-red-700 text-lg flex items-center gap-2">
-                <svg class="w-6 h-6 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 8v4m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>
-                </svg>
-                Alerts & Notifications
+    <!-- Alerts & Notifications -->
+    {% if alerts %}
+    <section class="mb-8">
+        <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded shadow-sm">
+            <div class="flex items-center mb-2">
+                <h3 class="text-lg font-semibold text-red-700">Alerts</h3>
             </div>
-            <ul class="space-y-2">
+            <ul class="list-disc list-inside text-red-800">
                 {% for alert in alerts %}
-                <li class="bg-red-50 border-l-4 border-red-700 text-red-900 px-4 py-2 rounded shadow-sm flex items-center gap-2">
-                    <svg class="w-4 h-4 text-red-700" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M18 10A8 8 0 11 2 10a8 8 0 0116 0zm-8 4a1 1 0 100-2 1 1 0 000 2zm-.707-7.707a1 1 0 011.414 0l.293.293.293-.293a1 1 0 111.414 1.414l-1 1a1 1 0 01-1.414 0l-1-1a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                    </svg>
-                    <span>{{ alert }}</span>
-                </li>
-                {% endfor %}
-            </ul>
-        </div>
-        {% endif %}
-
-        <!-- Recent Activity Feed -->
-        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-            <div class="font-bold mb-4 text-blue-700 text-lg flex items-center gap-2">
-                <svg class="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M5 13l4 4L19 7" />
-                </svg>
-                Recent Activity
-            </div>
-            <ul class="space-y-2">
-                {% for activity in recent_activity %}
-                <li class="bg-blue-50 border-l-4 border-blue-700 text-blue-900 px-4 py-2 rounded shadow-sm flex items-center gap-2">
-                    <svg class="w-4 h-4 text-blue-700" fill="currentColor" viewBox="0 0 20 20">
-                        <circle cx="10" cy="10" r="8" fill="currentColor"/>
-                    </svg>
-                    <span>{{ activity }}</span>
-                </li>
-                {% else %}
-                <li class="bg-gray-50 border-l-4 border-gray-400 text-gray-700 px-4 py-2 rounded shadow-sm flex items-center gap-2">
-                    <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                        <circle cx="10" cy="10" r="8" fill="currentColor"/>
-                    </svg>
-                    <span>No recent activity.</span>
-                </li>
+                <li>{{ alert }}</li>
                 {% endfor %}
             </ul>
         </div>
     </section>
+    {% endif %}
 
-    <!-- Mini Tables -->
-    <div class="text-xl font-semibold mb-4 text-gray-700">Tables</div>
-    <section class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-            <div class="font-bold mb-4 text-gray-700 text-lg">Top Vendors</div>
-            <table class="min-w-full bg-white rounded-lg">
+    <!-- Outstanding Payments (Accounts Payable) Table -->
+    <section class="mb-10 bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-gray-700">Outstanding Payments (Accounts Payable)</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-black text-white text-left">
-                        <th class="py-2 px-4">Name</th>
-                        <th class="py-2 px-4">Total Paid</th>
+                    <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                        <th class="py-3 px-6">ID</th>
+                        <th class="py-3 px-6">Payee / Party</th>
+                        <th class="py-3 px-6">Due Date</th>
+                        <th class="py-3 px-6 text-right">Amount</th>
+                        <th class="py-3 px-6 text-center">Status</th>
                     </tr>
                 </thead>
-                <tbody>
-                    {% for vendor in top_vendors %}
-                    <tr class="border-b">
-                        <td class="py-2 px-4">{{ vendor.name }}</td>
-                        <td class="py-2 px-4">K{{ vendor.total_paid }}</td>
+                <tbody class="text-gray-600 text-sm font-light">
+                    {% for op in outstanding_payments %}
+                    <tr class="border-b border-gray-200 hover:bg-gray-50">
+                        <td class="py-3 px-6 whitespace-nowrap font-medium">{{ op.payment_id }}</td>
+                        <td class="py-3 px-6">{{ op.party }}</td>
+                        <td class="py-3 px-6">{{ op.due_date }}</td>
+                        <td class="py-3 px-6 text-right font-bold">K{{ "{:,.2f}".format(op.amount) }}</td>
+                        <td class="py-3 px-6 text-center">
+                            <span class="bg-yellow-100 text-yellow-700 py-1 px-3 rounded-full text-xs">{{ op.status }}</span>
+                        </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="2" class="text-center py-4 text-gray-500">No data.</td>
+                        <td colspan="5" class="py-4 text-center text-gray-500">No outstanding payments found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-            <div class="font-bold mb-4 text-gray-700 text-lg">Recent Transactions</div>
-            <table class="min-w-full bg-white rounded-lg">
+    </section>
+
+    <!-- Payment History (Completed) Table -->
+    <section class="mb-10 bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-gray-700">Payment History (Completed)</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-black text-white text-left">
-                        <th class="py-2 px-4">Date</th>
-                        <th class="py-2 px-4">Description</th>
-                        <th class="py-2 px-4">Amount</th>
-                        <th class="py-2 px-4">Type</th>
+                    <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                        <th class="py-3 px-6">ID</th>
+                        <th class="py-3 px-6">Party / Invoice</th>
+                        <th class="py-3 px-6">Date</th>
+                        <th class="py-3 px-6 text-right">Amount</th>
+                        <th class="py-3 px-6 text-center">Status</th>
                     </tr>
                 </thead>
-                <tbody>
-                    {% for txn in recent_transactions %}
-                    <tr class="border-b">
-                        <td class="py-2 px-4">{{ txn.date }}</td>
-                        <td class="py-2 px-4">{{ txn.description }}</td>
-                        <td class="py-2 px-4">K{{ txn.amount }}</td>
-                        <td class="py-2 px-4">
-                            {% if txn.type == "Credit" %}
-                                <span class="inline-block px-2 py-1 rounded bg-green-100 text-green-700 font-semibold text-xs">{{ txn.type }}</span>
-                            {% else %}
-                                <span class="inline-block px-2 py-1 rounded bg-red-100 text-red-600 font-semibold text-xs">{{ txn.type }}</span>
-                            {% endif %}
+                <tbody class="text-gray-600 text-sm font-light">
+                    {% for p in payments %}
+                    <tr class="border-b border-gray-200 hover:bg-gray-50">
+                        <td class="py-3 px-6 whitespace-nowrap font-medium">{{ p.id }}</td>
+                        <td class="py-3 px-6">{{ p.party or p.invoice_id or '-' }}</td>
+                        <td class="py-3 px-6">{{ p.date }}</td>
+                        <td class="py-3 px-6 text-right font-bold">K{{ "{:,.2f}".format(p.amount) }}</td>
+                        <td class="py-3 px-6 text-center">
+                            <span class="bg-green-100 text-green-700 py-1 px-3 rounded-full text-xs">{{ p.status }}</span>
                         </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="4" class="text-center py-4 text-gray-500">No transactions found.</td>
+                        <td colspan="5" class="py-4 text-center text-gray-500">No payment history found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -151,33 +131,25 @@
     </section>
 
     <!-- Analytics Graphs -->
-    <div class="text-xl font-semibold mb-4 text-gray-700">Accounting Analytics</div>
+    <div class="text-xl font-semibold mb-4 text-gray-700">Financial Analytics</div>
     <section class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full mb-10">
-        <div>
-            <div class="font-semibold mb-2 text-gray-700">Monthly Cash Flow</div>
+        <div class="bg-white p-4 rounded-xl shadow border border-gray-200">
             <div id="cashflow-chart" style="height:320px; width:100%;"></div>
         </div>
-        <div>
-            <div class="font-semibold mb-2 text-gray-700">Expense Breakdown</div>
+        <div class="bg-white p-4 rounded-xl shadow border border-gray-200">
             <div id="expense-breakdown-chart" style="height:320px; width:100%;"></div>
-        </div>
-        <div>
-            <div class="font-semibold mb-2 text-gray-700">Revenue Sources</div>
-            <div id="revenue-sources-chart" style="height:320px; width:100%;"></div>
-        </div>
-        <div>
-            <div class="font-semibold mb-2 text-gray-700">Outstanding Invoices</div>
-            <div id="outstanding-invoices-chart" style="height:320px; width:100%;"></div>
         </div>
     </section>
 </div>
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
-    Plotly.newPlot('cashflow-chart', {{ cashflow_data | tojson }}.data, {{ cashflow_data | tojson }}.layout);
-    Plotly.newPlot('expense-breakdown-chart', {{ expense_breakdown_data | tojson }}.data, {{ expense_breakdown_data | tojson }}.layout);
-    Plotly.newPlot('revenue-sources-chart', {{ revenue_sources_data | tojson }}.data, {{ revenue_sources_data | tojson }}.layout);
-    Plotly.newPlot('outstanding-invoices-chart', {{ outstanding_invoices_data | tojson }}.data, {{ outstanding_invoices_data | tojson }}.layout);
+    const cashflowData = {{ cashflow_data | tojson }};
+    const expenseData = {{ expense_breakdown_data | tojson }};
+    
+    Plotly.newPlot('cashflow-chart', cashflowData.data, cashflowData.layout);
+    Plotly.newPlot('expense-breakdown-chart', expenseData.data, expenseData.layout);
 </script>
 {% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Record Expense{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-lg">
+    <h1 class="text-2xl font-bold mb-6 text-gray-800">Record Operational Expense</h1>
+    <form method="POST" class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+        <div class="mb-4">
+            <label class="block text-gray-700 font-bold mb-2">Date</label>
+            <input type="date" name="date" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 font-bold mb-2">Description</label>
+            <input type="text" name="description" placeholder="e.g. Office Supplies" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 font-bold mb-2">Category</label>
+            <select name="category" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="Utilities">Utilities</option>
+                <option value="Rent">Rent</option>
+                <option value="Salaries">Salaries</option>
+                <option value="Supplies">Supplies</option>
+                <option value="Travel">Travel</option>
+                <option value="Maintenance">Maintenance</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 font-bold mb-2">Amount</label>
+            <input type="number" step="0.01" name="amount" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+        </div>
+        <div class="mb-6">
+            <label class="block text-gray-700 font-bold mb-2">Account (Optional)</label>
+            <select name="account_id" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">-- Select Account --</option>
+                {% for acc in accounts %}
+                <option value="{{ acc.id }}">{{ acc.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex justify-end gap-4">
+            <a href="{{ url_for('accounting_overview') }}" class="text-gray-600 hover:text-gray-800 px-4 py-2">Cancel</a>
+            <button type="submit" class="bg-orange-600 text-white px-6 py-2 rounded hover:bg-orange-700 transition">Record Expense</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
