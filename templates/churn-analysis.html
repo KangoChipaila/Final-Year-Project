@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}Churn Analysis{% endblock %}
+
+{% block content %}
+<div class="container mx-auto max-w-6xl px-4 py-8">
+  <header class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-800">Churn Analysis</h1>
+      <p class="text-sm text-gray-500 mt-1">Compute churn rates, retention cohorts, and identify customers at risk.</p>
+    </div>
+    <div>
+      <a href="{{ url_for('customer_overview') }}" class="px-3 py-2 bg-gray-100 rounded text-sm">Back to Customers</a>
+    </div>
+  </header>
+
+  <section class="bg-white p-6 rounded shadow mb-6">
+    <form id="churn-form" method="POST" action="{{ url_for('churn_analysis') if (url_for is defined) else '/churn-analysis' }}">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Date range start</label>
+          <input name="date_from" type="date" class="mt-1 block w-full border rounded px-3 py-2" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Date range end</label>
+          <input name="date_to" type="date" class="mt-1 block w-full border rounded px-3 py-2" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Minimum orders</label>
+          <input name="min_orders" type="number" min="0" value="1" class="mt-1 block w-full border rounded px-3 py-2" />
+        </div>
+      </div>
+
+      <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Churn definition</label>
+          <select name="churn_definition" class="mt-1 block w-full border rounded px-3 py-2">
+            <option value="30">No activity for 30 days</option>
+            <option value="60">No activity for 60 days</option>
+            <option value="90">No activity for 90 days</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Model / method</label>
+          <select name="method" class="mt-1 block w-full border rounded px-3 py-2">
+            <option value="cohort">Cohort / retention</option>
+            <option value="classification">Classification (predictive)</option>
+            <option value="survival">Survival analysis</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button id="run-btn" type="submit" class="w-full bg-indigo-600 text-white px-4 py-2 rounded">Run Analysis</button>
+        </div>
+      </div>
+    </form>
+  </section>
+
+  <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white p-6 rounded shadow">
+      <h3 class="text-lg font-semibold mb-3">Retention / Cohort Curve</h3>
+      <div id="cohort-chart" style="height:360px;"></div>
+    </div>
+
+    <div class="bg-white p-6 rounded shadow">
+      <h3 class="text-lg font-semibold mb-3">Churn Summary</h3>
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div class="p-4 bg-gray-50 rounded">
+          <div class="text-sm text-gray-500">Churn Rate</div>
+          <div id="churn-rate" class="text-2xl font-bold text-red-600 mt-2">—</div>
+        </div>
+        <div class="p-4 bg-gray-50 rounded">
+          <div class="text-sm text-gray-500">Retention Rate</div>
+          <div id="retention-rate" class="text-2xl font-bold text-green-600 mt-2">—</div>
+        </div>
+      </div>
+
+      <h4 class="text-sm font-medium text-gray-700 mb-2">Top drivers (feature importance)</h4>
+      <div id="feature-importance" class="mb-4">No results yet.</div>
+
+      <h4 class="text-sm font-medium text-gray-700 mb-2">High-risk customers</h4>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-left text-sm">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="py-2 px-3">Customer</th>
+              <th class="py-2 px-3">Risk score</th>
+              <th class="py-2 px-3">Last activity</th>
+            </tr>
+          </thead>
+          <tbody id="risk-table-body">
+            <tr><td colspan="3" class="py-4 text-center text-gray-500">No results yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-white p-6 rounded shadow mt-6">
+    <h3 class="text-lg font-semibold mb-3">Export / Actions</h3>
+    <div class="flex gap-3">
+      <button id="download-csv" class="px-4 py-2 bg-gray-100 rounded text-sm">Download Results (CSV)</button>
+      <button id="email-report" class="px-4 py-2 bg-gray-100 rounded text-sm">Email Report</button>
+      <div class="text-sm text-gray-500 ml-auto">Tip: schedule nightly scoring via background worker for production.</div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+document.getElementById('churn-form').addEventListener('submit', async function(e){
+  e.preventDefault();
+  const form = e.target;
+  const data = new FormData(form);
+  const runBtn = document.getElementById('run-btn');
+  runBtn.disabled = true;
+  runBtn.textContent = 'Running...';
+
+  try {
+    const resp = await fetch('/api/churn', { method: 'POST', body: data, credentials: 'same-origin' });
+    if (!resp.ok) throw new Error('Analysis failed');
+    const result = await resp.json();
+
+    document.getElementById('churn-rate').textContent = (result.churn_rate*100).toFixed(1) + '%';
+    document.getElementById('retention-rate').textContent = (result.retention_rate*100).toFixed(1) + '%';
+
+    const fi = result.feature_importance || [];
+    const fiDiv = document.getElementById('feature-importance');
+    fiDiv.innerHTML = fi.length ? '<ul class="list-disc pl-5">' + fi.slice(0,8).map(f=>`<li>${f.name}: ${f.score.toFixed(3)}</li>`).join('') + '</ul>' : 'No importance data.';
+
+    const tbody = document.getElementById('risk-table-body');
+    tbody.innerHTML = '';
+    const risks = result.high_risk_customers || [];
+    if (risks.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="3" class="py-4 text-center text-gray-500">No high-risk customers found.</td></tr>';
+    } else {
+      for (const r of risks) {
+        const tr = document.createElement('tr');
+        tr.className = 'border-b';
+        tr.innerHTML = `<td class="py-2 px-3">${r.customer_name || r.customer_id}</td>
+                        <td class="py-2 px-3">${(r.risk_score || 0).toFixed(3)}</td>
+                        <td class="py-2 px-3">${r.last_activity || '-'}</td>`;
+        tbody.appendChild(tr);
+      }
+    }
+
+    const cohort = result.cohort || { x:[], y:[] };
+    Plotly.newPlot('cohort-chart', [{ x: cohort.x, z: cohort.y, type: 'heatmap', colorscale: 'Blues' }], { title: 'Cohort retention (heatmap)' });
+
+  } catch (err) {
+    console.error(err);
+    alert('Churn analysis failed. Check server logs.');
+  } finally {
+    runBtn.disabled = false;
+    runBtn.textContent = 'Run Analysis';
+  }
+});
+
+// download button (basic)
+document.getElementById('download-csv').addEventListener('click', function(){
+  window.location = '/api/churn/download.csv';
+});
+</script>
+{% endblock %}

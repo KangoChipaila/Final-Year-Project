@@ -64,15 +64,15 @@
         <div class="overflow-x-auto">
             <table class="min-w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
-                        <th class="py-3 px-6">ID</th>
+                    <tr class="bg-black text-white uppercase text-sm leading-normal">
+                        <th class="py-3 px-6 rounded-tl-lg">ID</th>
                         <th class="py-3 px-6">Payee / Party</th>
                         <th class="py-3 px-6">Due Date</th>
                         <th class="py-3 px-6 text-right">Amount</th>
-                        <th class="py-3 px-6 text-center">Status</th>
+                        <th class="py-3 px-6 text-center rounded-tr-lg">Status</th>
                     </tr>
                 </thead>
-                <tbody class="text-gray-600 text-sm font-light">
+                <tbody class="text-black text-sm font-light">
                     {% for op in outstanding_payments %}
                     <tr class="border-b border-gray-200 hover:bg-gray-50">
                         <td class="py-3 px-6 whitespace-nowrap font-medium">{{ op.payment_id }}</td>
@@ -101,15 +101,15 @@
         <div class="overflow-x-auto">
             <table class="min-w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
-                        <th class="py-3 px-6">ID</th>
+                    <tr class="bg-black text-white uppercase text-sm leading-normal">
+                        <th class="py-3 px-6 rounded-tl-lg">ID</th>
                         <th class="py-3 px-6">Party / Invoice</th>
                         <th class="py-3 px-6">Date</th>
                         <th class="py-3 px-6 text-right">Amount</th>
-                        <th class="py-3 px-6 text-center">Status</th>
+                        <th class="py-3 px-6 text-center rounded-tr-lg">Status</th>
                     </tr>
                 </thead>
-                <tbody class="text-gray-600 text-sm font-light">
+                <tbody class="text-black text-sm font-light">
                     {% for p in payments %}
                     <tr class="border-b border-gray-200 hover:bg-gray-50">
                         <td class="py-3 px-6 whitespace-nowrap font-medium">{{ p.id }}</td>
@@ -124,6 +124,41 @@
                     <tr>
                         <td colspan="5" class="py-4 text-center text-gray-500">No payment history found.</td>
                     </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Accounts Receivable (Invoices) -->
+    <section class="mb-8 bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-gray-700">Accounts Receivable (Invoices)</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-black text-white uppercase text-sm">
+                        <th class="py-3 px-6 rounded-tl-lg">Invoice ID</th>
+                        <th class="py-3 px-6">Customer</th>
+                        <th class="py-3 px-6">Date</th>
+                        <th class="py-3 px-6 text-right">Amount</th>
+                        <th class="py-3 px-6 rounded-tr-lg">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="text-black text-sm">
+                    {% for inv in invoices %}
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="py-3 px-6 font-medium">{{ inv.id }}</td>
+                        <td class="py-3 px-6">{{ inv.customer_id or '-' }}</td>
+                        <td class="py-3 px-6">{{ inv.date or '-' }}</td>
+                        <td class="py-3 px-6 text-right font-bold">K{{ "{:,.2f}".format(inv.amount or 0) }}</td>
+                        <td class="py-3 px-6">
+                            <span class="px-2 py-1 rounded text-xs {% if inv.status and inv.status|lower == 'paid' %}bg-green-100 text-green-700{% else %}bg-yellow-100 text-yellow-700{% endif %}">{{ inv.status or 'Unpaid' }}</span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5" class="py-4 text-center text-gray-500">No invoices found.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

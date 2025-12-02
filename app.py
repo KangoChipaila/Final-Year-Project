@@ -22,6 +22,7 @@ import csv
 import json
 import traceback
 from types import SimpleNamespace
+from flask_wtf import CSRFProtect
 
 from models import (
     db, register_extensions,
@@ -43,6 +44,8 @@ Payroll = PayrollRecord
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"  # Replace with a real secret key
+
+#csrf = CSRFProtect(app)
 
 app.register_blueprint(assets_upload_bp)
 
@@ -927,13 +930,14 @@ def get_outstanding_invoices_data():
         "layout": {"title": "Outstanding Invoices"}
     }
 
+
 @app.route('/add_payment', methods=['GET', 'POST'])
 @login_required
 def add_payment():
     """
     Create a payment record.
-    If status is 'Paid', save to Payment table (History).
-    If status is 'Pending', save to OutstandingPayment table (Liabilities).
+    If status is 'Paid', save to Payment table (history) with generated payment_id.
+    Otherwise save to OutstandingPayment table (liability) with generated payment_id.
     """
     if request.method == 'POST':
         party = request.form.get('party', '').strip()
@@ -941,41 +945,73 @@ def add_payment():
         amount = request.form.get('amount', '').strip()
         status = request.form.get('status', '').strip()
 
-        # Try DB first
         try:
-            # Check status to determine destination table
-            if status.lower() == 'paid':
-                print(status.lower())
-                # Save to Payment (History)
-                if 'Payment' in globals():
-                    p = Payment()
-                    _set_attr_if_exists(p, "party", party)
-                    # For paid items, the due_date is effectively the payment date
-                    _set_attr_if_exists(p, "due_date", due_date, date_try=True)
-                    _set_attr_if_exists(p, "amount", amount, cast_float=True)
-                    _set_attr_if_exists(p, "status", status)
-                    db.session.add(p)
-                    db.session.commit()
-                    flash('Payment recorded successfully!', 'success')
-                    return redirect(url_for('accounting_overview'))
-            else:
-                # Save to OutstandingPayment (Liability)
-                if 'OutstandingPayment' in globals():
-                    op = OutstandingPayment()
-                    _set_attr_if_exists(op, "party", party)
-                    _set_attr_if_exists(op, "due_date", due_date, date_try=True)
-                    _set_attr_if_exists(op, "amount", amount, cast_float=True)
-                    _set_attr_if_exists(op, "status", status)
-                    db.session.add(op)
-                    db.session.commit()
-                    flash('Bill recorded successfully!', 'success')
-                    return redirect(url_for('accounting_overview'))
+            # Paid -> Payment history
+            if status.lower() == 'paid' and 'Payment' in globals():
+                p = Payment()
+
+                # generate payment id based on count + 1
+                try:
+                    cnt = db.session.query(func.count()).select_from(Payment).scalar() or 0
+                    next_num = int(cnt) + 1
+                except Exception:
+                    try:
+                        # fallback to max id + 1
+                        max_id = db.session.query(func.coalesce(func.max(getattr(Payment, "id", Payment)), 0)).scalar() or 0
+                        next_num = int(max_id) + 1
+                    except Exception:
+                        next_num = int(datetime.utcnow().timestamp()) % 100000
+
+                payment_id = f"PAY-{next_num:04d}"
+                _set_attr_if_exists(p, "payment_id", payment_id)
+
+                _set_attr_if_exists(p, "party", party)
+                _set_attr_if_exists(p, "date", due_date, date_try=True)  # map form due_date -> Payment.date
+                _set_attr_if_exists(p, "amount", amount, cast_float=True)
+                _set_attr_if_exists(p, "status", status)
+
+                # fallback description if model lacks party
+                if not hasattr(p, 'party') and hasattr(p, 'description'):
+                    _set_attr_if_exists(p, "description", f"Payment to {party}")
+
+                db.session.add(p)
+                db.session.commit()
+                flash('Payment recorded in history.', 'success')
+                return redirect(url_for('accounting_overview'))
+
+            # Otherwise -> OutstandingPayment
+            if 'OutstandingPayment' in globals():
+                op = OutstandingPayment()
+
+                # generate outstanding payment id based on count + 1
+                try:
+                    cnt = db.session.query(func.count()).select_from(OutstandingPayment).scalar() or 0
+                    next_num = int(cnt) + 1
+                except Exception:
+                    try:
+                        max_id = db.session.query(func.coalesce(func.max(getattr(OutstandingPayment, "id", OutstandingPayment)), 0)).scalar() or 0
+                        next_num = int(max_id) + 1
+                    except Exception:
+                        next_num = int(datetime.utcnow().timestamp()) % 100000
+
+                op_id = f"OP-{next_num:04d}"
+                _set_attr_if_exists(op, "payment_id", op_id)
+
+                _set_attr_if_exists(op, "party", party)
+                _set_attr_if_exists(op, "due_date", due_date, date_try=True)
+                _set_attr_if_exists(op, "amount", amount, cast_float=True)
+                _set_attr_if_exists(op, "status", status)
+
+                db.session.add(op)
+                db.session.commit()
+                flash('Outstanding payment recorded.', 'success')
+                return redirect(url_for('accounting_overview'))
 
         except Exception:
             db.session.rollback()
             app.logger.exception("Failed to insert payment into DB; falling back to file")
 
-        # File fallback
+        # File fallback (store in outstanding_payments array)
         try:
             data = load_finance()
             payments = data.get('outstanding_payments', [])
@@ -997,7 +1033,7 @@ def add_payment():
             payments.append(new_payment)
             data['outstanding_payments'] = payments
             save_finance(data)
-            flash('Payment added (file fallback).', 'success')
+            flash('Payment saved to file fallback.', 'success')
         except Exception:
             app.logger.exception("Failed to append payment to finance JSON")
             flash('Failed to add payment.', 'error')
@@ -1005,7 +1041,7 @@ def add_payment():
         return redirect(url_for('accounting_overview'))
 
     return render_template('add_payment.html')
-# ...existing code...
+
 @app.route('/add_expense', methods=['GET', 'POST'])
 @login_required
 def add_expense():
@@ -1200,8 +1236,9 @@ def accounting_overview():
             for p in pay_rows:
                 payments.append({
                     "id": getattr(p, "id", None),
+                    "party": getattr(p, "party", None),
                     "invoice_id": getattr(p, "invoice_id", None) or getattr(p, "invoice", None),
-                    "date": getattr(p, "date", None) or getattr(p, "created_at", None),
+                    "date": getattr(p, "due_date", None) or getattr(p, "created_at", None),
                     "amount": float(getattr(p, "amount", 0) or 0),
                     "method": getattr(p, "method", "") or "",
                     "status": getattr(p, "status", "") or ""
@@ -1305,7 +1342,8 @@ def accounting_overview():
             revenue_sources_data={"data": [], "layout": {}},
             outstanding_invoices_data={"data": [], "layout": {}},
             outstanding_payments=outstanding_payments,
-            payments=payments
+            payments=payments,
+            invoices=invoices
         )
 
     except Exception:
@@ -1694,6 +1732,187 @@ def delete_customer(customer_id):
             return redirect(url_for('customer_overview'))
 
     return redirect(url_for('customer_overview'))
+
+#CHURN ANALYSIS
+
+from datetime import timedelta
+
+# Churn analysis UI route
+@app.route('/churn-analysis', methods=['GET'])
+@login_required
+def churn_analysis():
+    """Render churn analysis page."""
+    return render_template('churn-analysis.html')
+
+# API endpoint used by churn-analysis.html to run analysis
+@app.route('/api/churn', methods=['POST'])
+@login_required
+def api_churn():
+    """
+    Lightweight churn analysis using Customer + SalesOrder/Invoice tables.
+    Accepts form fields: date_from, date_to, min_orders, churn_definition (days), method.
+    Returns JSON: churn_rate, retention_rate, cohort, feature_importance, high_risk_customers.
+    """
+    try:
+        # parse inputs
+        date_from_raw = request.form.get('date_from', '').strip()
+        date_to_raw = request.form.get('date_to', '').strip()
+        min_orders = int(request.form.get('min_orders', 1) or 1)
+        churn_days = int(request.form.get('churn_definition', 30) or 30)
+        method = request.form.get('method', 'cohort')
+
+        try:
+            date_to = datetime.fromisoformat(date_to_raw).date() if date_to_raw else datetime.utcnow().date()
+        except Exception:
+            date_to = datetime.utcnow().date()
+        try:
+            date_from = datetime.fromisoformat(date_from_raw).date() if date_from_raw else (date_to - timedelta(days=365))
+        except Exception:
+            date_from = date_to - timedelta(days=365)
+
+        # load customers
+        try:
+            cust_rows = db.session.query(Customer).all()
+        except Exception:
+            app.logger.exception("Failed to load customers for churn")
+            return jsonify(ok=False, error="Failed to load customers"), 500
+
+        customers = [{"id": getattr(c, "id", None), "name": getattr(c, "name", "") or str(getattr(c, "id", ""))} for c in cust_rows]
+        total_customers = len(customers)
+        if total_customers == 0:
+            return jsonify(ok=True, churn_rate=0.0, retention_rate=1.0, cohort={"x": [], "y": []}, feature_importance=[], high_risk_customers=[])
+
+        # pick order/invoice model
+        order_model = None
+        order_customer_field = None
+        order_date_field = None
+        order_amount_field = None
+        if 'SalesOrder' in globals():
+            order_model = SalesOrder
+            order_customer_field = getattr(SalesOrder, "customer_id", None) or getattr(SalesOrder, "customer", None)
+            order_date_field = getattr(SalesOrder, "order_date", None) or getattr(SalesOrder, "date", None) or getattr(SalesOrder, "created_at", None)
+            order_amount_field = getattr(SalesOrder, "total", None) or getattr(SalesOrder, "amount", None)
+        elif 'Invoice' in globals():
+            order_model = Invoice
+            order_customer_field = getattr(Invoice, "customer_id", None) or getattr(Invoice, "customer", None)
+            order_date_field = getattr(Invoice, "date", None) or getattr(Invoice, "created_at", None)
+            order_amount_field = getattr(Invoice, "amount", None) or getattr(Invoice, "total", None)
+
+        # prepare activity dict
+        activity = {c["id"]: {"customer_id": c["id"], "customer_name": c["name"], "total_orders": 0, "total_amount": 0.0, "first_order": None, "last_order": None, "orders_in_range": 0, "orders_recent_window": 0} for c in customers}
+
+        # query orders/invoices if available
+        if order_model and order_customer_field is not None and order_date_field is not None:
+            try:
+                rows = (
+                    db.session.query(order_customer_field.label("customer_id"),
+                                     order_date_field.label("date"),
+                                     (order_amount_field if order_amount_field is not None else text("0")).label("amount"))
+                    .filter(order_date_field <= date_to)
+                    .filter(order_date_field >= (date_from - timedelta(days=365)))
+                    .all()
+                )
+                for r in rows:
+                    cid = getattr(r, "customer_id", None)
+                    if cid not in activity:
+                        continue
+                    d = getattr(r, "date", None)
+                    if hasattr(d, "date"):
+                        d = d.date()
+                    amt = getattr(r, "amount", 0) or 0
+                    rec = activity[cid]
+                    rec["total_orders"] += 1
+                    try:
+                        rec["total_amount"] += float(amt)
+                    except Exception:
+                        pass
+                    if rec["first_order"] is None or (d and d < rec["first_order"]):
+                        rec["first_order"] = d
+                    if rec["last_order"] is None or (d and d > rec["last_order"]):
+                        rec["last_order"] = d
+                    if d and (date_from <= d <= date_to):
+                        rec["orders_in_range"] = rec.get("orders_in_range", 0) + 1
+                    if d and ((date_to - d).days <= 90):
+                        rec["orders_recent_window"] = rec.get("orders_recent_window", 0) + 1
+            except Exception:
+                app.logger.exception("Failed to query orders for churn")
+
+        # label churned and compute risk
+        churn_threshold_date = date_to - timedelta(days=churn_days)
+        churned_count = 0
+        high_risk = []
+        cohort_rows = []
+        for cid, rec in activity.items():
+            last = rec.get("last_order")
+            if last is None:
+                rec["recency_days"] = None
+                rec["churned"] = True
+            else:
+                recency = (date_to - last).days
+                rec["recency_days"] = recency
+                rec["churned"] = (last < churn_threshold_date)
+            if rec["churned"]:
+                churned_count += 1
+            recency_days = rec.get("recency_days") if rec.get("recency_days") is not None else 3650
+            freq_recent = rec.get("orders_recent_window", 0)
+            risk_score = (recency_days + 1) / (1 + freq_recent)
+            high_risk.append({"customer_id": cid, "customer_name": rec.get("customer_name"), "risk_score": float(risk_score), "last_activity": rec.get("last_order").isoformat() if rec.get("last_order") else None})
+            if rec.get("first_order"):
+                cohort_rows.append({"customer_id": cid, "cohort_month": rec["first_order"].strftime("%Y-%m"), "last_month": (rec["last_order"].strftime("%Y-%m") if rec.get("last_order") else None)})
+
+        churn_rate = float(churned_count) / float(total_customers) if total_customers else 0.0
+        retention_rate = 1.0 - churn_rate
+        high_risk_sorted = sorted(high_risk, key=lambda x: x["risk_score"], reverse=True)[:50]
+
+        # cohort matrix (best-effort with pandas)
+        cohort_result = {"x": [], "y": []}
+        try:
+            import pandas as pd
+            if cohort_rows:
+                df_cohort = pd.DataFrame(cohort_rows)
+                months = pd.period_range(start=min(df_cohort["cohort_month"]), end=date_to.strftime("%Y-%m"), freq='M').astype(str).tolist()
+                matrix = []
+                cohort_groups = df_cohort.groupby("cohort_month")["customer_id"].nunique().to_dict()
+                for cm in sorted(df_cohort["cohort_month"].unique()):
+                    row_counts = []
+                    for m in months:
+                        count_retained = df_cohort[(df_cohort["cohort_month"] == cm) & (df_cohort["last_month"].notnull()) & (df_cohort["last_month"] >= m)]["customer_id"].nunique()
+                        total_cohort = cohort_groups.get(cm, 1)
+                        frac = float(count_retained) / float(total_cohort) if total_cohort else 0.0
+                        row_counts.append(round(frac, 4))
+                    matrix.append(row_counts)
+                cohort_result = {"x": months, "y": matrix}
+        except Exception:
+            cohort_result = {"x": [], "y": []}
+
+        # feature importance (best-effort)
+        feature_importance = []
+        try:
+            from sklearn.ensemble import RandomForestClassifier
+            from sklearn.model_selection import train_test_split
+            import numpy as np
+            rows = []
+            for cid, rec in activity.items():
+                rows.append({"customer_id": cid, "total_orders": rec.get("total_orders", 0), "total_amount": rec.get("total_amount", 0.0), "orders_recent_90": rec.get("orders_recent_window", 0), "recency_days": rec.get("recency_days") if rec.get("recency_days") is not None else 3650, "churned": 1 if rec.get("churned") else 0})
+            df = pd.DataFrame(rows)
+            if len(df) >= 20 and df['churned'].nunique() > 1:
+                X = df[["total_orders", "total_amount", "orders_recent_90", "recency_days"]].fillna(0)
+                y = df["churned"]
+                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+                clf = RandomForestClassifier(n_estimators=100, random_state=42)
+                clf.fit(X_train, y_train)
+                importances = clf.feature_importances_
+                feat_names = X.columns.tolist()
+                feature_importance = [{"name": n, "score": float(s)} for n, s in sorted(zip(feat_names, importances), key=lambda x: x[1], reverse=True)]
+        except Exception:
+            feature_importance = []
+
+        return jsonify(ok=True, churn_rate=churn_rate, retention_rate=retention_rate, cohort=cohort_result, feature_importance=feature_importance, high_risk_customers=high_risk_sorted)
+
+    except Exception:
+        app.logger.exception("Churn analysis failed")
+        return jsonify(ok=False, error="Server error during churn analysis"), 500
+
 
 @app.route('/customer-overview')
 @login_required
@@ -3029,6 +3248,358 @@ def hr_reports():
     ])
     return render_template('hr_reports.html', reports=reports)
 
+#TIME-TASK ANALYSIS
+
+# ---------- Time-Task Analysis endpoints ----------
+@app.route('/time-task-analysis')
+@login_required
+def time_task_analysis_page():
+    """Render the time-task analysis UI."""
+    return render_template('time-task-analysis.html')
+
+
+def _set_duration_field(obj, value):
+    """Try to set duration on common column names; fallback into meta if none exist."""
+    if value is None or value == "":
+        return False
+    # normalize to float seconds
+    val = None
+    try:
+        val = float(value)
+    except Exception:
+        try:
+            # timedelta-like
+            if hasattr(value, "total_seconds"):
+                val = float(value.total_seconds())
+        except Exception:
+            pass
+    if val is None:
+        return False
+    for fld in ("duration_seconds", "duration", "duration_sec", "length_seconds", "seconds"):
+        if hasattr(obj, fld):
+            try:
+                setattr(obj, fld, val)
+                return True
+            except Exception:
+                continue
+    # fallback: store inside meta JSON if available
+    try:
+        meta = getattr(obj, "meta", None)
+        if meta is None:
+            try:
+                setattr(obj, "meta", {"duration_seconds": val})
+            except Exception:
+                pass
+        elif isinstance(meta, dict):
+            meta["duration_seconds"] = val
+            try:
+                setattr(obj, "meta", meta)
+            except Exception:
+                pass
+        return True
+    except Exception:
+        return False
+
+
+def _emit_task_event(task_type: str,
+                     event_type: str,
+                     task_id: str = None,
+                     duration_seconds: float = None,
+                     work_center_id: int = None,
+                     production_order_id = None,
+                     employee_id: int = None,
+                     meta: dict = None):
+    """
+    Create a TaskEvent row (used as the local implementation of calling /api/task_events).
+    Using direct DB insert is more reliable than issuing an HTTP request to self.
+    """
+    try:
+        from models import TaskEvent
+        te = TaskEvent()
+        if task_id is not None:
+            try:
+                setattr(te, "task_id", str(task_id))
+            except Exception:
+                pass
+        _set_attr_if_exists(te, "task_type", task_type)
+        _set_attr_if_exists(te, "event_type", event_type)
+        _set_attr_if_exists(te, "timestamp", datetime.utcnow())
+        # Explicitly set the persisted duration column if available
+        if duration_seconds is not None:
+            try:
+                dur_val = float(duration_seconds)
+            except Exception:
+                try:
+                    if hasattr(duration_seconds, "total_seconds"):
+                        dur_val = float(duration_seconds.total_seconds())
+                    else:
+                        dur_val = None
+                except Exception:
+                    dur_val = None
+            if dur_val is not None:
+                # prefer direct attribute write to ensure column is populated
+                try:
+                    if hasattr(te, "duration_seconds"):
+                        setattr(te, "duration_seconds", dur_val)
+                    else:
+                        # fallback into tolerant helper (stores in meta)
+                        _set_duration_field(te, dur_val)
+                except Exception:
+                    _set_duration_field(te, dur_val)
+        # ...existing code continues...
+        if work_center_id is not None:
+            try:
+                setattr(te, "work_center_id", int(work_center_id))
+            except Exception:
+                setattr(te, "work_center_id", work_center_id)
+        if production_order_id is not None:
+            try:
+                setattr(te, "production_order_id", int(production_order_id))
+            except Exception:
+                setattr(te, "production_order_id", production_order_id)
+        if employee_id is not None:
+            try:
+                setattr(te, "employee_id", int(employee_id))
+            except Exception:
+                setattr(te, "employee_id", employee_id)
+        if isinstance(meta, dict):
+            # merge duration into meta if duration not on column
+            try:
+                existing_meta = getattr(te, "meta", {}) or {}
+                if dur_val is not None and "duration_seconds" not in existing_meta:
+                    existing_meta["duration_seconds"] = dur_val
+                setattr(te, "meta", {**existing_meta, **meta} if meta else existing_meta)
+            except Exception:
+                try:
+                    setattr(te, "meta", meta)
+                except Exception:
+                    pass
+        db.session.add(te)
+        db.session.commit()
+        return getattr(te, "id", None)
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        app.logger.exception("Failed to emit task event")
+        return None
+
+
+
+@app.route('/api/task_events', methods=['POST'])
+@login_required
+def api_create_task_event():
+    """Create a TaskEvent (JSON or form)."""
+    try:
+        from models import TaskEvent
+        data = request.get_json(silent=True) or request.form or {}
+        te = TaskEvent()
+        _set_attr_if_exists(te, 'task_id', data.get('task_id'))
+        _set_attr_if_exists(te, 'task_type', data.get('task_type') or data.get('type') or 'generic')
+        _set_attr_if_exists(te, 'event_type', data.get('event_type') or data.get('type_event') or 'start')
+        ts = data.get('timestamp')
+        if ts:
+            try:
+                _set_attr_if_exists(te, 'timestamp', datetime.fromisoformat(ts))
+            except Exception:
+                _set_attr_if_exists(te, 'timestamp', ts, date_try=True)
+        # support multiple names for duration in incoming payload and set persisted column explicitly
+        dur = None
+        if isinstance(data, dict):
+            for key in ('duration_seconds', 'duration', 'duration_sec', 'durationSec'):
+                if key in data and data.get(key) not in (None, ''):
+                    dur = data.get(key)
+                    break
+        else:
+            # form-like MultiDict: check keys
+            for key in ('duration_seconds', 'duration', 'duration_sec'):
+                if data.get(key):
+                    dur = data.get(key)
+                    break
+        if dur is not None:
+            try:
+                dur_val = float(dur)
+            except Exception:
+                try:
+                    if hasattr(dur, "total_seconds"):
+                        dur_val = float(dur.total_seconds())
+                    else:
+                        dur_val = None
+                except Exception:
+                    dur_val = None
+            if dur_val is not None:
+                try:
+                    if hasattr(te, "duration_seconds"):
+                        setattr(te, "duration_seconds", dur_val)
+                    else:
+                        _set_duration_field(te, dur_val)
+                except Exception:
+                    _set_duration_field(te, dur_val)
+        # ...existing code continues (work_center, production_order, meta etc.) ...
+        if data.get('work_center_id'):
+            try:
+                _set_attr_if_exists(te, 'work_center_id', int(data.get('work_center_id')))
+            except Exception:
+                _set_attr_if_exists(te, 'work_center_id', data.get('work_center_id'))
+        if data.get('production_order_id'):
+            try:
+                _set_attr_if_exists(te, 'production_order_id', int(data.get('production_order_id')))
+            except Exception:
+                _set_attr_if_exists(te, 'production_order_id', data.get('production_order_id'))
+        if data.get('employee_id'):
+            try:
+                _set_attr_if_exists(te, 'employee_id', int(data.get('employee_id')))
+            except Exception:
+                _set_attr_if_exists(te, 'employee_id', data.get('employee_id'))
+        meta = data.get('meta')
+        if isinstance(meta, str):
+            try:
+                meta = json.loads(meta)
+            except Exception:
+                meta = {"raw": meta}
+        _set_attr_if_exists(te, 'meta', meta)
+        db.session.add(te)
+        db.session.commit()
+        return jsonify(ok=True, id=getattr(te, 'id', None)), 201
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        app.logger.exception("Failed to create TaskEvent")
+        return jsonify(ok=False, error="Failed to create task event"), 500
+
+
+@app.route('/api/task_events', methods=['GET'])
+@login_required
+def api_list_task_events():
+    """List task events (paginated)."""
+    from models import TaskEvent
+    try:
+        page = max(1, int(request.args.get('page', 1)))
+        per_page = min(200, max(10, int(request.args.get('per_page', 50))))
+    except Exception:
+        page, per_page = 1, 50
+    q = db.session.query(TaskEvent)
+    tt = request.args.get('task_type')
+    if tt:
+        q = q.filter(TaskEvent.task_type == tt)
+    total = q.count()
+    rows = q.order_by(TaskEvent.timestamp.desc()).offset((page - 1) * per_page).limit(per_page).all()
+    out = []
+    for r in rows:
+        # tolerant duration read: check multiple possible field names
+        dur = None
+        for fld in ("duration_seconds", "duration", "duration_sec", "length_seconds", "seconds"):
+            try:
+                if hasattr(r, fld):
+                    dur = getattr(r, fld)
+                    if dur is not None:
+                        dur = float(dur)
+                        break
+            except Exception:
+                continue
+        # if not on a column, check meta
+        if dur is None:
+            try:
+                meta = getattr(r, "meta", None)
+                if isinstance(meta, dict):
+                    if "duration_seconds" in meta:
+                        dur = float(meta.get("duration_seconds"))
+            except Exception:
+                dur = None
+        out.append({
+            "id": getattr(r, "id", None),
+            "task_id": getattr(r, "task_id", None),
+            "task_type": getattr(r, "task_type", None),
+            "event_type": getattr(r, "event_type", None),
+            "timestamp": getattr(r, "timestamp").isoformat() if getattr(r, "timestamp", None) else None,
+            "duration_seconds": dur if dur is not None else 0.0,
+            "work_center_id": getattr(r, "work_center_id", None),
+            "production_order_id": getattr(r, "production_order_id", None),
+            "employee_id": getattr(r, "employee_id", None),
+            "meta": getattr(r, "meta", None)
+        })
+    return jsonify(ok=True, total=total, page=page, per_page=per_page, events=out)
+
+
+@app.route('/api/task_events/analysis', methods=['POST'])
+@login_required
+def api_task_events_analysis():
+    """
+    Compute simple time-task metrics for a date range and optional task types.
+    Returns per-task-type aggregates and work-center utilization.
+    """
+    from models import TaskEvent
+    try:
+        params = request.get_json(silent=True) or request.form or {}
+        date_from_raw = params.get('date_from')
+        date_to_raw = params.get('date_to')
+        task_types = params.get('task_types')
+        if isinstance(task_types, str):
+            task_types = [t.strip() for t in task_types.split(',') if t.strip()]
+        try:
+            date_to = datetime.fromisoformat(date_to_raw).date() if date_to_raw else datetime.utcnow().date()
+        except Exception:
+            date_to = datetime.utcnow().date()
+        try:
+            date_from = datetime.fromisoformat(date_from_raw).date() if date_from_raw else (date_to - timedelta(days=30))
+        except Exception:
+            date_from = date_to - timedelta(days=30)
+        start_dt = datetime.combine(date_from, datetime.min.time())
+        end_dt = datetime.combine(date_to, datetime.max.time())
+
+        q = db.session.query(TaskEvent).filter(TaskEvent.timestamp >= start_dt, TaskEvent.timestamp <= end_dt)
+        if task_types:
+            q = q.filter(TaskEvent.task_type.in_(task_types))
+        rows = q.all()
+
+        # Aggregate
+        stats = {}
+        by_wc = {}
+        all_durations = []
+        for r in rows:
+            tt = getattr(r, 'task_type', 'generic') or 'generic'
+            dur = getattr(r, 'duration_seconds', None)
+            st = stats.setdefault(tt, {"count": 0, "durations": []})
+            st["count"] += 1
+            if dur is not None:
+                st["durations"].append(float(dur))
+                all_durations.append(float(dur))
+            wc = getattr(r, 'work_center_id', None)
+            if wc and dur:
+                by_wc.setdefault(wc, 0.0)
+                by_wc[wc] += float(dur)
+
+        def summarize(durs):
+            if not durs:
+                return {"count": 0, "avg": None, "p50": None, "p90": None, "sum": 0.0}
+            d = sorted(durs)
+            n = len(d)
+            s = sum(d)
+            avg = s / n
+            p50 = d[int(n * 0.5) - 1] if n > 0 else None
+            p90 = d[min(n - 1, max(0, int(n * 0.9) - 1))]
+            return {"count": n, "avg": avg, "p50": p50, "p90": p90, "sum": s}
+
+        result_stats = {}
+        for k, v in stats.items():
+            result_stats[k] = summarize(v["durations"])
+            result_stats[k]["events"] = v["count"]
+
+        window_seconds = (end_dt - start_dt).total_seconds() or 1.0
+        wc_util = []
+        for wc, busy in by_wc.items():
+            wc_util.append({"work_center_id": wc, "busy_seconds": busy, "util_percent": (busy / window_seconds) * 100.0})
+
+        overall = summarize(all_durations)
+
+        return jsonify(ok=True, window_seconds=window_seconds, overall=overall, by_task_type=result_stats, work_center_utilization=wc_util)
+    except Exception:
+        app.logger.exception("Task events analysis failed")
+        return jsonify(ok=False, error="Server error"), 500
+
 
 @app.route('/human_resources_overview')
 @login_required
@@ -3511,49 +4082,127 @@ def save_production_data(data):
     with open(PRODUCTION_DATA_FILE, 'w') as f:
         json.dump(data, f, indent=2)
 
+
 @app.route('/add_production_order', methods=['GET', 'POST'])
 @login_required
 def add_production_order():
     """
-    Backend for templates/add_production_order.html
-    Creates a ProductionOrder row using flexible attribute setting helper.
+    Create a production order. Validate inputs and ensure order_id is always non-null.
+    Generates a fallback order_id when the form does not provide one.
     """
     if request.method == 'POST':
-        order_id = request.form.get('order_id', '').strip()
-        product = request.form.get('product', '').strip()
-        quantity = request.form.get('quantity', '').strip()
-        start_date = request.form.get('start_date', '').strip()
-        end_date = request.form.get('end_date', '').strip()
-        status = request.form.get('status', '').strip()
+        raw_order_id = (request.form.get('order_id') or '').strip()
+        product = (request.form.get('product') or '').strip()
+        raw_quantity = (request.form.get('quantity') or '').strip()
+        raw_start = (request.form.get('start_date') or '').strip()
+        raw_end = (request.form.get('end_date') or '').strip()
+        status = (request.form.get('status') or '').strip()
+
+        # basic validation: require either product or an order_id
+        if not raw_order_id and not product:
+            flash('Please provide at least an Order ID or Product name.', 'error')
+            return redirect(url_for('production_overview'))
+
+        def to_float(v):
+            if v is None or v == '':
+                return None
+            try:
+                return float(v)
+            except Exception:
+                return None
+
+        def to_dt(v):
+            if not v or v == '':
+                return None
+            try:
+                return datetime.fromisoformat(v)
+            except Exception:
+                try:
+                    return datetime.strptime(v, "%Y-%m-%d")
+                except Exception:
+                    return None
 
         try:
-            po = ProductionOrder()
-            # Accept multiple possible model column names
-            _set_attr_if_exists(po, "order_id", order_id)
-            _set_attr_if_exists(po, "id", order_id)
-            _set_attr_if_exists(po, "product", product)
-            _set_attr_if_exists(po, "product_name", product)
-            _set_attr_if_exists(po, "name", product)
-            _set_attr_if_exists(po, "quantity", quantity, cast_float=True)
-            _set_attr_if_exists(po, "qty", quantity, cast_float=True)
-            _set_attr_if_exists(po, "amount", quantity, cast_float=True)
-            _set_attr_if_exists(po, "start_date", start_date, date_try=True)
-            _set_attr_if_exists(po, "date", start_date, date_try=True)
-            _set_attr_if_exists(po, "end_date", end_date, date_try=True)
-            _set_attr_if_exists(po, "status", status)
-            _set_attr_if_exists(po, "state", status)
+            from models import ProductionOrder
+            p = ProductionOrder()
 
-            db.session.add(po)
+            # set order_id if provided (try numeric first)
+            if raw_order_id:
+                try:
+                    _set_attr_if_exists(p, 'order_id', int(raw_order_id))
+                except Exception:
+                    _set_attr_if_exists(p, 'order_id', raw_order_id)
+            else:
+                # attempt to derive next numeric order_id if column numeric
+                next_oid = None
+                try:
+                    max_oid = db.session.query(func.max(getattr(ProductionOrder, "order_id"))).scalar()
+                    if max_oid is None:
+                        next_oid = 1
+                    else:
+                        try:
+                            next_oid = int(max_oid) + 1
+                        except Exception:
+                            next_oid = None
+                except Exception:
+                    next_oid = None
+
+                if next_oid is not None:
+                    _set_attr_if_exists(p, 'order_id', next_oid)
+                else:
+                    import uuid
+                    fallback = f"PO-{datetime.utcnow().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
+                    _set_attr_if_exists(p, 'order_id', fallback)
+
+            # set other fields only when present
+            if product:
+                _set_attr_if_exists(p, 'product', product)
+                _set_attr_if_exists(p, 'product_name', product)
+            qty = to_float(raw_quantity)
+            if qty is not None:
+                _set_attr_if_exists(p, 'quantity', qty)
+                _set_attr_if_exists(p, 'qty', qty)
+            sd = to_dt(raw_start)
+            if sd is not None:
+                _set_attr_if_exists(p, 'start_date', sd)
+            ed = to_dt(raw_end)
+            if ed is not None:
+                _set_attr_if_exists(p, 'end_date', ed)
+            if status:
+                _set_attr_if_exists(p, 'status', status)
+
+            # final safety: ensure order_id is not null before insert
+            if getattr(p, 'order_id', None) in (None, ''):
+                import uuid
+                _set_attr_if_exists(p, 'order_id', f"PO-{uuid.uuid4().hex[:8].upper()}")
+
+            db.session.add(p)
             db.session.commit()
-            flash('Production order added!', 'success')
+
+            # emit task events if helper present (best-effort)
+            try:
+                _emit_task_event(
+                    task_type="production_order",
+                    event_type="created",
+                    task_id=getattr(p, "order_id", None) or getattr(p, "id", None),
+                    production_order_id=getattr(p, "id", None),
+                    meta={"product": getattr(p, "product", None), "status": getattr(p, "status", None)}
+                )
+            except Exception:
+                app.logger.debug("Could not emit TaskEvent for production order", exc_info=True)
+
+            flash('Production order added.', 'success')
             return redirect(url_for('production_overview'))
+
         except Exception:
             db.session.rollback()
             app.logger.exception("Failed to add production order to DB")
             flash('Failed to add production order.', 'error')
             return redirect(url_for('production_overview'))
 
+    # GET
     return render_template('add_production_order.html')
+
 
 @app.route('/add_bom', methods=['GET', 'POST'])
 @login_required

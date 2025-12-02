@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from sqlalchemy import func
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy import Column, Integer, String, DateTime, Float, ForeignKey, JSON, Index
 
 db = SQLAlchemy()
 
@@ -504,3 +505,23 @@ class ErrorLog(db.Model):
 
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+
+class TaskEvent(db.Model):
+    __tablename__ = "task_event"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_id = Column(String(128), nullable=True)             # business/task identifier (order_id, work_id)
+    task_type = Column(String(100), nullable=False)          # e.g. 'picking','assembly','inspection'
+    event_type = Column(String(32), nullable=False)          # 'start','end','pause','resume','handoff'
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    duration_seconds = Column(Float, nullable=True)          # optional precomputed duration for 'end' events
+    work_center_id = Column(Integer, ForeignKey('work_centers.id'), nullable=True)
+    production_order_id = Column(Integer, ForeignKey('production_orders.id'), nullable=True)
+    employee_id = Column(Integer, ForeignKey('employees.id'), nullable=True)
+    meta = Column(JSON, nullable=True)                       # freeform context (step_name, device, notes)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        Index('ix_taskevent_tasktype_timestamp', 'task_type', 'timestamp'),
+        Index('ix_taskevent_wc_timestamp', 'work_center_id', 'timestamp'),
+    )
