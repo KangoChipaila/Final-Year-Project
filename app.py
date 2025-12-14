@@ -1011,7 +1011,6 @@ def add_payment():
             db.session.rollback()
             app.logger.exception("Failed to insert payment into DB; falling back to file")
 
-        # File fallback (store in outstanding_payments array)
         try:
             data = load_finance()
             payments = data.get('outstanding_payments', [])
@@ -2489,7 +2488,6 @@ def finance_overview():
         return default
 
     try:
-        # Try to load from DB models if present
         any_db = False
 
         # Financial summary lines
@@ -2501,7 +2499,7 @@ def finance_overview():
                 label = safe_get(r, "label", "name") or ""
                 amount = float(safe_get(r, "value_amount", "amount", default=0) or 0)
                 period = safe_get(r, "period", default="")
-                # group by label (latest override)
+                
                 financial_summary[label] = {"value": amount, "currency": safe_get(r, "currency", ""), "period": period}
 
         # Income statement lines

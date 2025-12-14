@@ -30,8 +30,6 @@
                         Upload Asset via CSV
                     </button>
                 </form>
-
-                <a href="{{ url_for('assets_upload.download_sample_csv') }}" class="text-sm text-gray-600 hover:underline">Download sample CSV</a>
             </div>
         </div>
     </section>
@@ -102,14 +100,13 @@
         <table class="min-w-full bg-white rounded-lg">
             <thead>
                 <tr class="text-white text-left">
-                    <!-- offset table header so it sits below the sticky title (64px) -->
-                    <th class="sticky top-[64px] z-20 bg-blue-700 py-3 px-4 rounded-tl-lg">#</th>
-                    <th class="sticky top-[64px] z-20 bg-blue-700 py-3 px-4">Name</th>
-                    <th class="sticky top-[64px] z-20 bg-blue-700 py-3 px-4">Category</th>
-                    <th class="sticky top-[64px] z-20 bg-blue-700 py-3 px-4">Purchase Date</th>
-                    <th class="sticky top-[64px] z-20 bg-blue-700 py-3 px-4">Value (ZMW)</th>
-                    <th class="sticky top-[64px] z-20 bg-blue-700 py-3 px-4">Status</th>
-                    <th class="sticky top-[64px] z-20 bg-blue-700 py-3 px-4 rounded-tr-lg">Actions</th>
+                    <th class="sticky top-[64px] z-20 bg-black py-3 px-4 rounded-tl-lg">#</th>
+                    <th class="sticky top-[64px] z-20 bg-black py-3 px-4">Name</th>
+                    <th class="sticky top-[64px] z-20 bg-black py-3 px-4">Category</th>
+                    <th class="sticky top-[64px] z-20 bg-black py-3 px-4">Purchase Date</th>
+                    <th class="sticky top-[64px] z-20 bg-black py-3 px-4">Value (ZMW)</th>
+                    <th class="sticky top-[64px] z-20 bg-black py-3 px-4">Status</th>
+                    <th class="sticky top-[64px] z-20 bg-black py-3 px-4 rounded-tr-lg">Actions</th>
                 </tr>
             </thead>
             <tbody>

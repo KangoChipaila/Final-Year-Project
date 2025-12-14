@@ -130,7 +130,7 @@
                     <td class="py-2 px-4">{{ order.date }}</td>
                     <td class="py-2 px-4">{{ order.item }}</td>
                     <td class="py-2 px-4">{{ order.quantity }}</td>
-                    <td class="py-2 px-4">${{ order.amount }}</td>
+                    <td class="py-2 px-4">K{{ order.amount }}</td>
                     <td class="py-2 px-4">
                         {% if order.status == 'Ordered' %}
                             <span class="inline-block px-2 py-1 rounded bg-yellow-100 text-yellow-700 font-semibold text-xs">{{ order.status }}</span>
@@ -218,7 +218,6 @@
 
 {% block scripts %}
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-<!-- Add any page-specific JS here -->
 <script>
 (function(){
   // Save scroll position right before the form submits so it can be restored after reload
@@ -233,18 +232,15 @@
         const nextSection = f.nextElementSibling && f.nextElementSibling.id ? f.nextElementSibling.id : '';
         if(nextSection) sessionStorage.setItem('procurement.anchor', nextSection);
       } catch (e) {
-        /* ignore storage errors */
       }
     });
   });
 
-  // On page load, restore the scroll position (small timeout ensures layout finished)
   window.addEventListener('load', function(){
     try {
       const v = sessionStorage.getItem('procurement.scrollY');
       const anchor = sessionStorage.getItem('procurement.anchor');
       if (anchor) {
-        // prefer scrolling to the section so user keeps context
         const el = document.getElementById(anchor);
         if (el) {
           el.scrollIntoView({behavior: 'auto', block: 'start'});
@@ -253,13 +249,11 @@
       } else if (v) {
         const y = parseInt(v, 10);
         if (!Number.isNaN(y)) {
-          // small timeout improves accuracy across browsers
           setTimeout(() => window.scrollTo(0, y), 10);
         }
       }
       sessionStorage.removeItem('procurement.scrollY');
     } catch (e) {
-      /* ignore */
     }
   });
 
