@@ -240,7 +240,7 @@
                     <td class="px-4 py-2">{{ order.order_id }}</td>
                     <td class="px-4 py-2">{{ order.customer_name }}</td>
                     <td class="px-4 py-2">{{ order.date }}</td>
-                    <td class="px-4 py-2">{{order.total | default('0') }}</td>
+                    <td class="px-4 py-2">{{order.amount | default('0') }}</td>
                     <td class="px-4 py-2">
                         {% if order.status == 'Shipped' %}
                             <span class="inline-block px-2 py-1 rounded bg-purple-100 text-purple-700 font-semibold text-xs">{{ order.status }}</span>

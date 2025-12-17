@@ -2014,7 +2014,6 @@ def _set_attr_if_exists(obj, field, value, date_try=False, cast_float=False):
         # ignore individual set errors
         app.logger.debug("Could not set %s on %s", field, type(obj).__name__)
 
-# Replace file-based distribution handlers with DB-backed versions
 @app.route('/distribution-overview')
 def distribution_overview():
     try:
@@ -2035,7 +2034,6 @@ def distribution_overview():
                     out[f] = None
             return out
 
-        # best-effort field lists (safe getters)
         inventory = []
         for r in inv_rows:
             inventory.append(row_to_dict(r, [
@@ -2049,16 +2047,40 @@ def distribution_overview():
             ]))
 
         shipments = []
-        for s in shipments_rows:
-            shipments.append(row_to_dict(s, [
-                "id" if hasattr(Shipment, "id") else "",
-                "shipment_id" if hasattr(Shipment, "shipment_id") else ("id" if hasattr(Shipment, "id") else "shipment"),
-                "date" if hasattr(Shipment, "date") else ("shipped_at" if hasattr(Shipment, "shipped_at") else "created_at"),
-                "carrier" if hasattr(Shipment, "carrier") else "carrier_name",
-                "destination" if hasattr(Shipment, "destination") else "dest",
-                "status" if hasattr(Shipment, "status") else "state",
-                "customer" if hasattr(Shipment, "customer_name") else ""
-            ]))
+        # If Customer model and a customer_id FK exist on Shipment, join and attach customer name
+        if 'Customer' in globals() and hasattr(Shipment, "customer_id"):
+            rows = (
+                db.session.query(Shipment, Customer)
+                .outerjoin(Customer, getattr(Shipment, "customer_id") == getattr(Customer, "id"))
+                .order_by(getattr(Shipment, "id", Shipment))
+                .all()
+            )
+            for sh, cust in rows:
+                sh_dict = row_to_dict(sh, [
+                    "id" if hasattr(Shipment, "id") else "",
+                    "shipment_id" if hasattr(Shipment, "shipment_id") else ("id" if hasattr(Shipment, "id") else "shipment"),
+                    "date" if hasattr(Shipment, "date") else ("shipped_at" if hasattr(Shipment, "shipped_at") else "created_at"),
+                    "carrier" if hasattr(Shipment, "carrier") else "carrier_name",
+                    "destination" if hasattr(Shipment, "destination") else "dest",
+                    "status" if hasattr(Shipment, "status") else "state",
+                ])
+            
+                if cust is not None:
+                    sh_dict["customer"] = getattr(cust, "name", None) or getattr(cust, "customer_name", None) or getattr(cust, "full_name", None) or ""
+                else:
+                    sh_dict["customer"] = getattr(sh, "customer_name", "") or (getattr(sh, "customer", None) and getattr(sh.customer, "name", "")) or ""
+                shipments.append(sh_dict)
+        else:
+            for s in shipments_rows:
+                shipments.append(row_to_dict(s, [
+                    "id" if hasattr(Shipment, "id") else "",
+                    "shipment_id" if hasattr(Shipment, "shipment_id") else ("id" if hasattr(Shipment, "id") else "shipment"),
+                    "date" if hasattr(Shipment, "date") else ("shipped_at" if hasattr(Shipment, "shipped_at") else "created_at"),
+                    "carrier" if hasattr(Shipment, "carrier") else "carrier_name",
+                    "destination" if hasattr(Shipment, "destination") else "dest",
+                    "status" if hasattr(Shipment, "status") else "state",
+                    "customer" if hasattr(Shipment, "customer") else ""
+                ]))
             
         orders = []
         try:
@@ -2074,10 +2096,10 @@ def distribution_overview():
                         "order_id" if hasattr(SalesOrder, "order_id") else ("id" if hasattr(SalesOrder, "id") else "order"),
                         "customer_id",
                         "date" if hasattr(SalesOrder, "date") else ("order_date" if hasattr(SalesOrder, "order_date") else "created_at"),
-                        "total" if hasattr(SalesOrder, "total") else ("amount" if hasattr(SalesOrder, "amount") else "value"),
+                        "amount" if hasattr(SalesOrder, "amount") else ("total" if hasattr(SalesOrder, "total") else "value"),
                         "status" if hasattr(SalesOrder, "status") else "state"
                     ])
-                    # attach best-effort customer name from joined Customer row
+                    
                     if cust is not None:
                         od["customer_name"] = getattr(cust, "name", None) or getattr(cust, "customer_name", None) or getattr(cust, "full_name", None) or ""
                     else:
@@ -2091,7 +2113,7 @@ def distribution_overview():
                         "order_id" if hasattr(SalesOrder, "order_id") else ("id" if hasattr(SalesOrder, "id") else "order"),
                         "customer_id" if hasattr(SalesOrder, "customer_id") else ("customer" if hasattr(SalesOrder, "customer") else "customer_name"),
                         "date" if hasattr(SalesOrder, "date") else ("order_date" if hasattr(SalesOrder, "order_date") else "created_at"),
-                        "total" if hasattr(SalesOrder, "total") else ("amount" if hasattr(SalesOrder, "amount") else "value"),
+                        "amount" if hasattr(SalesOrder, "amount") else ("total" if hasattr(SalesOrder, "total") else "value"),
                         "status" if hasattr(SalesOrder, "status") else "state"
                     ])
                     # if SalesOrder has a relationship attribute 'customer', use it
@@ -2110,7 +2132,7 @@ def distribution_overview():
                     "order_id" if hasattr(SalesOrder, "order_id") else ("id" if hasattr(SalesOrder, "id") else "order"),
                     "customer_id" if hasattr(SalesOrder, "customer_id") else ("customer" if hasattr(SalesOrder, "customer") else "customer_name"),
                     "date" if hasattr(SalesOrder, "date") else ("order_date" if hasattr(SalesOrder, "order_date") else "created_at"),
-                    "total" if hasattr(SalesOrder, "total") else ("amount" if hasattr(SalesOrder, "amount") else "value"),
+                    "amount" if hasattr(SalesOrder, "amount") else ("total" if hasattr(SalesOrder, "total") else "value"),
                     "status" if hasattr(SalesOrder, "status") else "state"
                 ])
                 od["customer_name"] = getattr(o, "customer_name", "") or getattr(o, "customer", "") or ""
