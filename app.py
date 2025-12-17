@@ -4836,9 +4836,7 @@ def process_payroll():
 @app.route('/sales-overview')
 @login_required
 def sales_overview():
-    # existing analytics variables are produced elsewhere; keep them
     try:
-        # gather customers and inventory for the order-entry UI (best-effort)
         customers = []
         if 'Customer' in globals():
             try:
@@ -4863,11 +4861,9 @@ def sales_overview():
             except Exception:
                 app.logger.exception("Failed to load inventory for sales_overview")
             
-        # --- ALERTS LOGIC ---
         alerts = []
         stockouts = [item['product'] for item in inventory if item['quantity'] <= 0]
         if stockouts:
-            # Limit to first 3 to avoid cluttering the UI
             display_stockouts = stockouts[:3]
             msg = f"Stockout Alert: {', '.join(display_stockouts)}"
             if len(stockouts) > 3:
@@ -4876,10 +4872,9 @@ def sales_overview():
             alerts.append(msg)
 
         #Goods performance
-        # existing (legacy) in-memory figures; we'll attempt DB-built replacements where possible
         sales_trend = globals().get("sales_trend_graph", {"data": [], "layout": {}})
-        # Attempt to build goods performance pie chart from DB (preferred) with safe fallbacks
         goods_perf = {"data": [], "layout": {}}
+
         try:
             if 'SalesOrder' in globals() and 'InventoryItem' in globals():
                 value_col = getattr(SalesOrder, "amount", None)
@@ -4900,31 +4895,26 @@ def sales_overview():
                         goods_perf = {"data": [{"labels": labels, "values": vals, "type": "pie", "name": "Goods Performance"}],
                                      "layout": {"title": "Goods Performance by Sales"}}
                     else:
-                        print("ARghggh")
+                        pass
         except Exception:
             app.logger.exception("Failed to build goods performance chart from DB; falling back to legacy figure")
 
-        # legacy customer expenditure figure (keep as-is / fallback)
         cust_expenditure = globals().get("customer_expenditure_pie_chart", {"data": [], "layout": {}})
 
-        # KPI calculation (best-effort, safe fallbacks)
         kpi = None
         try:
-            # orders count
             orders_count = 0
             try:
                 orders_count = int(db.session.query(func.count()).select_from(SalesOrder).scalar() or 0)
             except Exception:
                 orders_count = len(db.session.query(SalesOrder).all()) if 'SalesOrder' in globals() else 0
 
-            # customers count
             customers_count = 0
             try:
                 customers_count = int(db.session.query(func.count()).select_from(Customer).scalar() or 0)
             except Exception:
                 customers_count = len(customers)
 
-            # revenue / total sales amount
             total_revenue = 0.0
             try:
                 if 'SalesOrder' in globals():
@@ -4976,7 +4966,6 @@ def sales_overview():
                                alerts=alerts)
     except Exception:
         app.logger.exception("Failed to render sales_overview")
-        # safe fallback
         return render_template('sales_overview.html',
                                sales_trend_graph={"data": [], "layout": {}},
                                goods_performance_pie_chart={"data": [], "layout": {}},
