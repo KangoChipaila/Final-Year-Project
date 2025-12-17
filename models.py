@@ -33,6 +33,9 @@ class SalesOrder(db.Model):
     amount = db.Column(db.Numeric(12, 2), nullable=True)
     status = db.Column(db.String(50), nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
+    quantity = db.Column(db.Integer, nullable=True, default=0)
+    inventory_id = db.Column(db.Integer, db.ForeignKey("inventory_items.id"), nullable=True)
+
 
     customer = db.relationship("Customer", backref="sales_orders", lazy=True)
 
@@ -80,6 +83,8 @@ class Shipment(db.Model):
     carrier = db.Column(db.String(255), nullable=True)
     destination = db.Column(db.String(255), nullable=True)
     status = db.Column(db.String(50), nullable=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey("customers.id"), nullable=True)
+    customer = db.relationship("Customer", lazy=True)
     created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     def to_dict(self):

@@ -18,6 +18,7 @@
     --color-orange-600: oklch(64.6% 0.222 41.116);
     --color-orange-700: oklch(55.3% 0.195 38.402);
     --color-yellow-100: oklch(97.3% 0.071 103.193);
+    --color-yellow-500: oklch(79.5% 0.184 86.047);
     --color-yellow-600: oklch(68.1% 0.162 75.834);
     --color-yellow-700: oklch(55.4% 0.135 66.442);
     --color-green-100: oklch(96.2% 0.044 156.743);
@@ -39,6 +40,7 @@
     --color-purple-700: oklch(49.6% 0.265 301.924);
     --color-purple-800: oklch(43.8% 0.218 303.724);
     --color-pink-600: oklch(59.2% 0.249 0.584);
+    --color-pink-700: oklch(52.5% 0.223 3.958);
     --color-pink-800: oklch(45.9% 0.187 3.815);
     --color-gray-50: oklch(98.5% 0.002 247.839);
     --color-gray-100: oklch(96.7% 0.003 264.542);
@@ -750,11 +752,17 @@
   .bg-pink-600 {
     background-color: var(--color-pink-600);
   }
+  .bg-pink-700 {
+    background-color: var(--color-pink-700);
+  }
   .bg-purple-100 {
     background-color: var(--color-purple-100);
   }
   .bg-purple-600 {
     background-color: var(--color-purple-600);
+  }
+  .bg-purple-700 {
+    background-color: var(--color-purple-700);
   }
   .bg-red-50 {
     background-color: var(--color-red-50);
@@ -783,8 +791,14 @@
   .bg-yellow-100 {
     background-color: var(--color-yellow-100);
   }
+  .bg-yellow-500 {
+    background-color: var(--color-yellow-500);
+  }
   .bg-yellow-600 {
     background-color: var(--color-yellow-600);
+  }
+  .bg-yellow-700 {
+    background-color: var(--color-yellow-700);
   }
   .p-1 {
     padding: calc(var(--spacing) * 1);

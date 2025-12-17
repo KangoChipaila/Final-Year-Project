@@ -374,7 +374,7 @@ hadoop_bin_path = r'C:\hadoop\hadoop-3.3.5\bin\hadoop.cmd'
 os.environ['HADOOP_USER_NAME'] = 'Kango Chipaila'
 
 sales_trend_graph = analytics.generate_sales_trend()
-goods_performance_pie_chart = analytics.generate_goods_performance_pchart()
+#goods_performance_pie_chart = analytics.generate_goods_performance_pchart()
 customer_expenditure_pie_chart = analytics.generate_customer_expenditure_distribution_pchart()
 
 #spark = SparkSession.builder.appName("CSVUpload").getOrCreate()
@@ -595,7 +595,6 @@ def index():
                     if labels and vals:
                         customers = {"data": [{"labels": labels, "values": vals, "type": "pie", "name": "Customers"}],
                                      "layout": {"title": "Top Customers by Sales"}}
-
 
             
             # Product performance: prefer join SalesOrder.inventory_id -> InventoryItem.id to get product names
@@ -836,99 +835,6 @@ def index():
             employee_status_graph=employee_status_graph
         )
 
-# Example mock data (replace with database queries)
-def get_accounting_alerts():
-    return [
-        "Invoice INV-1002 is overdue.",
-        "Low balance in main account.",
-        "Pending approval for payment to Beta Ltd."
-    ]
-
-def get_accounting_recent_activity():
-    return [
-        "Payment of K5,000 made to Acme Corp.",
-        "Invoice INV-1003 received from Gamma Inc.",
-        "Expense report submitted by Alice Banda."
-    ]
-
-def get_accounting_summary():
-    return [
-        {"label": "Total Revenue", "value": "K120,000"},
-        {"label": "Total Expenses", "value": "K85,000"},
-        {"label": "Net Profit", "value": "K35,000"},
-        {"label": "Outstanding Invoices", "value": "K9,700"}
-    ]
-
-def get_cashflow_data():
-    return {
-        "data": [
-            {
-                "x": ["2025-06", "2025-07", "2025-08", "2025-09", "2025-10"],
-                "y": [12000, 15000, 11000, 17000, 16000],
-                "type": "scatter",
-                "mode": "lines+markers",
-                "name": "Cash Flow"
-            }
-        ],
-        "layout": {
-            "title": "Monthly Cash Flow",
-            "xaxis": {"title": "Month"},
-            "yaxis": {"title": "Amount (USD)"}
-        }
-    }
-
-def get_top_vendors():
-    return [
-        {"name": "Acme Corp", "total_paid": 32000},
-        {"name": "Beta Ltd", "total_paid": 21000},
-        {"name": "Gamma Inc", "total_paid": 18000}
-    ]
-
-def get_recent_transactions():
-    return [
-        {"date": "2025-10-10", "description": "Payment to Acme Corp", "amount": 5000, "type": "Debit"},
-        {"date": "2025-10-09", "description": "Invoice from Gamma Inc", "amount": 3500, "type": "Credit"},
-        {"date": "2025-10-08", "description": "Salary Payment", "amount": 12000, "type": "Debit"}
-    ]
-
-def get_expense_breakdown_data():
-    return {
-        "data": [
-            {
-                "labels": ["Salaries", "Supplies", "Utilities", "Travel"],
-                "values": [12000, 4000, 2000, 1500],
-                "type": "pie",
-                "name": "Expenses"
-            }
-        ],
-        "layout": {"title": "Expense Breakdown"}
-    }
-
-def get_revenue_sources_data():
-    return {
-        "data": [
-            {
-                "labels": ["Product Sales", "Services", "Investments"],
-                "values": [18000, 7000, 3000],
-                "type": "pie",
-                "name": "Revenue"
-            }
-        ],
-        "layout": {"title": "Revenue Sources"}
-    }
-
-def get_outstanding_invoices_data():
-    return {
-        "data": [
-            {
-                "x": ["INV-1001", "INV-1002", "INV-1003"],
-                "y": [3500, 5000, 4200],
-                "type": "bar",
-                "name": "Outstanding"
-            }
-        ],
-        "layout": {"title": "Outstanding Invoices"}
-    }
 
 
 @app.route('/add_payment', methods=['GET', 'POST'])
@@ -1352,18 +1258,11 @@ def accounting_overview():
 @app.route("/assets/edit/<int:asset_id>", methods=["GET", "POST"])
 @login_required
 def edit_asset(asset_id):
-    """
-    Edit an existing asset entry.
-    Retrieves asset from the in-memory list (later replaced by DB query).
-    """
-    asset = next((a for a in assets_data if a["id"] == asset_id), None)
-    if not asset:
-        flash("Asset not found.", "error")
-        return redirect(url_for("asset_overview"))
+    # Support both GET (render form) and POST (apply DB-backed update)
+    row = db.session.get(Asset, asset_id)
 
     if request.method == "POST":
-        # capture before snapshot for audit
-        before = asset.copy()
+        # read form values
         name = request.form.get("name")
         category = request.form.get("category")
         purchase_date = request.form.get("purchase_date")
@@ -1371,55 +1270,81 @@ def edit_asset(asset_id):
         depreciation_rate = request.form.get("depreciation_rate")
         status = request.form.get("status")
 
+        if row is None:
+            flash("Asset not found.", "error")
+            return redirect(url_for("asset_overview"))
+
         if not name or not category or not purchase_date or not value:
             flash("Please fill in all required fields.", "error")
             return redirect(url_for("edit_asset", asset_id=asset_id))
 
-        # Update the asset data
-        asset["name"] = name
-        asset["category"] = category
-        asset["purchase_date"] = purchase_date
-        asset["value"] = float(value)
-        asset["depreciation_rate"] = float(depreciation_rate or 0)
-        asset["status"] = status
-
-        # audit log update
         try:
-            log_audit(action="update", resource_type="Asset", resource_id=asset_id, before=before, after=asset)
+            before = row.to_dict() if hasattr(row, "to_dict") else None
+            _set_attr_if_exists(row, "name", name)
+            _set_attr_if_exists(row, "category", category)
+            _set_attr_if_exists(row, "purchase_date", purchase_date, date_try=True)
+            _set_attr_if_exists(row, "value", value, cast_float=True)
+            _set_attr_if_exists(row, "depreciation_rate", depreciation_rate, cast_float=True)
+            _set_attr_if_exists(row, "status", status)
+
+            db.session.commit()
+
+            try:
+                log_audit(action="update", resource_type="Asset", resource_id=asset_id, before=before, after=row)
+            except Exception:
+                app.logger.debug("Audit log failed for edit_asset", exc_info=True)
+
+            flash(f"Asset '{getattr(row, 'name', asset_id)}' updated successfully!", "success")
         except Exception:
-            app.logger.debug("Audit log failed for edit_asset", exc_info=True)
+            db.session.rollback()
+            app.logger.exception("Failed to update asset in DB")
+            flash("Failed to update asset (database error).", "error")
 
-
-        flash(f"Asset '{name}' updated successfully!", "success")
         return redirect(url_for("asset_overview"))
 
-    return render_template("edit-asset.html", asset=asset)
+    # GET: render template using DB row if available, otherwise fall back to in-memory dict
+    if row is not None:
+        asset_dict = {
+            "id": getattr(row, "id", None),
+            "name": getattr(row, "name", "") or "",
+            "category": getattr(row, "category", "") or "",
+            "purchase_date": (getattr(row, "purchase_date", "") or "") if not hasattr(getattr(row, "purchase_date", None), "isoformat") else getattr(row, "purchase_date").isoformat(),
+            "value": float(getattr(row, "value", 0) or 0),
+            "depreciation_rate": float(getattr(row, "depreciation_rate", 0) or 0),
+            "status": getattr(row, "status", "") or ""
+        }
+    else:
+        asset_dict = next((a for a in assets_data if a["id"] == asset_id), None)
+        if not asset_dict:
+            flash("Asset not found.", "error")
+            return redirect(url_for("asset_overview"))
+
+    return render_template("edit-asset.html", asset=asset_dict)
 
 @app.route("/assets/delete/<int:asset_id>", methods=["POST"])
 @login_required
 def delete_asset(asset_id):
    
-    global assets_data
-
-    asset = next((a for a in assets_data if a["id"] == asset_id), None)
-
-    if not asset:
-        flash("Asset not found.", "error")
-        return redirect(url_for("asset_overview"))
-
-    # capture before snapshot for audit
-    before = asset.copy()
-    assets_data = [a for a in assets_data if a["id"] != asset_id]
-
-    # audit log delete
     try:
-        log_audit(action="delete", resource_type="Asset", resource_id=asset_id, before=before, after=None)
+        row = db.session.get(Asset, asset_id)
+        if row is None:
+            flash("Asset not found.", "error")
+            return redirect(url_for("asset_overview"))
+        before = row.to_dict() if hasattr(row, "to_dict") else None
+        db.session.delete(row)
+        db.session.commit()
+
+        try:
+            log_audit(action="delete", resource_type="Asset", resource_id=asset_id, before=before, after=None)
+        except Exception:
+            app.logger.debug("Audit log failed for delete_asset", exc_info=True)
+        flash(f"Asset '{getattr(row, 'name', asset_id)}' deleted successfully!", "success")
+    
     except Exception:
-        app.logger.debug("Audit log failed for delete_asset", exc_info=True)
-
-    assets_data = [a for a in assets_data if a["id"] != asset_id]
-
-    flash(f"Asset '{asset['name']}' deleted successfully!", "success")
+        db.session.rollback()
+        app.logger.exception("Failed to delete asset from DB")
+        flash("Failed to delete asset (database error).", "error")
+    
     return redirect(url_for("asset_overview"))
 
 @app.route("/assets/add", methods=["GET", "POST"])
@@ -1439,26 +1364,25 @@ def add_asset():
             flash("Please fill in all required fields.", "error")
             return redirect(url_for("add_asset"))
 
-        # Simulate database insert
-        new_asset = {
-            "id": len(assets_data) + 1,
-            "name": name,
-            "category": category,
-            "purchase_date": purchase_date,
-            "value": float(value),
-            "depreciation_rate": float(depreciation_rate or 0),
-            "status": status or "Active"
-        }
+        a = Asset()
+        _set_attr_if_exists(a, "name", name)
+        _set_attr_if_exists(a, "category", category)
+        _set_attr_if_exists(a, "purchase_date", purchase_date, date_try=True)
+        _set_attr_if_exists(a, "value", value, cast_float=True)
+        _set_attr_if_exists(a, "depreciation_rate", depreciation_rate, cast_float=True)
+        _set_attr_if_exists(a, "status", status)
 
-        assets_data.append(new_asset)
-        # audit log create
+        db.session.add(a)
         try:
-            log_audit(action="create", resource_type="Asset", resource_id=new_asset["id"], after=new_asset)
+            db.session.commit()
+            log_audit(action="create", resource_type="Asset", resource_id=getattr(a, "id", None), after=a)
+            flash(f"Asset '{name}' added successfully!", "success")
+            return redirect(url_for("asset_overview"))
         except Exception:
-            app.logger.debug("Audit log failed for add_asset", exc_info=True)
-
-        flash(f"Asset '{name}' added successfully!", "success")
-        return redirect(url_for("asset_overview"))
+            db.session.rollback()
+            app.logger.exception("Failed to add Asset to DB")
+            flash("Failed to save asset to database.", "error")
+            return redirect(url_for("add_asset"))
 
     # If GET: render the form
     return render_template("add_asset.html")
@@ -1482,7 +1406,6 @@ def asset_overview():
             q = q.filter(Asset.category == category)
 
         if status:
-            # assume Asset has a 'status' column; adjust if different
             q = q.filter(Asset.status == status)
 
         assets_rows = q.order_by(Asset.id).all()
@@ -2094,10 +2017,6 @@ def _set_attr_if_exists(obj, field, value, date_try=False, cast_float=False):
 # Replace file-based distribution handlers with DB-backed versions
 @app.route('/distribution-overview')
 def distribution_overview():
-    """
-    Show inventory items, shipments and orders from the PostgreSQL DB.
-    Falls back to file-based JSON if DB access fails.
-    """
     try:
         inv_rows = db.session.query(InventoryItem).order_by(getattr(InventoryItem, "id", InventoryItem)).all()
         shipments_rows = db.session.query(Shipment).order_by(getattr(Shipment, "id", Shipment)).all()
@@ -2137,7 +2056,8 @@ def distribution_overview():
                 "date" if hasattr(Shipment, "date") else ("shipped_at" if hasattr(Shipment, "shipped_at") else "created_at"),
                 "carrier" if hasattr(Shipment, "carrier") else "carrier_name",
                 "destination" if hasattr(Shipment, "destination") else "dest",
-                "status" if hasattr(Shipment, "status") else "state"
+                "status" if hasattr(Shipment, "status") else "state",
+                "customer" if hasattr(Shipment, "customer_name") else ""
             ]))
             
         orders = []
@@ -2471,10 +2391,6 @@ def reject_purchase_request(id):
 @app.route('/finance-overview')
 @login_required
 def finance_overview():
-    """
-    Prefer PostgreSQL-backed finance tables when available. Fallback to static JSON file
-    (load_finance/save_finance) if DB models/tables are missing or an error occurs.
-    """
     def safe_get(row, *candidates, default=None):
         for c in candidates:
             if hasattr(row, c):
@@ -2500,7 +2416,8 @@ def finance_overview():
                 amount = float(safe_get(r, "value_amount", "amount", default=0) or 0)
                 period = safe_get(r, "period", default="")
                 
-                financial_summary[label] = {"value": amount, "currency": safe_get(r, "currency", ""), "period": period}
+                # store the numeric amount for templates that expect a scalar
+                financial_summary[label] = amount
 
         # Income statement lines
         income_statement = []
@@ -2602,7 +2519,16 @@ def finance_overview():
         summary_list = []
         if financial_summary:
             for k, v in financial_summary.items():
-                summary_list.append({"label": k, "value": f"{v.get('value', 0):.2f}"})
+                # support both dict (legacy) and scalar values
+                if isinstance(v, dict):
+                    val = v.get('value', 0)
+                else:
+                    val = v or 0
+                try:
+                    valf = float(val)
+                except Exception:
+                    valf = 0.0
+                summary_list.append({"label": k, "value": f"{valf:.2f}"})
         else:
             # fallback aggregate from income_statement / cash_flow if needed
             total_revenue = sum(i.get("amount", 0) for i in income_statement if i.get("line_type") == "income")
@@ -4915,7 +4841,7 @@ def sales_overview():
             except Exception:
                 app.logger.exception("Failed to load inventory for sales_overview")
             
-        # --- NEW ALERTS LOGIC ---
+        # --- ALERTS LOGIC ---
         alerts = []
         stockouts = [item['product'] for item in inventory if item['quantity'] <= 0]
         if stockouts:
@@ -4927,9 +4853,36 @@ def sales_overview():
             msg += " are out of stock."
             alerts.append(msg)
 
-        # reuse the precomputed graphs from module-level variables if present
+        #Goods performance
+        # existing (legacy) in-memory figures; we'll attempt DB-built replacements where possible
         sales_trend = globals().get("sales_trend_graph", {"data": [], "layout": {}})
-        goods_perf = globals().get("goods_performance_pie_chart", {"data": [], "layout": {}})
+        # Attempt to build goods performance pie chart from DB (preferred) with safe fallbacks
+        goods_perf = {"data": [], "layout": {}}
+        try:
+            if 'SalesOrder' in globals() and 'InventoryItem' in globals():
+                value_col = getattr(SalesOrder, "amount", None)
+                if value_col is not None:
+                    inv_label_col = getattr(InventoryItem, "product", None)
+                    grouping_col = getattr(SalesOrder, "id", None)
+                    rows = (
+                        db.session.query(inv_label_col, func.coalesce(func.sum(value_col), 0).label('amount'))
+                        .join(SalesOrder, getattr(SalesOrder, "inventory_id") == getattr(InventoryItem, "id"))
+                        .group_by(inv_label_col)
+                        .order_by(func.sum(value_col).desc())
+                        .limit(10)
+                        .all()
+                    )
+                    labels = [str(r[0]) if r[0] is not None else "Unknown" for r in rows]
+                    vals = [float(r[1]) for r in rows]
+                    if labels and vals:
+                        goods_perf = {"data": [{"labels": labels, "values": vals, "type": "pie", "name": "Goods Performance"}],
+                                     "layout": {"title": "Goods Performance by Sales"}}
+                    else:
+                        print("ARghggh")
+        except Exception:
+            app.logger.exception("Failed to build goods performance chart from DB; falling back to legacy figure")
+
+        # legacy customer expenditure figure (keep as-is / fallback)
         cust_expenditure = globals().get("customer_expenditure_pie_chart", {"data": [], "layout": {}})
 
         # KPI calculation (best-effort, safe fallbacks)
@@ -4960,7 +4913,6 @@ def sales_overview():
                 app.logger.exception("Failed to compute total_revenue for sales_overview")
                 total_revenue = 0.0
 
-            # human-friendly formatted totals
             kpi = {
                 "total_sales": f"{total_revenue:,.2f}",
                 "orders": int(orders_count),
@@ -4971,11 +4923,32 @@ def sales_overview():
             app.logger.exception("Failed to build KPIs for sales_overview")
             kpi = {"total_sales": "N/A", "orders": "N/A", "customers": "N/A", "revenue": "N/A"}
 
+        # Top customers by revenue (pie)
+        top_customers = {"data": [], "layout": {"title": "Top Customers"}}
+        if 'Customer' in globals() and 'SalesOrder' in globals() and hasattr(SalesOrder, "customer_id"):
+            value_col = getattr(SalesOrder, "total", getattr(SalesOrder, "amount", None))
+            if value_col is not None:
+                rows = (
+                    db.session.query(Customer.name, func.coalesce(func.sum(value_col), 0).label('total'))
+                    .join(SalesOrder, getattr(SalesOrder, "customer_id") == getattr(Customer, "id"))
+                    .group_by(Customer.name)
+                    .order_by(func.sum(value_col).desc())
+                    .limit(10)
+                    .all()
+                )
+                labels = [r[0] or "Unknown" for r in rows]
+                vals = [float(r[1]) for r in rows]
+                if labels and vals:
+                    top_customers = {"data": [{"labels": labels, "values": vals, "type": "pie", "name": "Customers"}],
+                                 "layout": {"title": "Top Customers by Sales"}}
+
+        
         return render_template('sales_overview.html',
                                sales_trend_graph=sales_trend,
                                goods_performance_pie_chart=goods_perf,
                                customer_expenditure_pie_chart=cust_expenditure,
                                customers=customers,
+                               top_customers=top_customers,
                                inventory=inventory,
                                kpi=kpi,
                                alerts=alerts)
@@ -4992,15 +4965,12 @@ def sales_overview():
 @app.route('/create_sale', methods=['POST'])
 @login_required
 def create_sale():
-    """
-    Create a sale (order) safely and always return JSON.
-    Accepts JSON or form: { customer_id, inventory_id, quantity }.
-    """
     data = request.get_json(silent=True) or request.form or {}
     try:
         customer_id = int((data.get('customer_id') or 0))
         inventory_id = int((data.get('inventory_id') or 0))
         quantity = float((data.get('quantity') or 0))
+
     except Exception:
         return jsonify(ok=False, error="Invalid input types"), 400
 
@@ -5048,13 +5018,11 @@ def create_sale():
             if (unpaid_total + order_total) > float(credit_limit):
                 return jsonify(ok=False, error="Customer credit limit exceeded"), 400
     except Exception:
-        # IMPORTANT: Rollback to clear any aborted transaction state if the query failed
         db.session.rollback()
         app.logger.exception("Credit check failed; continuing without blocking")
 
     # Perform DB transaction
     try:
-        # Ensure we start with a clean state
         db.session.rollback()
 
         total = float(getattr(item, "unit_cost", 0) or 0) * quantity
@@ -5064,7 +5032,6 @@ def create_sale():
         so = None
         if 'SalesOrder' in globals():
             so = SalesOrder()
-            # ensure order_id if DB requires it
             if hasattr(SalesOrder, "order_id"):
                 try:
                     next_oid = db.session.query(func.coalesce(func.max(getattr(SalesOrder, "order_id")), 0) + 1).scalar()
@@ -5084,7 +5051,7 @@ def create_sale():
             _set_attr_if_exists(so, "status", "pending")
             _set_attr_if_exists(so, "order_date", datetime.now().date(), date_try=True)
             db.session.add(so)
-            db.session.flush()  # populate so.id
+            db.session.flush() 
             so_id = getattr(so, "id", None)
 
         # decrement inventory
@@ -5100,7 +5067,7 @@ def create_sale():
             app.logger.exception("Failed to decrement inventory quantity; aborting")
             raise
 
-        # create invoice if model exists
+        # create invoice
         if 'Invoice' in globals():
             inv = Invoice()
             _set_attr_if_exists(inv, "customer_id", customer_id)
@@ -5119,10 +5086,10 @@ def create_sale():
                 db.session.add(so)
                 db.session.flush()
 
-        # notify warehouse by creating Shipment record if model exists
+        # notify warehouse by creating Shipment record
         if 'Shipment' in globals():
             sh = Shipment()
-            # Generate shipment_id based on count + 1
+            # Generate shipment_id
             try:
                 shipment_count = db.session.query(Shipment).count()
                 _set_attr_if_exists(sh, "shipment_id", shipment_count + 1)
@@ -5135,6 +5102,7 @@ def create_sale():
             _set_attr_if_exists(sh, "status", "Pending")
             _set_attr_if_exists(sh, "order_id", so_id)
             _set_attr_if_exists(sh, "order", so_id)
+            _set_attr_if_exists(sh, "customer_id", customer_id)
             db.session.add(sh)
 
         # finalize

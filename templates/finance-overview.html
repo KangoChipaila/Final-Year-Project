@@ -104,7 +104,7 @@
         <table class="w-full text-sm text-left text-gray-800">
             <thead class="text-xs uppercase text-white bg-black">
                 <tr>
-                    <th class="px-4 py-2">Total Assets</th>
+                    <th class="px-4 py-2">Total Asset</th>
                     <th class="px-4 py-2">Total Liabilities</th>
                     <th class="px-4 py-2">Equity</th>
                     <th class="px-4 py-2">Cash on Hand</th>
@@ -260,11 +260,12 @@
         </div>
     </div>
 
-    <!-- Finance Analytics Chart -->
+    <!-- Finance Analytics Chart 
     <section class="bg-white rounded-xl shadow-lg p-6 mt-8 border border-gray-200">
         <h2 class="text-lg font-semibold mb-4 text-gray-700">Finance Analytics</h2>
         <div id="finance-analytics-chart" style="height:400px;"></div>
     </section>
+    -->
 </div>
 {% endblock %}
 
@@ -272,6 +273,6 @@
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
     const chartData = {{ finance_chart_data | safe }};
-    Plotly.newPlot('finance-analytics-chart', chartData.data, chartData.layout);
+    //Plotly.newPlot('finance-analytics-chart', chartData.data, chartData.layout);
 </script>
 {% endblock %}

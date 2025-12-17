@@ -11,16 +11,16 @@
         </div>
     </section>
 
-    <!-- Upload Controls -->
-
-    <!-- KPI Cards (example, add backend data for these) -->
+    <!-- KPI Cards -->
     <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+      <!--
         <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
             <div class="text-gray-500 text-sm mb-2">Total Sales</div>
             <div class="text-3xl font-bold text-blue-700">{{ kpi.total_sales if kpi else "N/A" }}</div>
         </div>
+      -->
         <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
-            <div class="text-gray-500 text-sm mb-2">Orders</div>
+            <div class="text-gray-500 text-sm mb-2">Total Orders</div>
             <div class="text-3xl font-bold text-green-700">{{ kpi.orders if kpi else "N/A" }}</div>
         </div>
         <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
@@ -28,7 +28,7 @@
             <div class="text-3xl font-bold text-yellow-700">{{ kpi.customers if kpi else "N/A" }}</div>
         </div>
         <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
-            <div class="text-gray-500 text-sm mb-2">Revenue</div>
+            <div class="text-gray-500 text-sm mb-2">Total Revenue</div>
             <div class="text-3xl font-bold text-red-700">{{ kpi.revenue if kpi else "N/A" }}</div>
         </div>
     </section>
@@ -40,16 +40,16 @@
             <button id="open-new-sale" class="flex items-center gap-2 bg-green-700 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-green-800 transition">
                 <span>New Sale</span>
             </button>
-            <a href="/sales-forecast" class="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-blue-800 transition">
+            <a href="/sales-forecast" class="flex items-center gap-2 bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-blue-800 transition">
                 <span>Sales Forecasting</span>
             </a>
-            <a href="/cutomers-overview" class="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-yellow-700 transition">
+            <a href="/cutomers-overview" class="flex items-center gap-2 bg-yellow-500 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-yellow-700 transition">
                 <span>Customers</span>
             </a>
-            <a href="/distribution-overview" class="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-purple-800 transition">
+            <a href="/distribution-overview" class="flex items-center gap-2 bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-purple-800 transition">
                 <span>Sales Orders</span>
             </a>
-            <a href="/distribution-overview" class="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-pink-800 transition">
+            <a href="/distribution-overview" class="flex items-center gap-2 bg-pink-700 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-pink-800 transition">
                 <span>Purchase Orders</span>
             </a>
         </div>
@@ -68,10 +68,16 @@
             <div class="font-semibold mb-2 text-gray-700">Goods Performance</div>
             <div id="goods-performance-pie-chart" style="height:320px; width:100%;"></div>
         </div>
+        <!--
         <div>
             <div class="font-semibold mb-2 text-gray-700">Customers by Expenditure</div>
             <div id="customers-by-expenditure-pie-chart" style="height:320px; width:100%;"></div>
         </div>
+        -->
+        <div>
+                <div class="font-semibold mb-2 text-gray-700">Top Customers by Expenditure</div>
+                <div id="top-customers-graph" class="rounded-lg shadow-md" style="height:320px; width:100%;"></div>
+            </div>
     </section>
 
     
@@ -184,10 +190,11 @@
 <script>
     var salesTrendGraph = {{ sales_trend_graph | tojson }};
     var goodsPerformancePieChart = {{ goods_performance_pie_chart | tojson }};
-    var customerExpenditurePieChart = {{ customer_expenditure_pie_chart | tojson }};
+    //var customerExpenditurePieChart = {{ customer_expenditure_pie_chart | tojson }};
     
     Plotly.newPlot('sales-trend-graph', salesTrendGraph.data, salesTrendGraph.layout);
     Plotly.newPlot('goods-performance-pie-chart', goodsPerformancePieChart.data, goodsPerformancePieChart.layout);
-    Plotly.newPlot('customers-by-expenditure-pie-chart', customerExpenditurePieChart.data, customerExpenditurePieChart.layout);
+    //Plotly.newPlot('customers-by-expenditure-pie-chart', customerExpenditurePieChart.data, customerExpenditurePieChart.layout);
+    Plotly.newPlot('top-customers-graph', {{ top_customers | tojson }}.data, {{ top_customers | tojson }}.layout);
 </script>
 {% endblock %}

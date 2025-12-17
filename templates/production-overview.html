@@ -24,7 +24,7 @@
         </div>
         <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
             <div class="text-gray-500 text-sm mb-2">Active Work Centers</div>
-            <div class="text-3xl font-bold text-green-700">{{ work_centers|selectattr('status', 'equalto', 'Running')|list|length }}</div>
+            <div class="text-3xl font-bold text-green-700">{{ work_centers|selectattr('status', 'equalto', 'Active')|list|length }}</div>
         </div>
         <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
             <div class="text-gray-500 text-sm mb-2">Total BOMs</div>

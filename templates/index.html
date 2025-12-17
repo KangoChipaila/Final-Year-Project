@@ -166,10 +166,10 @@
                 <div class="font-semibold mb-2 text-gray-700">Top Customers by Expenditure</div>
                 <div id="customer-dashboard-summary" class="rounded-lg shadow-md" style="height:320px; width:100%;"></div>
             </div>
-            <div>
+            <!--<div>
                 <div class="font-semibold mb-2 text-gray-700">Product Performance</div>
                 <div id="product-performance-graph" class="rounded-lg shadow-md" style="height:320px; width:100%;"></div>
-            </div>
+            </div>-->
             <div>
                 <div class="font-semibold mb-2 text-gray-700">Inventory Status</div>
                 <div id="inventory-status-graph" class="rounded-lg shadow-md" style="height:320px; width:100%;"></div>
@@ -196,7 +196,7 @@
 <script>
     Plotly.newPlot('sales-analytics-dashboard-summary', {{ sales_trend_graph | tojson }}.data, {{ sales_trend_graph | tojson }}.layout);
     Plotly.newPlot('customer-dashboard-summary', {{ customers | tojson }}.data, {{ customers | tojson }}.layout);
-    Plotly.newPlot('product-performance-graph', {{ product_performance_graph | tojson }}.data, {{ product_performance_graph | tojson }}.layout);
+    //Plotly.newPlot('product-performance-graph', {{ product_performance_graph | tojson }}.data, {{ product_performance_graph | tojson }}.layout);
     Plotly.newPlot('inventory-status-graph', {{ inventory_status_graph | tojson }}.data, {{ inventory_status_graph | tojson }}.layout);
     Plotly.newPlot('order-status-graph', {{ order_status_graph | tojson }}.data, {{ order_status_graph | tojson }}.layout);
     Plotly.newPlot('revenue-expenses-graph', {{ revenue_expenses_graph | tojson }}.data, {{ revenue_expenses_graph | tojson }}.layout);
