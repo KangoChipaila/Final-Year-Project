@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="container mx-auto max-w-7xl px-4 py-8 bg-gray-50">
-    <!-- Header -->
+    
     <section class="flex justify-between items-center mb-8">
         <div>
             <h1 class="text-3xl font-bold text-blue-700 tracking-tight">Sales Overview</h1>
@@ -13,12 +13,6 @@
 
     <!-- KPI Cards -->
     <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-      <!--
-        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
-            <div class="text-gray-500 text-sm mb-2">Total Sales</div>
-            <div class="text-3xl font-bold text-blue-700">{{ kpi.total_sales if kpi else "N/A" }}</div>
-        </div>
-      -->
         <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
             <div class="text-gray-500 text-sm mb-2">Total Orders</div>
             <div class="text-3xl font-bold text-green-700">{{ kpi.orders if kpi else "N/A" }}</div>
@@ -68,12 +62,6 @@
             <div class="font-semibold mb-2 text-gray-700">Goods Performance</div>
             <div id="goods-performance-pie-chart" style="height:320px; width:100%;"></div>
         </div>
-        <!--
-        <div>
-            <div class="font-semibold mb-2 text-gray-700">Customers by Expenditure</div>
-            <div id="customers-by-expenditure-pie-chart" style="height:320px; width:100%;"></div>
-        </div>
-        -->
         <div>
                 <div class="font-semibold mb-2 text-gray-700">Top Customers by Expenditure</div>
                 <div id="top-customers-graph" class="rounded-lg shadow-md" style="height:320px; width:100%;"></div>
@@ -134,7 +122,6 @@
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
 (function(){
-  // create sale modal behavior
   const openBtn = document.getElementById('open-new-sale');
   const modal = document.getElementById('new-sale-modal');
   const closeBtn = document.getElementById('close-new-sale');
@@ -159,7 +146,6 @@
 
     if(!customer_id || !inventory_id || !quantity){ feedback.textContent = 'Please fill all fields'; feedback.classList.remove('hidden'); return; }
 
-    // client-side quick inventory check
     const selectedOpt = document.querySelector('#ns-product option[value="'+inventory_id+'"]');
     const available = selectedOpt ? parseFloat(selectedOpt.dataset.qty || 0) : 0;
     if(quantity > available){
@@ -177,7 +163,6 @@
         feedback.textContent = j.error || 'Failed to create sale'; feedback.classList.remove('hidden');
         return;
       }
-      // success: reload page to refresh KPIs/inventory
       window.location.reload();
     } catch (err){
       console.error(err);
@@ -186,15 +171,12 @@
   });
 })();
 </script>
-
 <script>
     var salesTrendGraph = {{ sales_trend_graph | tojson }};
     var goodsPerformancePieChart = {{ goods_performance_pie_chart | tojson }};
-    //var customerExpenditurePieChart = {{ customer_expenditure_pie_chart | tojson }};
     
     Plotly.newPlot('sales-trend-graph', salesTrendGraph.data, salesTrendGraph.layout);
     Plotly.newPlot('goods-performance-pie-chart', goodsPerformancePieChart.data, goodsPerformancePieChart.layout);
-    //Plotly.newPlot('customers-by-expenditure-pie-chart', customerExpenditurePieChart.data, customerExpenditurePieChart.layout);
     Plotly.newPlot('top-customers-graph', {{ top_customers | tojson }}.data, {{ top_customers | tojson }}.layout);
 </script>
 {% endblock %}

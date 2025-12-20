@@ -28,6 +28,7 @@
             <label class="block text-gray-700 font-bold mb-2">Amount</label>
             <input type="number" step="0.01" name="amount" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
         </div>
+        <!--
         <div class="mb-6">
             <label class="block text-gray-700 font-bold mb-2">Account (Optional)</label>
             <select name="account_id" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -37,6 +38,7 @@
                 {% endfor %}
             </select>
         </div>
+        -->
         <div class="flex justify-end gap-4">
             <a href="{{ url_for('accounting_overview') }}" class="text-gray-600 hover:text-gray-800 px-4 py-2">Cancel</a>
             <button type="submit" class="bg-orange-600 text-white px-6 py-2 rounded hover:bg-orange-700 transition">Record Expense</button>

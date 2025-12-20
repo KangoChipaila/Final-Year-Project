@@ -11,7 +11,7 @@ from barcode.writer import ImageWriter
 import os
 import subprocess
 from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user, login_required
-from datetime import datetime
+from datetime import datetime, timezone
 import pdfkit
 from sqlalchemy import text, func
 from sqlalchemy.exc import OperationalError, DataError
@@ -67,7 +67,7 @@ migrate = Migrate(app, db)
 
 config = pdfkit.configuration(wkhtmltopdf=r'C:\Progra~1\wkhtmltopdf\bin\wkhtmltopdf.exe')
 
-# Global error handler to persist uncaught exceptions to DB (best-effort)
+# Global error handler to persist uncaught exceptions to DB
 @app.errorhandler(Exception)
 def handle_uncaught_exception(e):
     try:
@@ -113,15 +113,8 @@ class FallbackUser:
         self.username = username
         self.is_active = True
 
-# remove the local shadowing User class (it previously hid models.User)
-
 @login_manager.user_loader
 def load_user(user_id):
-    """
-    Load a user by id. Try numeric-id lookup in DB first, otherwise username lookup.
-    If DB is unavailable or lookup fails, fall back to in-memory USERS.
-    Returns an AuthUser (wrapping the DB model) or None.
-    """
     try:
         # try treating user_id as integer primary key first
         try:
@@ -395,13 +388,9 @@ def load_dashboard_data():
 @app.route('/')
 @login_required
 def index():
-    """
-    Dashboard index: try to load live KPIs from the database, fall back to static JSON file.
-    """
     def safe_get(obj, attr, default=None):
         try:
             val = getattr(obj, attr)
-            # if it's a column/property InstrumentedAttribute on model instance, getattr returns value
             return val if val is not None else default
         except Exception:
             return default
@@ -411,7 +400,6 @@ def index():
         total_orders = db.session.query(func.count()).select_from(SalesOrder).scalar() or 0
         total_customers = db.session.query(func.count()).select_from(Customer).scalar() or 0
 
-        # Try to sum a sensible revenue column if present
         revenue_col = None
         if hasattr(SalesOrder, "total"):
             revenue_col = getattr(SalesOrder, "total")
@@ -435,8 +423,8 @@ def index():
                 "total": float(safe_get(o, "total") or safe_get(o, "amount") or 0.0)
             })
         recent_orders = []
+
         try:
-            # Prefer a DB join between SalesOrder and Customer for accurate recent orders
             if 'Customer' in globals() and 'SalesOrder' in globals() and hasattr(SalesOrder, "customer_id") and hasattr(Customer, "id"):
                 rows = (
                     db.session.query(SalesOrder, Customer)
@@ -445,6 +433,7 @@ def index():
                     .limit(5)
                     .all()
                 )
+
                 for so, cust in rows:
                     date_val = getattr(so, "order_date", None) or getattr(so, "created_at", None) or getattr(so, "date", None)
                     if hasattr(date_val, "isoformat"):
@@ -462,7 +451,6 @@ def index():
                         "status": getattr(so, "status", "") or ""
                     })
             else:
-                # fallback: get recent orders from SalesOrder only
                 recent_q = db.session.query(SalesOrder).order_by(getattr(SalesOrder, "id", SalesOrder).desc()).limit(5)
                 recent_orders_rows = recent_q.all()
                 for o in recent_orders_rows:
@@ -489,9 +477,9 @@ def index():
             recent_orders = []
 
         top_customers = []
+
         try:
             if hasattr(SalesOrder, "customer_id"):
-                # choose the value column (total or amount)
                 value_col = getattr(SalesOrder, "total", None) or getattr(SalesOrder, "amount", None)
                 if value_col is not None:
                     rows = (
@@ -523,7 +511,6 @@ def index():
         
         #Total inventory value
         try:
-            # prefer DB-side aggregate since columns are known: quantity (int) and unit_cost (float)
             if 'InventoryItem' in globals():
                 total_inventory_value = float(
                     db.session.query(
@@ -531,7 +518,6 @@ def index():
                     ).scalar() or 0.0
                 )
             else:
-                # fallback: compute in Python row-wise
                 rows = db.session.query(InventoryItem).all()
                 s = 0.0
                 for r in rows:
@@ -547,8 +533,6 @@ def index():
             app.logger.exception("Failed to compute total_inventory_value")
             total_inventory_value = 0.0
 
-
-
         kpi = {
             "total_orders": int(total_orders),
             "total_customers": int(total_customers),
@@ -557,7 +541,6 @@ def index():
         }
 
         try:
-            # Sales trend (monthly totals) from SalesOrder (prefer 'total' then 'amount')
             sales_trend_graph_local = {"data": [], "layout": {"title": "Sales Trend"}}
             if 'SalesOrder' in globals() and hasattr(SalesOrder, "id"):
                 date_col = getattr(SalesOrder, "order_date", getattr(SalesOrder, "date", None))
@@ -597,7 +580,6 @@ def index():
                                      "layout": {"title": "Top Customers by Sales"}}
 
             
-            # Product performance: prefer join SalesOrder.inventory_id -> InventoryItem.id to get product names
             product_performance_graph = {"data": [], "layout": {"title": "Product Performance"}}
             prod_field = None
             if 'SalesOrder' in globals():
@@ -631,10 +613,9 @@ def index():
                     product_performance_graph = {"data": [{"labels": labels, "values": vals, "type": "pie", "name": "Inventory categories"}],
                                                  "layout": {"title": "Inventory by Category"}}
             product_performance_graph = {"data": [], "layout": {"title": "Product Performance"}}
+
             try:
-                # Prefer a join from SalesOrder.inventory_id -> InventoryItem.id to get product names
                 if 'SalesOrder' in globals() and 'InventoryItem' in globals() and hasattr(SalesOrder, "inventory_id") and hasattr(InventoryItem, "id"):
-                    # choose best product/name column on InventoryItem
                     prod_col = getattr(InventoryItem, "product", None) or getattr(InventoryItem, "name", None) or getattr(InventoryItem, "item", None)
                     if prod_col is not None:
                         rows = (
@@ -650,7 +631,6 @@ def index():
                         if labels and vals:
                             product_performance_graph = {"data": [{"labels": labels, "values": vals, "type": "pie", "name": "Products"}],
                                                          "layout": {"title": "Top Products (by order count)"}}
-                # fallback: try SalesOrder product-like fields
                 if not product_performance_graph["data"]:
                     prod_field = None
                     if 'SalesOrder' in globals():
@@ -671,7 +651,6 @@ def index():
                         if labels and vals:
                             product_performance_graph = {"data": [{"labels": labels, "values": vals, "type": "pie", "name": "Products"}],
                                                          "layout": {"title": "Top Products (by count)"}}
-                # final fallback: aggregate by InventoryItem.category if available
                 if not product_performance_graph["data"] and 'InventoryItem' in globals() and hasattr(InventoryItem, "category"):
                     rows = (
                         db.session.query(InventoryItem.category, func.count().label("cnt"))
@@ -950,10 +929,6 @@ def add_payment():
 @app.route('/add_expense', methods=['GET', 'POST'])
 @login_required
 def add_expense():
-    """
-    Record an operational expense.
-    Redirects to accounting_overview.
-    """
     if request.method == 'POST':
         date_val = request.form.get('date', '').strip()
         description = request.form.get('description', '').strip()
@@ -1099,13 +1074,12 @@ def accounting_overview():
         return default
 
     try:
-        # Attempt to read from DB models if they exist in this module's globals
         accounts = []
         invoices = []
         payments = []
         expenses = []
         journal_entries = []
-        outstanding_payments = [] # Initialize list for AP
+        outstanding_payments = []
 
         # Accounts
         if 'Account' in globals():
@@ -4935,7 +4909,7 @@ def sales_overview():
             app.logger.exception("Failed to build KPIs for sales_overview")
             kpi = {"total_sales": "N/A", "orders": "N/A", "customers": "N/A", "revenue": "N/A"}
 
-        # Top customers by revenue (pie)
+        # Top customers by revenue
         top_customers = {"data": [], "layout": {"title": "Top Customers"}}
         if 'Customer' in globals() and 'SalesOrder' in globals() and hasattr(SalesOrder, "customer_id"):
             value_col = getattr(SalesOrder, "total", getattr(SalesOrder, "amount", None))
@@ -5047,7 +5021,6 @@ def create_sale():
                 try:
                     next_oid = db.session.query(func.coalesce(func.max(getattr(SalesOrder, "order_id")), 0) + 1).scalar()
                 except Exception:
-                    # Rollback if ID generation query fails
                     db.session.rollback()
                     next_oid = None
                 if not next_oid:
@@ -5059,8 +5032,9 @@ def create_sale():
             _set_attr_if_exists(so, "product", getattr(item, "product", None) or getattr(item, "name", None))
             _set_attr_if_exists(so, "quantity", quantity)
             _set_attr_if_exists(so, "amount", total)
-            _set_attr_if_exists(so, "status", "pending")
-            _set_attr_if_exists(so, "order_date", datetime.now().date(), date_try=True)
+            _set_attr_if_exists(so, "status", "Pending")
+            _set_attr_if_exists(so, "date", datetime.now(timezone.utc).date(), date_try=True)
+            _set_attr_if_exists(so, "created_at", datetime.now(timezone.utc), date_try=True)
             db.session.add(so)
             db.session.flush() 
             so_id = getattr(so, "id", None)
