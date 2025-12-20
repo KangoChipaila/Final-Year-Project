@@ -423,7 +423,7 @@ class IncomeStatementLine(db.Model):
     period = db.Column(db.String(50))
     category = db.Column(db.String(200))
     amount = db.Column(db.Numeric(18, 2), default=0)
-    line_type = db.Column(db.String(50))  # e.g. 'income' or 'expense'
+    line_type = db.Column(db.String(50))
     created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
     def __repr__(self):

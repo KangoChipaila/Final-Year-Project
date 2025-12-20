@@ -451,6 +451,12 @@
   .h-screen {
     height: 100vh;
   }
+  .max-h-56 {
+    max-height: calc(var(--spacing) * 56);
+  }
+  .max-h-64 {
+    max-height: calc(var(--spacing) * 64);
+  }
   .min-h-screen {
     min-height: 100vh;
   }
@@ -933,6 +939,9 @@
   .tracking-wide {
     --tw-tracking: var(--tracking-wide);
     letter-spacing: var(--tracking-wide);
+  }
+  .break-words {
+    overflow-wrap: break-word;
   }
   .whitespace-nowrap {
     white-space: nowrap;

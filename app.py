@@ -577,7 +577,7 @@ def index():
                     vals = [float(r[1]) for r in rows]
                     if labels and vals:
                         customers = {"data": [{"labels": labels, "values": vals, "type": "pie", "name": "Customers"}],
-                                     "layout": {"title": "Top Customers by Sales"}}
+                                     "layout": {"title": "Top Customers by Expenditure"}}
 
             
             product_performance_graph = {"data": [], "layout": {"title": "Product Performance"}}
@@ -4640,19 +4640,63 @@ GROUPS = {
 }
 
 # standardized roles list
-ROLES = ["pending_user", "admin", "manager", "finance", "hr", "it", "logistics"]
+ROLES = ["pending_user", "manager", "staff"]
 
 @app.route("/admin-users")
 @login_required
 def admin_users():
-    # allow only admin (role == 'admin' or group_id == 0)
     model = getattr(current_user, "model", None)
     is_admin = bool(model and (getattr(model, "role", None) == "admin" or getattr(model, "group_id", None) == 0))
     if not is_admin:
         return render_template("403.html"), 403
 
     users = db.session.query(User).order_by(User.id).all()
-    return render_template("admin-users.html", users=users, groups=GROUPS, roles=ROLES)
+
+    try:
+        per_page = 25
+        auth_page = max(1, int(request.args.get('auth_page', 1)))
+        audit_page = max(1, int(request.args.get('audit_page', 1)))
+
+        # Auth logs
+        auth_total = db.session.query(func.count()).select_from(AuthLog).scalar() or 0
+        auth_logs = (
+            db.session.query(AuthLog)
+            .order_by(getattr(AuthLog, 'created_at', AuthLog.id).desc())
+            .limit(per_page)
+            .offset((auth_page - 1) * per_page)
+            .all()
+        )
+
+        # Audit logs
+        audit_total = db.session.query(func.count()).select_from(AuditLog).scalar() or 0
+        audit_logs = (
+            db.session.query(AuditLog)
+            .order_by(getattr(AuditLog, 'created_at', AuditLog.id).desc())
+            .limit(per_page)
+            .offset((audit_page - 1) * per_page)
+            .all()
+        )
+    except Exception:
+        # If logging tables or DB are unavailable, fall back to empty lists
+        app.logger.debug("Auth/Audit logs not available for admin view", exc_info=True)
+        auth_logs = []
+        audit_logs = []
+        auth_total = 0
+        audit_total = 0
+
+    return render_template(
+        "admin-users.html",
+        users=users,
+        groups=GROUPS,
+        roles=ROLES,
+        auth_logs=auth_logs,
+        audit_logs=audit_logs,
+        auth_page=auth_page,
+        audit_page=audit_page,
+        auth_total=auth_total,
+        audit_total=audit_total,
+        per_page=per_page
+    )
 
 @app.route("/admin-users/<int:user_id>/update", methods=["POST"])
 @login_required
@@ -4926,7 +4970,7 @@ def sales_overview():
                 vals = [float(r[1]) for r in rows]
                 if labels and vals:
                     top_customers = {"data": [{"labels": labels, "values": vals, "type": "pie", "name": "Customers"}],
-                                 "layout": {"title": "Top Customers by Sales"}}
+                                 "layout": {"title": "Top Customers by Expenditure"}}
 
         
         return render_template('sales_overview.html',

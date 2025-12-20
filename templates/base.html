@@ -13,13 +13,11 @@
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
     <style>
-        /* Smooth transitions for the drawer and main content */
         #sidebar { transition: transform .18s ease, width .18s ease; }
         #mainContent { transition: margin-left .18s ease, padding .18s ease; }
 
-        /* Collapsed state adjustments are applied from JS by toggling 'sidebar-collapsed' on <body> */
         body.sidebar-collapsed #sidebar {
-            transform: translateX(-100%); /* hide sidebar */
+            transform: translateX(-100%); 
             width: 0 !important;
             visibility: hidden;
         }
@@ -27,9 +25,8 @@
             margin-left: 0 !important;
         }
 
-        /* Ensure large-screen default spacing (matches existing md:ml-64) */
         @media (min-width: 768px) {
-            #mainContent { margin-left: 16rem; } /* 64 = 16rem matches sidebar width */
+            #mainContent { margin-left: 16rem; }
         }
     </style>
 

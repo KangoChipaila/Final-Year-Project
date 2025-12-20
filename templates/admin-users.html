@@ -122,5 +122,90 @@
       </tbody>
     </table>
   </div>
+  
+  <!-- Auth logs -->
+  <div class="mt-6 mb-6 shadow-lg rounded p-4 bg-white">
+    <h3 class="font-semibold mb-3">Authentication Logs</h3>
+    {% if auth_logs %}
+    <div class="overflow-x-auto">
+      <div class="max-h-56 overflow-y-auto">
+      <table class="w-full table-auto border-collapse">
+        <thead>
+          <tr class="text-left text-sm text-gray-600 border-b">
+            <th class="py-2 px-3">ID</th>
+            <th class="py-2 px-3">User ID</th>
+            <th class="py-2 px-3">Event</th>
+            <th class="py-2 px-3">Success</th>
+            <th class="py-2 px-3">IP</th>
+            <th class="py-2 px-3">User Agent</th>
+            <th class="py-2 px-3">Meta</th>
+            <th class="py-2 px-3">Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in auth_logs[:10] %}
+          <tr class="border-b hover:bg-gray-50">
+            <td class="py-2 px-3 text-sm">{{ log.id }}</td>
+            <td class="py-2 px-3 text-sm">{{ log.user_id or '' }}</td>
+            <td class="py-2 px-3 text-sm">{{ log.event_type }}</td>
+            <td class="py-2 px-3 text-sm">{{ 'Yes' if log.success else 'No' }}</td>
+            <td class="py-2 px-3 text-sm">{{ log.ip_address or '' }}</td>
+            <td class="py-2 px-3 text-sm break-words">{{ log.user_agent or '' }}</td>
+            <td class="py-2 px-3 text-sm break-words">{{ log.meta or '' }}</td>
+            <td class="py-2 px-3 text-sm">{{ log.created_at }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+    {% else %}
+      <div class="text-sm text-gray-500">No authentication logs available.</div>
+    {% endif %}
+  </div>
+
+  <!-- Audit logs -->
+  <div class="mt-6 mb-6 shadow-lg rounded p-4 bg-white">
+    <h3 class="font-semibold mb-3">Audit Logs</h3>
+    {% if audit_logs %}
+    <div class="overflow-x-auto">
+      <div class="max-h-64 overflow-y-auto">
+      <table class="w-full table-auto border-collapse">
+        <thead>
+          <tr class="text-left text-sm text-gray-600 border-b">
+            <th class="py-2 px-3">ID</th>
+            <th class="py-2 px-3">User ID</th>
+            <th class="py-2 px-3">Action</th>
+            <th class="py-2 px-3">Resource</th>
+            <th class="py-2 px-3">Resource ID</th>
+            <th class="py-2 px-3">Reason</th>
+            <th class="py-2 px-3">Before</th>
+            <th class="py-2 px-3">After</th>
+            <th class="py-2 px-3">Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in audit_logs[:10] %}
+          <tr class="border-b hover:bg-gray-50">
+            <td class="py-2 px-3 text-sm">{{ a.id }}</td>
+            <td class="py-2 px-3 text-sm">{{ a.user_id or '' }}</td>
+            <td class="py-2 px-3 text-sm">{{ a.action }}</td>
+            <td class="py-2 px-3 text-sm">{{ a.resource_type or '' }}</td>
+            <td class="py-2 px-3 text-sm">{{ a.resource_id or '' }}</td>
+            <td class="py-2 px-3 text-sm break-words">{{ a.reason or '' }}</td>
+            <td class="py-2 px-3 text-sm break-words">{{ a.before or '' }}</td>
+            <td class="py-2 px-3 text-sm break-words">{{ a.after or '' }}</td>
+            <td class="py-2 px-3 text-sm">{{ a.created_at }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+    {% else %}
+      <div class="text-sm text-gray-500">No audit logs available.</div>
+    {% endif %}
+  </div>
+
 </div>
 {% endblock %}
