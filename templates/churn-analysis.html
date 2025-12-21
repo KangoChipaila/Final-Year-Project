@@ -40,11 +40,13 @@
           </select>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700">Model / method</label>
+          <label class="block text-sm font-medium text-gray-700">Method</label>
           <select name="method" class="mt-1 block w-full border rounded px-3 py-2">
-            <option value="cohort">Cohort / retention</option>
+            <option value="cohort">Retention</option>
+            <!--
             <option value="classification">Classification (predictive)</option>
             <option value="survival">Survival analysis</option>
+            -->
           </select>
         </div>
         <div class="flex items-end">
@@ -56,7 +58,7 @@
 
   <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <div class="bg-white p-6 rounded shadow">
-      <h3 class="text-lg font-semibold mb-3">Retention / Cohort Curve</h3>
+      <h3 class="text-lg font-semibold mb-3">Retention Chart</h3>
       <div id="cohort-chart" style="height:360px;"></div>
     </div>
 
@@ -73,8 +75,8 @@
         </div>
       </div>
 
-      <h4 class="text-sm font-medium text-gray-700 mb-2">Top drivers (feature importance)</h4>
-      <div id="feature-importance" class="mb-4">No results yet.</div>
+      <h4 class="text-sm font-medium text-gray-700 mb-2"></h4>
+      <div id="feature-importance" class="mb-4"></div>
 
       <h4 class="text-sm font-medium text-gray-700 mb-2">High-risk customers</h4>
       <div class="overflow-x-auto">
@@ -91,15 +93,6 @@
           </tbody>
         </table>
       </div>
-    </div>
-  </section>
-
-  <section class="bg-white p-6 rounded shadow mt-6">
-    <h3 class="text-lg font-semibold mb-3">Export / Actions</h3>
-    <div class="flex gap-3">
-      <button id="download-csv" class="px-4 py-2 bg-gray-100 rounded text-sm">Download Results (CSV)</button>
-      <button id="email-report" class="px-4 py-2 bg-gray-100 rounded text-sm">Email Report</button>
-      <div class="text-sm text-gray-500 ml-auto">Tip: schedule nightly scoring via background worker for production.</div>
     </div>
   </section>
 </div>

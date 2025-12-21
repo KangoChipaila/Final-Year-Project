@@ -124,8 +124,8 @@
   </div>
   
   <!-- Auth logs -->
-  <div class="mt-6 mb-6 shadow-lg rounded p-4 bg-white">
-    <h3 class="font-semibold mb-3">Authentication Logs</h3>
+  <div class="mt-6 bg-white h-95 overflow-y-scroll rounded-xl shadow-lg border border-gray-200 px-6 py-0 mb-8">
+    <h3 class="font-semibold mb-3 p-4">Authentication Logs</h3>
     {% if auth_logs %}
     <div class="overflow-x-auto">
       <div class="max-h-56 overflow-y-auto">
@@ -143,7 +143,7 @@
           </tr>
         </thead>
         <tbody>
-          {% for log in auth_logs[:10] %}
+          {% for log in auth_logs %}
           <tr class="border-b hover:bg-gray-50">
             <td class="py-2 px-3 text-sm">{{ log.id }}</td>
             <td class="py-2 px-3 text-sm">{{ log.user_id or '' }}</td>
@@ -165,8 +165,8 @@
   </div>
 
   <!-- Audit logs -->
-  <div class="mt-6 mb-6 shadow-lg rounded p-4 bg-white">
-    <h3 class="font-semibold mb-3">Audit Logs</h3>
+  <div class="bg-white h-95 overflow-y-scroll rounded-xl shadow-lg border border-gray-200 px-6 py-0 mb-8">
+    <h3 class="font-semibold mb-3 p-4">Audit Logs</h3>
     {% if audit_logs %}
     <div class="overflow-x-auto">
       <div class="max-h-64 overflow-y-auto">
@@ -176,24 +176,16 @@
             <th class="py-2 px-3">ID</th>
             <th class="py-2 px-3">User ID</th>
             <th class="py-2 px-3">Action</th>
-            <th class="py-2 px-3">Resource</th>
-            <th class="py-2 px-3">Resource ID</th>
-            <th class="py-2 px-3">Reason</th>
-            <th class="py-2 px-3">Before</th>
             <th class="py-2 px-3">After</th>
             <th class="py-2 px-3">Created</th>
           </tr>
         </thead>
         <tbody>
-          {% for a in audit_logs[:10] %}
+          {% for a in audit_logs %}
           <tr class="border-b hover:bg-gray-50">
             <td class="py-2 px-3 text-sm">{{ a.id }}</td>
             <td class="py-2 px-3 text-sm">{{ a.user_id or '' }}</td>
             <td class="py-2 px-3 text-sm">{{ a.action }}</td>
-            <td class="py-2 px-3 text-sm">{{ a.resource_type or '' }}</td>
-            <td class="py-2 px-3 text-sm">{{ a.resource_id or '' }}</td>
-            <td class="py-2 px-3 text-sm break-words">{{ a.reason or '' }}</td>
-            <td class="py-2 px-3 text-sm break-words">{{ a.before or '' }}</td>
             <td class="py-2 px-3 text-sm break-words">{{ a.after or '' }}</td>
             <td class="py-2 px-3 text-sm">{{ a.created_at }}</td>
           </tr>

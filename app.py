@@ -1,15 +1,15 @@
-from flask import Flask, render_template, jsonify, Response, send_file, request, redirect, url_for, json, flash, make_response, abort
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import col
+from flask import Flask, render_template, jsonify, Response, request, redirect, url_for, json, flash, make_response, abort
+#from pyspark.sql import SparkSession
+#from pyspark.sql.functions import col
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 import analytics
 import asset_upload_module
-import asset_functions
-import barcode
+#import asset_functions
+#import barcode
 from barcode.writer import ImageWriter
 import os
-import subprocess
+#import subprocess
 from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user, login_required
 from datetime import datetime, timezone
 import pdfkit
@@ -22,7 +22,7 @@ import csv
 import json
 import traceback
 from types import SimpleNamespace
-from flask_wtf import CSRFProtect
+#from flask_wtf import CSRFProtect
 
 from models import (
     db, register_extensions,
@@ -43,13 +43,12 @@ Payroll = PayrollRecord
 
 
 app = Flask(__name__)
-app.secret_key = "supersecretkey"  # Replace with a real secret key
+app.secret_key = "supersecretkey"
 
 #csrf = CSRFProtect(app)
 
 app.register_blueprint(assets_upload_bp)
 
-# configure SQLAlchemy (use env var or fallback)
 username = 'postgres'
 password = 'kango'
 directory = 'Final-Year-Project'
@@ -63,7 +62,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # initialize DB extensions
 register_extensions(app)
 migrate = Migrate(app, db)
-
 
 config = pdfkit.configuration(wkhtmltopdf=r'C:\Progra~1\wkhtmltopdf\bin\wkhtmltopdf.exe')
 
@@ -81,19 +79,17 @@ def handle_uncaught_exception(e):
     except Exception:
         app.logger.exception("Failed to persist ErrorLog")
 
-    # re-raise default behavior for debug mode; return a 500 page in production
     return render_template('500.html'), 500
 
-# ------------------- Login Manager Setup -------------------
+# Login Manager Setup
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 
-# lightweight wrapper so Flask-Login works with models.User (DB model)
+# Wrapper so Flask-Login works with models.User (DB model)
 class AuthUser(UserMixin):
     def __init__(self, model):
         self._model = model
-        # Flask-Login expects get_id() to return a string
         self.id = str(getattr(model, "id", ""))
         self.username = getattr(model, "username", None)
 
@@ -103,10 +99,8 @@ class AuthUser(UserMixin):
 
     @property
     def is_active(self):
-        # return model's is_active flag (default True) without setting an attribute
         return bool(getattr(self._model, "is_active", True))
 
-# simple fallback in-memory user wrapper (for development)
 class FallbackUser:
     def __init__(self, username):
         self.id = username
@@ -116,14 +110,12 @@ class FallbackUser:
 @login_manager.user_loader
 def load_user(user_id):
     try:
-        # try treating user_id as integer primary key first
         try:
             uid = int(user_id)
             user_row = db.session.get(User, uid)
             if user_row:
                 return AuthUser(user_row)
         except (ValueError, TypeError):
-            # not an int — do username lookup
             user_row = None
 
         if user_row is None:
@@ -132,32 +124,22 @@ def load_user(user_id):
                 if user_row:
                     return AuthUser(user_row)
             except (OperationalError, DataError):
-                # DB trouble during username lookup — fall through to fallback
                 pass
 
     except (OperationalError, DataError):
-        # DB not ready — fall back to in-memory users
         pass
-"""
-    # fallback to in-memory USERS
-    if user_id in USERS:
-        return AuthUser(FallbackUser(user_id))
-    return None"""
 
-
-# --- Logging helpers (persist to DB tables: auth_logs, audit_logs, error_logs) ---
+# Logging helpers
 def _current_user_id():
     try:
         m = getattr(current_user, "model", None)
         if m is not None:
             return getattr(m, "id", None)
-        # fallback if current_user is a plain object
         return getattr(current_user, "id", None)
     except Exception:
         return None
 
 def log_auth(event_type, success=True, user_id=None, ip=None, user_agent=None, meta=None):
-    """Append to auth_logs (best-effort)."""
     try:
         uid = user_id if user_id is not None else _current_user_id()
         al = AuthLog(
@@ -178,7 +160,6 @@ def log_auth(event_type, success=True, user_id=None, ip=None, user_agent=None, m
         app.logger.exception("Failed to write AuthLog")
 
 def log_audit(action, resource_type=None, resource_id=None, before=None, after=None, reason=None, user_id=None, meta=None):
-    """Append to audit_logs (best-effort)."""
     try:
         uid = user_id if user_id is not None else _current_user_id()
         al = AuditLog(
@@ -201,7 +182,6 @@ def log_audit(action, resource_type=None, resource_id=None, before=None, after=N
         app.logger.exception("Failed to write AuditLog")
 
 def log_error(level, message, stacktrace=None, context=None):
-    """Append to error_logs (best-effort)."""
     try:
         el = ErrorLog(
             level=(level or "ERROR"),
@@ -218,11 +198,10 @@ def log_error(level, message, stacktrace=None, context=None):
             pass
         app.logger.exception("Failed to write ErrorLog")
 
-# ------------------- Admin: Create user -------------------
+# Admin: Create user
 @app.route("/admin/users/create", methods=["POST"])
 @login_required
 def admin_create_user():
-    # only allow administrators (role == 'admin' or group_id == 0)
     model = getattr(current_user, "model", None)
     is_admin = bool(model and (getattr(model, "role", None) == "admin" or getattr(model, "group_id", None) == 0))
     if not is_admin:
@@ -241,7 +220,6 @@ def admin_create_user():
         return redirect(url_for("admin_users"))
 
     try:
-        # ensure username unique
         existing = db.session.query(User).filter_by(username=username).first()
         if existing:
             flash("Username already exists.", "error")
@@ -249,24 +227,20 @@ def admin_create_user():
 
         new_user = User(username=username)
 
-        # optional fields if model supports them
         if hasattr(new_user, "email"):
             setattr(new_user, "email", email)
         if hasattr(new_user, "full_name"):
             setattr(new_user, "full_name", full_name)
 
-        # group_id
         try:
             gid = int(group_id_raw)
             setattr(new_user, "group_id", gid)
         except Exception:
             setattr(new_user, "group_id", group_id_raw)
 
-        # role
         if hasattr(new_user, "role"):
             setattr(new_user, "role", role)
 
-        # password (prefer model helper)
         if hasattr(new_user, "set_password"):
             new_user.set_password(password)
         else:
@@ -277,7 +251,6 @@ def admin_create_user():
             else:
                 setattr(new_user, "password_hash", generate_password_hash(password))
 
-        # is_active
         if hasattr(new_user, "is_active"):
             setattr(new_user, "is_active", bool(is_active))
         else:
@@ -286,7 +259,7 @@ def admin_create_user():
         db.session.add(new_user)
         db.session.commit()
         flash(f"User '{username}' created.", "success")
-        # audit
+
         try:
             log_audit(action="create_user", resource_type="User", resource_id=getattr(new_user, "id", None), after=new_user)
         except Exception:
@@ -298,12 +271,9 @@ def admin_create_user():
         flash(str(e))
     return redirect(url_for("admin_users"))
 
-# ------------------- Login Route (use DB model when available) -------------------
+# Login Route (use DB model when available)
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    """
-    Authenticate against models.User when available. Fall back to in-memory USERS.
-    """
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
@@ -332,14 +302,13 @@ def login():
                 log_auth(event_type="login_failed", success=False, user_id=None, meta={"username": username})
                 return render_template("login.html", error="Invalid username or password")
         except (OperationalError, DataError):
-            # DB not available — try in-memory
             pass
 
         return render_template("login.html", error="Invalid username or password")
 
     return render_template("login.html")
 
-# ------------------- Context Processor (for base.html) -------------------
+# Context Processor (for base.html)
 @app.context_processor
 def inject_globals():
     return {
@@ -349,7 +318,7 @@ def inject_globals():
         "version": "1.0.0"
     }
 
-# ------------------- Logout Route -------------------
+# Logout Route 
 @app.route("/logout", methods=["POST"])
 @login_required
 def logout():
@@ -499,7 +468,6 @@ def index():
                         for r in rows
                     ]
                 else:
-                    # no numeric order value column; fall back to listing customers
                     cust_rows = db.session.query(Customer).limit(5).all()
                     top_customers = [{"name": getattr(c, "name", ""), "total": 0.0} for c in cust_rows]
             else:
@@ -693,7 +661,6 @@ def index():
                 # build monthly maps
                 revenue_map = {}
                 expense_map = {}
-                # revenue from SalesOrder
                 if 'SalesOrder' in globals() and date_col is not None and value_col is not None:
                     rev_rows = (
                         db.session.query(func.date_trunc('month', date_col).label('month'),
@@ -706,7 +673,6 @@ def index():
                         if r[0] is not None:
                             k = r[0].strftime("%Y-%m")
                             revenue_map[k] = float(r[1])
-                # expenses from Expense.amount / date
                 if 'Expense' in globals() and hasattr(Expense, "date") and hasattr(Expense, "amount"):
                     exp_rows = (
                         db.session.query(func.date_trunc('month', Expense.date).label('month'),
@@ -719,7 +685,6 @@ def index():
                         if r[0] is not None:
                             k = r[0].strftime("%Y-%m")
                             expense_map[k] = float(r[1])
-                # unify timeline
                 months = sorted(set(list(revenue_map.keys()) + list(expense_map.keys())))
                 if months:
                     rev_vals = [revenue_map.get(m, 0.0) for m in months]
@@ -732,7 +697,6 @@ def index():
                         "layout": {"title": "Revenue vs Expenses", "xaxis": {"title": "Month"}, "yaxis": {"title": "Amount"}}
                     }
             except Exception:
-                # leave fallback empty
                 app.logger.debug("Revenue/expenses graph build failed", exc_info=True)
 
             # Employee status
@@ -746,7 +710,6 @@ def index():
                                              "layout": {"title": "Employee Status"}}
 
         except Exception:
-            # fall back to simple empty placeholders if any DB error occurs
             app.logger.exception("Failed to build DB-backed graphs; using placeholders")
             sales_trend_graph_local = sales_trend_graph or {"data": [], "layout": {}}
             customers = goods_performance_pie_chart or {"data": [], "layout": {}}
@@ -757,7 +720,7 @@ def index():
             employee_status_graph = {"data": [], "layout": {}}
 
 
-        # recent activity: synthesize from recent orders/payments if possible
+        # recent activity: collect from recent orders/payments if possible
         recent_activity = []
         try:
             payments = db.session.query(Payment).order_by(getattr(Payment, "id", Payment)).limit(5).all()
@@ -783,7 +746,6 @@ def index():
         )
 
     except Exception as e:
-        # If anything fails (DB unavailable / schema mismatch), fall back to the existing JSON file
         app.logger.exception("Failed to load dashboard data from DB, falling back to static data")
         data = load_dashboard_data()
         kpi = data.get('kpi', {})
@@ -819,11 +781,6 @@ def index():
 @app.route('/add_payment', methods=['GET', 'POST'])
 @login_required
 def add_payment():
-    """
-    Create a payment record.
-    If status is 'Paid', save to Payment table (history) with generated payment_id.
-    Otherwise save to OutstandingPayment table (liability) with generated payment_id.
-    """
     if request.method == 'POST':
         party = request.form.get('party', '').strip()
         due_date = request.form.get('due_date', '').strip()
@@ -831,17 +788,14 @@ def add_payment():
         status = request.form.get('status', '').strip()
 
         try:
-            # Paid -> Payment history
             if status.lower() == 'paid' and 'Payment' in globals():
                 p = Payment()
 
-                # generate payment id based on count + 1
                 try:
                     cnt = db.session.query(func.count()).select_from(Payment).scalar() or 0
                     next_num = int(cnt) + 1
                 except Exception:
                     try:
-                        # fallback to max id + 1
                         max_id = db.session.query(func.coalesce(func.max(getattr(Payment, "id", Payment)), 0)).scalar() or 0
                         next_num = int(max_id) + 1
                     except Exception:
@@ -855,7 +809,6 @@ def add_payment():
                 _set_attr_if_exists(p, "amount", amount, cast_float=True)
                 _set_attr_if_exists(p, "status", status)
 
-                # fallback description if model lacks party
                 if not hasattr(p, 'party') and hasattr(p, 'description'):
                     _set_attr_if_exists(p, "description", f"Payment to {party}")
 
@@ -864,11 +817,9 @@ def add_payment():
                 flash('Payment recorded in history.', 'success')
                 return redirect(url_for('accounting_overview'))
 
-            # Otherwise -> OutstandingPayment
             if 'OutstandingPayment' in globals():
                 op = OutstandingPayment()
 
-                # generate outstanding payment id based on count + 1
                 try:
                     cnt = db.session.query(func.count()).select_from(OutstandingPayment).scalar() or 0
                     next_num = int(cnt) + 1
@@ -955,7 +906,6 @@ def add_expense():
             app.logger.exception("Failed to add expense")
             flash('Failed to add expense.', 'error')
 
-    # Load accounts for the dropdown if available
     accounts = []
     if 'Account' in globals():
         try:
@@ -968,10 +918,6 @@ def add_expense():
 @app.route('/add_journal_entry', methods=['GET', 'POST'])
 @login_required
 def add_journal_entry():
-    """
-    Record a manual journal entry (General Ledger).
-    Redirects to accounting_overview.
-    """
     if request.method == 'POST':
         date_val = request.form.get('date', '').strip()
         description = request.form.get('description', '').strip()
@@ -1013,10 +959,6 @@ def add_journal_entry():
 @app.route('/add_invoice', methods=['GET', 'POST'])
 @login_required
 def add_invoice():
-    """
-    Manually create an invoice.
-    Redirects to accounting_overview.
-    """
     if request.method == 'POST':
         customer_id = request.form.get('customer_id', '').strip()
         date_val = request.form.get('date', '').strip()
@@ -1044,7 +986,6 @@ def add_invoice():
             app.logger.exception("Failed to add invoice")
             flash('Failed to add invoice.', 'error')
 
-    # Load customers
     customers = []
     if 'Customer' in globals():
         try:
@@ -1057,10 +998,6 @@ def add_invoice():
 @app.route("/accounting-overview")
 @login_required
 def accounting_overview():
-    """
-    Load accounting overview from PostgreSQL tables when available.
-    Falls back to the existing file-based finance loader on error.
-    """
     def safe_get(row, *candidates, default=None):
         for c in candidates:
             if hasattr(row, c):
@@ -1109,7 +1046,6 @@ def accounting_overview():
                     "status": safe_get(inv, "status", "state", default="")
                 })
 
-        # Payments (Payment model is imported at top if available)
         if 'Payment' in globals():
             pay_rows = db.session.query(Payment).order_by(getattr(Payment, "id", Payment)).all()
             for p in pay_rows:
@@ -1123,7 +1059,6 @@ def accounting_overview():
                     "status": getattr(p, "status", "") or ""
                 })
 
-        # Outstanding Payments (Accounts Payable) - Added for Accounting Module
         if 'OutstandingPayment' in globals():
             op_rows = db.session.query(OutstandingPayment).order_by(getattr(OutstandingPayment, "due_date", OutstandingPayment)).all()
             for r in op_rows:
@@ -1135,7 +1070,6 @@ def accounting_overview():
                     "status": safe_get(r, "status", "")
                 })
 
-        # Expenses
         if 'Expense' in globals():
             exp_rows = db.session.query(Expense).order_by(getattr(Expense, "id", Expense)).all()
             for e in exp_rows:
@@ -1149,7 +1083,6 @@ def accounting_overview():
                     "status": getattr(e, "status", "") or ""
                 })
 
-        # Journal entries
         if 'JournalEntry' in globals():
             je_rows = db.session.query(JournalEntry).order_by(getattr(JournalEntry, "entry_id", JournalEntry)).all()
             for j in je_rows:
@@ -1162,12 +1095,10 @@ def accounting_overview():
                     "amount": float(safe_get(j, "amount", default=0) or 0)
                 })
 
-        # If no DB data found, fall through to file fallback
         any_db_data = any([accounts, invoices, payments, expenses, journal_entries, outstanding_payments])
         if not any_db_data:
             raise RuntimeError("No accounting models present in globals() or no rows returned")
 
-        # Compute simple summary metrics
         total_revenue = sum(inv.get("amount", 0) for inv in invoices)
         total_expenses = sum(exp.get("amount", 0) for exp in expenses)
         outstanding_invoices_amount = sum(inv.get("amount", 0) for inv in invoices if (inv.get("status", "").lower() != "paid"))
@@ -1187,7 +1118,6 @@ def accounting_overview():
             "layout": {"title": "Cash Flow by Period"}
         }
 
-        # Expense breakdown by category
         expense_by_cat = {}
         for e in expenses:
             cat = e.get("category") or "Uncategorized"
@@ -1206,7 +1136,7 @@ def accounting_overview():
         ]
 
         recent_activity = [f"Payment {p.get('id')} {p.get('status')} {p.get('amount')}" for p in payments[:5]]
-        top_vendors = []  # would require supplier/payee model joins; leave empty if not available
+        top_vendors = [] 
         recent_transactions = payments[:5] if payments else []
 
         return render_template(
@@ -1232,11 +1162,9 @@ def accounting_overview():
 @app.route("/assets/edit/<int:asset_id>", methods=["GET", "POST"])
 @login_required
 def edit_asset(asset_id):
-    # Support both GET (render form) and POST (apply DB-backed update)
     row = db.session.get(Asset, asset_id)
 
     if request.method == "POST":
-        # read form values
         name = request.form.get("name")
         category = request.form.get("category")
         purchase_date = request.form.get("purchase_date")
@@ -1276,7 +1204,6 @@ def edit_asset(asset_id):
 
         return redirect(url_for("asset_overview"))
 
-    # GET: render template using DB row if available, otherwise fall back to in-memory dict
     if row is not None:
         asset_dict = {
             "id": getattr(row, "id", None),
@@ -1333,7 +1260,6 @@ def add_asset():
         depreciation_rate = request.form.get("depreciation_rate")
         status = request.form.get("status")
 
-        # Basic validation
         if not name or not category or not purchase_date or not value:
             flash("Please fill in all required fields.", "error")
             return redirect(url_for("add_asset"))
@@ -1358,19 +1284,16 @@ def add_asset():
             flash("Failed to save asset to database.", "error")
             return redirect(url_for("add_asset"))
 
-    # If GET: render the form
     return render_template("add_asset.html")
 
 @app.route("/assets-overview", methods=["GET"])
 @login_required
 def asset_overview():
-    # Get search and filter parameters from URL
     query = request.args.get("query", "").strip()
     category = request.args.get("category", "")
     status = request.args.get("status", "")
 
     try:
-        # Query Postgres via SQLAlchemy Asset model
         q = db.session.query(Asset)
 
         if query:
@@ -1384,7 +1307,6 @@ def asset_overview():
 
         assets_rows = q.order_by(Asset.id).all()
 
-        # Convert model objects to dicts to match existing template expectations
         def asset_to_dict(a):
             purchase_date = getattr(a, "purchase_date", None)
             if hasattr(purchase_date, "isoformat"):
@@ -1418,13 +1340,11 @@ def asset_overview():
     except Exception as exc:
         app.logger.exception("Failed to load assets from DB, falling back to in-memory list")
         flash("Could not load assets from database. Showing in-memory data.", "warning")
-        # fallback to previous in-memory list (assets_data)
         assets = assets_data
         categories = sorted(list(set([a["category"] for a in assets])))
 
-        # build Plotly pie chart JSON for asset categories
+        # build Plotly pie chart for asset categories
     try:
-        # category chart
         cat_counts = {}
         status_counts = {}
         for a in assets:
@@ -1502,7 +1422,6 @@ def add_customer():
         phone = request.form.get('phone', '').strip()
         status = request.form.get('status', 'Active').strip()
 
-        # Try to insert into DB; fall back to file storage if DB unavailable
         try:
             cust = Customer()
             if hasattr(cust, "name"):
@@ -1516,7 +1435,6 @@ def add_customer():
             if hasattr(cust, "status"):
                 setattr(cust, "status", status)
 
-            # set upload timestamp on first matching possible field
             for ts_field in ("uploaded_at", "created_at", "timestamp", "created_on", "uploaded_on", "created"):
                 if hasattr(cust, ts_field):
                     setattr(cust, ts_field, datetime.utcnow())
@@ -1527,7 +1445,6 @@ def add_customer():
             flash('Customer added successfully!', 'success')
             return redirect(url_for('customer_overview'))
         except Exception:
-            # DB failed - fallback to JSON file as before
             db.session.rollback()
             app.logger.exception("DB add_customer failed")
 
@@ -1539,20 +1456,15 @@ def add_customer():
 
 @app.route('/edit_customer/<int:customer_id>', methods=['GET', 'POST'])
 def edit_customer(customer_id):
-    """
-    Edit a customer. Prefer updating the PostgreSQL Customer table; fall back to file-based storage.
-    """
-    # Try DB first
+   
     try:
         cust = db.session.get(Customer, customer_id)
     except Exception:
         app.logger.exception("DB lookup failed for edit_customer")
         cust = None
 
-    # If we found a DB row, operate on it
     if cust:
         if request.method == 'POST':
-            # Read form values
             name = request.form.get('name', '').strip()
             contact_person = request.form.get('contact_person', '').strip()
             email = request.form.get('email', '').strip()
@@ -1571,13 +1483,11 @@ def edit_customer(customer_id):
                 if hasattr(cust, "status"):
                     setattr(cust, "status", status)
 
-                # update "uploaded_at"/timestamp field if present (do not overwrite if empty)
                 for ts_field in ("uploaded_at", "created_at", "timestamp", "created_on", "uploaded_on", "created"):
                     if hasattr(cust, ts_field):
                         try:
                             setattr(cust, ts_field, datetime.utcnow())
                         except Exception:
-                            # ignore timestamp set errors
                             app.logger.debug("Could not set timestamp field %s on Customer", ts_field)
                         break
 
@@ -1591,7 +1501,6 @@ def edit_customer(customer_id):
                 flash('Failed to update customer (database error).', 'danger')
                 return redirect(url_for('customer_overview'))
 
-        # GET: prepare a simple dict for the template (templates expect dict)
         customer_dict = {
             "id": getattr(cust, "id", None),
             "name": getattr(cust, "name", "") or "",
@@ -1605,10 +1514,6 @@ def edit_customer(customer_id):
 @app.route('/delete_customer/<int:customer_id>', methods=['POST'])
 @login_required
 def delete_customer(customer_id):
-    """
-    Delete a customer. Prefer deleting from PostgreSQL Customer table; fall back to file-based storage.
-    """
-    # Try DB first
     try:
         cust = db.session.get(Customer, customer_id)
     except Exception:
@@ -1633,24 +1538,15 @@ def delete_customer(customer_id):
 
 from datetime import timedelta
 
-# Churn analysis UI route
 @app.route('/churn-analysis', methods=['GET'])
 @login_required
 def churn_analysis():
-    """Render churn analysis page."""
     return render_template('churn-analysis.html')
 
-# API endpoint used by churn-analysis.html to run analysis
 @app.route('/api/churn', methods=['POST'])
 @login_required
 def api_churn():
-    """
-    Lightweight churn analysis using Customer + SalesOrder/Invoice tables.
-    Accepts form fields: date_from, date_to, min_orders, churn_definition (days), method.
-    Returns JSON: churn_rate, retention_rate, cohort, feature_importance, high_risk_customers.
-    """
     try:
-        # parse inputs
         date_from_raw = request.form.get('date_from', '').strip()
         date_to_raw = request.form.get('date_to', '').strip()
         min_orders = int(request.form.get('min_orders', 1) or 1)
@@ -1678,7 +1574,6 @@ def api_churn():
         if total_customers == 0:
             return jsonify(ok=True, churn_rate=0.0, retention_rate=1.0, cohort={"x": [], "y": []}, feature_importance=[], high_risk_customers=[])
 
-        # pick order/invoice model
         order_model = None
         order_customer_field = None
         order_date_field = None
@@ -1760,7 +1655,6 @@ def api_churn():
         retention_rate = 1.0 - churn_rate
         high_risk_sorted = sorted(high_risk, key=lambda x: x["risk_score"], reverse=True)[:50]
 
-        # cohort matrix (best-effort with pandas)
         cohort_result = {"x": [], "y": []}
         try:
             import pandas as pd
@@ -1777,12 +1671,15 @@ def api_churn():
                         frac = float(count_retained) / float(total_cohort) if total_cohort else 0.0
                         row_counts.append(round(frac, 4))
                     matrix.append(row_counts)
+                import numpy as np
+                matrix = np.nan_to_num(np.array(matrix, dtype=float), nan=0.0).tolist()
                 cohort_result = {"x": months, "y": matrix}
         except Exception:
             cohort_result = {"x": [], "y": []}
 
-        # feature importance (best-effort)
+        # feature importance
         feature_importance = []
+        
         try:
             from sklearn.ensemble import RandomForestClassifier
             from sklearn.model_selection import train_test_split
@@ -1802,6 +1699,7 @@ def api_churn():
                 feature_importance = [{"name": n, "score": float(s)} for n, s in sorted(zip(feat_names, importances), key=lambda x: x[1], reverse=True)]
         except Exception:
             feature_importance = []
+            
 
         return jsonify(ok=True, churn_rate=churn_rate, retention_rate=retention_rate, cohort=cohort_result, feature_importance=feature_importance, high_risk_customers=high_risk_sorted)
 
@@ -1813,10 +1711,6 @@ def api_churn():
 @app.route('/customer-overview')
 @login_required
 def customer_overview():
-    """
-    Load customers from the database (Customer model). Falls back to file-based loader on error.
-    Provides customer_summary and customer_chart_data for the template.
-    """
     query = request.args.get('query', '').strip()
     selected_status = request.args.get('status', '')
 
@@ -1845,7 +1739,6 @@ def customer_overview():
     except Exception:
         app.logger.exception("Failed to load customers from DB")
 
-    # Summary metrics
     total = len(customers)
     active_count = sum(1 for c in customers if (c.get("status") or c.get("status", "")) == "Active")
     inactive_count = sum(1 for c in customers if (c.get("status") or c.get("status", "")) == "Inactive")
@@ -1880,10 +1773,6 @@ def customer_overview():
 @app.route('/customers/upload', methods=['POST'])
 @login_required
 def upload_customers():
-    """
-    Accept a CSV file with headers: Id,name,contact_person,email,phone,status
-    Insert rows into the Customer table. Skip rows that fail with a warning.
-    """
     file = request.files.get('csv_file')
     if not file:
         flash("No file uploaded.", "error")
@@ -1901,7 +1790,6 @@ def upload_customers():
     skipped = 0
     for row in reader:
         try:
-            # Map CSV columns safely
             name = (row.get('name') or row.get('Name') or '').strip()
             contact_person = (row.get('contact_person') or row.get('contactPerson') or row.get('Contact Person') or '').strip()
             email = (row.get('email') or row.get('Email') or '').strip()
@@ -1924,7 +1812,6 @@ def upload_customers():
             if hasattr(cust, "status"):
                 setattr(cust, "status", status)
 
-            # set upload timestamp (UTC) on the first matching timestamp field
             for ts_field in ("uploaded_at", "created_at", "timestamp", "created_on", "uploaded_on", "created"):
                 if hasattr(cust, ts_field):
                     setattr(cust, ts_field, datetime.utcnow())
@@ -1952,9 +1839,6 @@ def upload_customers():
 @app.route('/customers/download-sample')
 @login_required
 def download_customers_sample():
-    """
-    Return a small CSV sample for customers upload
-    """
     sample = (
         "Id,name,contact_person,email,phone,status\r\n"
         "1,Acme Trading,Chileshe Mwansa,chileshe.mwansa@acmetrading.co.zm,+260971234567,Active\r\n"
@@ -1970,7 +1854,6 @@ def _set_attr_if_exists(obj, field, value, date_try=False, cast_float=False):
     val = value
     if date_try and value:
         try:
-            # expect 'YYYY-MM-DD' from forms
             val = datetime.fromisoformat(value)
         except Exception:
             try:
@@ -1985,7 +1868,6 @@ def _set_attr_if_exists(obj, field, value, date_try=False, cast_float=False):
     try:
         setattr(obj, field, val)
     except Exception:
-        # ignore individual set errors
         app.logger.debug("Could not set %s on %s", field, type(obj).__name__)
 
 @app.route('/distribution-overview')
@@ -2000,7 +1882,6 @@ def distribution_overview():
             for f in fields:
                 try:
                     val = getattr(row, f)
-                    # serialize datetimes
                     if hasattr(val, "isoformat"):
                         val = val.isoformat()
                     out[f] = val
@@ -2021,7 +1902,6 @@ def distribution_overview():
             ]))
 
         shipments = []
-        # If Customer model and a customer_id FK exist on Shipment, join and attach customer name
         if 'Customer' in globals() and hasattr(Shipment, "customer_id"):
             rows = (
                 db.session.query(Shipment, Customer)
@@ -2080,7 +1960,6 @@ def distribution_overview():
                         od["customer_name"] = ""
                     orders.append(od)
             else:
-                # Fallback: no Customer model or no customer_id field — read orders only and try relationship if present
                 orders_rows = db.session.query(SalesOrder).order_by(getattr(SalesOrder, "id", SalesOrder)).all()
                 for o in orders_rows:
                     od = row_to_dict(o, [
@@ -2135,7 +2014,6 @@ def distribution_overview():
         
         # --- Build pie charts: shipment status distribution and order status distribution ---
         try:
-            # Shipments status counts
             ship_status_counts = {}
             for s in shipments:
                 st = (s.get("status") or s.get("state") or "Unknown")
@@ -2189,7 +2067,6 @@ def edit_shipment(id):
     if request.method == 'POST':
         try:
             form = request.form
-            # date: try parse YYYY-MM-DD -> date object; otherwise set raw value
             date_val = form.get('date')
             if date_val:
                 try:
@@ -2204,7 +2081,6 @@ def edit_shipment(id):
 
             db.session.add(sh)
             db.session.commit()
-            # redirect back to distribution overview
             return redirect(url_for('distribution_overview'))
         except Exception:
             try:
@@ -2212,10 +2088,8 @@ def edit_shipment(id):
             except Exception:
                 pass
             app.logger.exception("Failed to save shipment edits")
-            # show edit page again with 500 status
             return render_template('edit_shipment.html', shipment=sh), 500
 
-    # GET
     return render_template('edit_shipment.html', shipment=sh)
 
 
@@ -2229,7 +2103,6 @@ def add_shipment():
 
         try:
             sh = Shipment()
-            # flexible attribute setting
             _set_attr_if_exists(sh, "shipment_id", request.form.get('shipment_id', ''), date_try=False)
             _set_attr_if_exists(sh, "date", date_val, date_try=True)
             _set_attr_if_exists(sh, "carrier", carrier)
@@ -2243,7 +2116,6 @@ def add_shipment():
         except Exception:
             db.session.rollback()
             app.logger.exception("Failed to add shipment to DB; falling back to file")
-            # fallback to file-based storage for compatibility
 
         return redirect(url_for('distribution_overview'))
     return render_template('add_shipment.html')
@@ -2259,7 +2131,6 @@ def add_order():
 
         try:
             o = SalesOrder()
-            # try multiple common fields
             _set_attr_if_exists(o, "order_id", order_id)
             if customer.isdigit():
                 _set_attr_if_exists(o, "customer_id", int(customer))
@@ -2337,7 +2208,6 @@ def approve_purchase_request(id):
         if not pr:
             flash("Purchase request not found.", "error")
             return redirect(url_for('finance_overview'))
-        # set common status fields
         if hasattr(pr, "status"):
             setattr(pr, "status", "Approved")
         elif hasattr(pr, "state"):
@@ -2384,6 +2254,8 @@ def reject_purchase_request(id):
         flash("Failed to reject purchase request.", "error")
     return redirect(url_for('finance_overview'))
 
+# FINANCE
+
 @app.route('/finance-overview')
 @login_required
 def finance_overview():
@@ -2402,7 +2274,6 @@ def finance_overview():
     try:
         any_db = False
 
-        # Financial summary lines
         financial_summary = {}
         if 'FinancialSummaryLine' in globals():
             any_db = True
@@ -2412,10 +2283,8 @@ def finance_overview():
                 amount = float(safe_get(r, "value_amount", "amount", default=0) or 0)
                 period = safe_get(r, "period", default="")
                 
-                # store the numeric amount for templates that expect a scalar
                 financial_summary[label] = amount
 
-        # Income statement lines
         income_statement = []
         if 'IncomeStatementLine' in globals():
             any_db = True
@@ -2428,7 +2297,6 @@ def finance_overview():
                     "line_type": safe_get(r, "line_type", "type", "")
                 })
 
-        # Cash flow entries
         cash_flow = []
         if 'CashFlowEntry' in globals():
             any_db = True
@@ -2443,9 +2311,7 @@ def finance_overview():
                     "balance": float(safe_get(r, "balance", default=0) or 0)
                 })
 
-        # Outstanding payments
         outstanding_payments = []
-        # Prefer a dedicated OutstandingPayment model, otherwise try Payment as fallback
         if 'OutstandingPayment' in globals():
             any_db = True
             rows = db.session.query(OutstandingPayment).order_by(getattr(OutstandingPayment, "due_date", OutstandingPayment)).all()
@@ -2458,7 +2324,6 @@ def finance_overview():
                     "status": safe_get(r, "status", "")
                 })
         elif 'Payment' in globals():
-            # Payment model already used elsewhere but may contain payments we can surface
             any_db = True
             rows = db.session.query(Payment).order_by(getattr(Payment, "date", Payment)).all()
             for r in rows:
@@ -2470,7 +2335,6 @@ def finance_overview():
                     "status": safe_get(r, "status", "")
                 })
 
-        # Finance chart data (JSON stored)
         finance_chart_data = {}
         if 'FinanceChartData' in globals():
             any_db = True
@@ -2478,14 +2342,12 @@ def finance_overview():
             for r in rows:
                 name = safe_get(r, "name", "chart_id")
                 chart_json = safe_get(r, "chart_json", "data") or safe_get(r, "json", None)
-                # attempt to parse if stored as text
                 try:
                     parsed = chart_json if isinstance(chart_json, (dict, list)) else json.loads(chart_json)
                 except Exception:
                     parsed = {"data": [], "layout": {}}
                 finance_chart_data[name] = parsed
 
-        # --- Pending Purchase Requests for finance approval ---
         pending_purchase_requests = []
         if 'PurchaseRequest' in globals():
             try:
@@ -2511,11 +2373,10 @@ def finance_overview():
         if not any_db:
             raise RuntimeError("No finance DB models available")
 
-        # Prepare summary list (template expects list of label/value)
         summary_list = []
         if financial_summary:
             for k, v in financial_summary.items():
-                # support both dict (legacy) and scalar values
+
                 if isinstance(v, dict):
                     val = v.get('value', 0)
                 else:
@@ -2526,7 +2387,6 @@ def finance_overview():
                     valf = 0.0
                 summary_list.append({"label": k, "value": f"{valf:.2f}"})
         else:
-            # fallback aggregate from income_statement / cash_flow if needed
             total_revenue = sum(i.get("amount", 0) for i in income_statement if i.get("line_type") == "income")
             total_expenses = -sum(i.get("amount", 0) for i in income_statement if i.get("line_type") == "expense")
             summary_list = [
@@ -2534,10 +2394,9 @@ def finance_overview():
                 {"label": "Total Expenses", "value": f"{total_expenses:.2f}"}
             ]
 
-        # --- NEW DYNAMIC ALERTS FOR FINANCE ---
+        # ALERTS FOR FINANCE 
         alerts = []
 
-        # Derive outstanding_invoices_count from outstanding_payments if available
         outstanding_invoices_count = 0
         try:
             outstanding_invoices_count = sum(
@@ -2549,12 +2408,10 @@ def finance_overview():
         if outstanding_invoices_count > 0:
             alerts.append(f"Attention: {outstanding_invoices_count} invoices are currently unpaid.")
 
-        # Check for pending purchase requests
         pending_pr_count = len(pending_purchase_requests or [])
         if pending_pr_count > 0:
             alerts.append(f"Action Required: {pending_pr_count} purchase requests await approval.")
 
-        # Build accounts list (best-effort from DB) so we can check balances
         accounts = []
         if 'Account' in globals():
             try:
@@ -2575,7 +2432,6 @@ def finance_overview():
             except Exception:
                 app.logger.exception("Failed to load accounts for alerts")
 
-        # Check for low account balances (example threshold 1000)
         for acc in accounts:
             try:
                 if float(acc.get('balance', 0) or 0) < 1000:
@@ -2583,7 +2439,6 @@ def finance_overview():
             except Exception:
                 continue
 
-        # Basic charts extraction
         cashflow_chart = finance_chart_data.get("monthly_cashflow") or {"data": [], "layout": {}}
         expense_breakdown = finance_chart_data.get("expense_breakdown") or {"data": [], "layout": {}}
         revenue_sources = finance_chart_data.get("revenue_sources") or {"data": [], "layout": {}}
@@ -2623,16 +2478,12 @@ def finance_overview():
 @app.route('/add_receipt', methods=['GET', 'POST'])
 @login_required
 def add_receipt():
-    """
-    Add a cashflow receipt row: prefer CashFlowEntry model; otherwise use finance JSON.
-    """
     if request.method == 'POST':
         date_val = request.form.get('date', '').strip()
         description = request.form.get('description', '').strip()
         inflow = request.form.get('inflow', '').strip()
         balance = request.form.get('balance', '').strip()
 
-        # DB attempt
         try:
             if 'CashFlowEntry' in globals():
                 cfe = CashFlowEntry()
@@ -2650,7 +2501,6 @@ def add_receipt():
             db.session.rollback()
             app.logger.exception("Failed to insert cashflow entry into DB; falling back to file")
 
-        # File fallback
         try:
             data = load_finance()
             cash_flow = data.get('cash_flow', [])
@@ -2715,9 +2565,6 @@ def generate_report():
 
 @app.route('/add_employee', methods=['GET', 'POST'])
 def add_employee():
-    """
-    Create an Employee row in the DB when possible, otherwise fall back to file-based storage.
-    """
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
         department = request.form.get('department', '').strip()
@@ -2726,7 +2573,6 @@ def add_employee():
         phone = request.form.get('phone', '').strip()
         status = request.form.get('status', '').strip() or 'Active'
 
-        # Try DB insert first
         try:
             if 'Employee' in globals():
                 emp = Employee()
@@ -2736,7 +2582,7 @@ def add_employee():
                 _set_attr_if_exists(emp, "email", email)
                 _set_attr_if_exists(emp, "phone", phone)
                 _set_attr_if_exists(emp, "status", status)
-                # optional timestamp fields
+
                 for ts in ("hired_at", "created_at", "joined_on", "created"):
                     if hasattr(emp, ts):
                         _set_attr_if_exists(emp, ts, datetime.utcnow().isoformat())
@@ -2748,20 +2594,15 @@ def add_employee():
         except Exception:
             db.session.rollback()
             app.logger.exception("Failed to add employee to DB; falling back to file")
-            # fall through to render form (with flashes) so response is always returned
 
-    # If GET or POST fallback, render the form
     return render_template('add_employee.html')
 
 @app.route('/edit_employee/<employee_id>', methods=['GET', 'POST'])
 def edit_employee(employee_id):
-    """
-    Edit an employee: prefer DB row update; fallback to JSON file.
-    """
-    # Try DB first
+
     emp_obj = None
     try:
-        # allow numeric id or string id depending on model
+
         if 'Employee' in globals():
             try:
                 eid = int(employee_id)
@@ -2787,7 +2628,7 @@ def edit_employee(employee_id):
                 _set_attr_if_exists(emp_obj, "email", email)
                 _set_attr_if_exists(emp_obj, "phone", phone)
                 _set_attr_if_exists(emp_obj, "status", status)
-                # update timestamp if available
+
                 for ts in ("updated_at", "modified_at", "updated"):
                     if hasattr(emp_obj, ts):
                         _set_attr_if_exists(emp_obj, ts, datetime.utcnow().isoformat())
@@ -2801,7 +2642,7 @@ def edit_employee(employee_id):
                 app.logger.exception("Failed to update employee in DB")
                 flash('Failed to update employee (database error).', 'danger')
                 return redirect(url_for('human_resources_overview'))
-        # GET -> prepare dict for template
+
         employee_dict = {
             "id": getattr(emp_obj, "id", None),
             "name": getattr(emp_obj, "name", "") or "",
@@ -2816,10 +2657,6 @@ def edit_employee(employee_id):
 
 @app.route('/delete_employee/<employee_id>', methods=['POST'])
 def delete_employee(employee_id):
-    """
-    Delete employee from DB when possible; otherwise remove from HR JSON.
-    """
-    # Try DB delete
     try:
         if 'Employee' in globals():
             try:
@@ -2836,12 +2673,8 @@ def delete_employee(employee_id):
         db.session.rollback()
         app.logger.exception("Failed to delete employee from DB")
 
-#Fix this
 @app.route('/departments_overview')
 def departments_overview():
-    """
-    Aggregate departments from DB Employee table when available; fallback to HR JSON.
-    """
     try:
         if 'Employee' in globals():
             rows = db.session.query(Employee).all()
@@ -2854,7 +2687,6 @@ def departments_overview():
     except Exception:
         app.logger.exception("DB unavailable for departments_overview; falling back to file")
 
-    # file fallback
     employees = ('employees', [])
     departments = sorted(set(e.get('department') for e in employees))
     department_stats = [
@@ -2864,7 +2696,6 @@ def departments_overview():
     return render_template('departments_overview.html', departments=department_stats)
 
 def _is_hr_or_admin(user=None):
-    """Return True if user is HR or Admin (legacy checks: role string or group_id==0)."""
     u = user or current_user
     try:
         m = getattr(u, "model", None)
@@ -2882,10 +2713,7 @@ def _is_hr_or_admin(user=None):
 @app.route('/attendance_overview')
 @login_required
 def attendance_overview():
-    """
-    List attendance records with filters and pagination.
-    Query params: employee_id, date_from (YYYY-MM-DD), date_to (YYYY-MM-DD), status, page, per_page
-    """
+   
     def safe_get(row, *candidates, default=None):
         for c in candidates:
             if hasattr(row, c):
@@ -2914,7 +2742,6 @@ def attendance_overview():
     try:
         if 'Attendance' in globals():
             q = db.session.query(Attendance)
-            # date column handling
             date_col = getattr(Attendance, "date", None)
             if employee_id:
                 if hasattr(Attendance, "employee_id"):
@@ -2927,7 +2754,6 @@ def attendance_overview():
             if status:
                 if hasattr(Attendance, "status"):
                     q = q.filter(getattr(Attendance, "status") == status)
-            # date range
             if date_from and date_col is not None:
                 try:
                     df = datetime.fromisoformat(date_from)
@@ -2953,11 +2779,10 @@ def attendance_overview():
                     "status": safe_get(r, "status"),
                     "check_in": safe_get(r, "check_in"),
                     "check_out": safe_get(r, "check_out"),
-                    # preserve model instance where useful
                     "_model": r
                 })
 
-            # Audit: record view (best-effort)
+            # Audit: record view 
             try:
                 log_audit(action="view", resource_type="Attendance", resource_id=None,
                           after={"filters": {"employee_id": employee_id, "date_from": date_from, "date_to": date_to, "status": status, "page": page, "per_page": per_page}, "count": len(attendance_records)})
@@ -2969,16 +2794,12 @@ def attendance_overview():
     except Exception:
         app.logger.exception("DB unavailable for attendance_overview; falling back to file")
 
-    # file fallback (existing behavior)
     attendance_records = ('attendance', [])
     return render_template('attendance_overview.html', attendance_records=attendance_records, pagination={"page":1,"per_page":len(attendance_records),"total":len(attendance_records)}, filters={})
 
 @app.route('/attendance/add', methods=['GET', 'POST'])
 @login_required
 def add_attendance():
-    """
-    Add an attendance record. POST: employee_id, date (YYYY-MM-DD), status, check_in, check_out
-    """
     if request.method == 'POST':
         employee_id = request.form.get('employee_id', '').strip()
         date_val = request.form.get('date', '').strip()
@@ -3014,9 +2835,6 @@ def add_attendance():
 @app.route('/attendance/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_attendance(id):
-    """
-    Edit an attendance record by id.
-    """
     if 'Attendance' not in globals():
         flash("Attendance model not available.", "error")
         return redirect(url_for('attendance_overview'))
@@ -3048,7 +2866,6 @@ def edit_attendance(id):
             flash("Failed to update attendance.", "error")
         return redirect(url_for('attendance_overview'))
 
-    # GET: prepare dict for template
     rec_dict = {
         "id": getattr(rec, "id", None),
         "employee_id": getattr(rec, "employee_id", None) or getattr(rec, "employee", ""),
@@ -3065,9 +2882,6 @@ def edit_attendance(id):
 @app.route('/attendance/delete/<int:id>', methods=['POST'])
 @login_required
 def delete_attendance(id):
-    """
-    Delete attendance record. Only HR or Admin allowed.
-    """
     if not _is_hr_or_admin():
         return render_template("403.html"), 403
 
@@ -3096,12 +2910,8 @@ def delete_attendance(id):
 
     return redirect(url_for('attendance_overview'))
 
-#Fix this
 @app.route('/payroll_overview')
 def payroll_overview():
-    """
-    Prefer DB Payroll table when available; otherwise use HR JSON 'payroll'.
-    """
     try:
         if 'Payroll' in globals():
             payroll_rows = db.session.query(Payroll).order_by(getattr(Payroll, "id", Payroll)).all()
@@ -3123,12 +2933,8 @@ def payroll_overview():
     payroll = ('payroll', [])
     return render_template('payroll_overview.html', payroll=payroll)
 
-#Fix this
 @app.route('/leave_overview')
 def leave_overview():
-    """
-    Prefer DB LeaveRequest table when available; otherwise use HR JSON 'leave_requests'.
-    """
     try:
         if 'LeaveRequest' in globals():
             leaves = db.session.query(LeaveRequest).order_by(getattr(LeaveRequest, "id", LeaveRequest)).all()
@@ -3148,12 +2954,8 @@ def leave_overview():
     except Exception:
         app.logger.exception("DB unavailable for leave_overview")
 
-#Fix this
 @app.route('/hr_reports')
 def hr_reports():
-    """
-    Prefer DB reports if a Reports model/table exists; otherwise load from HR JSON.
-    """
     try:
         if 'HRReport' in globals():
             reports_rows = db.session.query(HRReport).order_by(getattr(HRReport, "date", HRReport)).all()
@@ -3170,7 +2972,7 @@ def hr_reports():
 
 #TIME-TASK ANALYSIS
 
-# ---------- Time-Task Analysis endpoints ----------
+# Time-Task Analysis endpoints
 @app.route('/time-task-analysis')
 @login_required
 def time_task_analysis_page():
@@ -3179,16 +2981,13 @@ def time_task_analysis_page():
 
 
 def _set_duration_field(obj, value):
-    """Try to set duration on common column names; fallback into meta if none exist."""
     if value is None or value == "":
         return False
-    # normalize to float seconds
     val = None
     try:
         val = float(value)
     except Exception:
         try:
-            # timedelta-like
             if hasattr(value, "total_seconds"):
                 val = float(value.total_seconds())
         except Exception:
@@ -3202,7 +3001,6 @@ def _set_duration_field(obj, value):
                 return True
             except Exception:
                 continue
-    # fallback: store inside meta JSON if available
     try:
         meta = getattr(obj, "meta", None)
         if meta is None:
@@ -3229,10 +3027,7 @@ def _emit_task_event(task_type: str,
                      production_order_id = None,
                      employee_id: int = None,
                      meta: dict = None):
-    """
-    Create a TaskEvent row (used as the local implementation of calling /api/task_events).
-    Using direct DB insert is more reliable than issuing an HTTP request to self.
-    """
+   
     try:
         from models import TaskEvent
         te = TaskEvent()
@@ -3244,7 +3039,6 @@ def _emit_task_event(task_type: str,
         _set_attr_if_exists(te, "task_type", task_type)
         _set_attr_if_exists(te, "event_type", event_type)
         _set_attr_if_exists(te, "timestamp", datetime.utcnow())
-        # Explicitly set the persisted duration column if available
         if duration_seconds is not None:
             try:
                 dur_val = float(duration_seconds)
@@ -3257,16 +3051,14 @@ def _emit_task_event(task_type: str,
                 except Exception:
                     dur_val = None
             if dur_val is not None:
-                # prefer direct attribute write to ensure column is populated
                 try:
                     if hasattr(te, "duration_seconds"):
                         setattr(te, "duration_seconds", dur_val)
                     else:
-                        # fallback into tolerant helper (stores in meta)
                         _set_duration_field(te, dur_val)
                 except Exception:
                     _set_duration_field(te, dur_val)
-        # ...existing code continues...
+        
         if work_center_id is not None:
             try:
                 setattr(te, "work_center_id", int(work_center_id))
@@ -3283,7 +3075,6 @@ def _emit_task_event(task_type: str,
             except Exception:
                 setattr(te, "employee_id", employee_id)
         if isinstance(meta, dict):
-            # merge duration into meta if duration not on column
             try:
                 existing_meta = getattr(te, "meta", {}) or {}
                 if dur_val is not None and "duration_seconds" not in existing_meta:
@@ -3310,7 +3101,6 @@ def _emit_task_event(task_type: str,
 @app.route('/api/task_events', methods=['POST'])
 @login_required
 def api_create_task_event():
-    """Create a TaskEvent (JSON or form)."""
     try:
         from models import TaskEvent
         data = request.get_json(silent=True) or request.form or {}
@@ -3394,7 +3184,6 @@ def api_create_task_event():
 @app.route('/api/task_events', methods=['GET'])
 @login_required
 def api_list_task_events():
-    """List task events (paginated)."""
     from models import TaskEvent
     try:
         page = max(1, int(request.args.get('page', 1)))
@@ -3447,10 +3236,6 @@ def api_list_task_events():
 @app.route('/api/task_events/analysis', methods=['POST'])
 @login_required
 def api_task_events_analysis():
-    """
-    Compute simple time-task metrics for a date range and optional task types.
-    Returns per-task-type aggregates and work-center utilization.
-    """
     from models import TaskEvent
     try:
         params = request.get_json(silent=True) or request.form or {}
@@ -3621,35 +3406,7 @@ def human_resources_overview():
         hr_chart_data_json = json.dumps(hr_chart_data, cls=PlotlyJSONEncoder)
 
     except (OperationalError, DataError):
-        fallback_employees = [
-            {
-                "id": 1,
-                "name": "Alice Banda",
-                "department": "HR",
-                "role": "HR Manager",
-                "email": "alice.banda@example.com",
-                "phone": "+260-971-000-001",
-                "status": "Active",
-            },
-            {
-                "id": 2,
-                "name": "Brian Mwale",
-                "department": "Finance",
-                "role": "Accountant",
-                "email": "brian.mwale@example.com",
-                "phone": "+260-971-000-002",
-                "status": "Active",
-            },
-            {
-                "id": 3,
-                "name": "Chipo Zulu",
-                "department": "Logistics",
-                "role": "Coordinator",
-                "email": "chipo.zulu@example.com",
-                "phone": "+260-971-000-003",
-                "status": "Inactive",
-            },
-        ]
+        pass
 
         def _matches_filters(record):
             if query and query.lower() not in record["name"].lower():
@@ -3722,10 +3479,7 @@ def human_resources_overview():
 
 @app.route('/procurement-overview')
 def procurement_overview():
-    """
-    Load procurement overview from PostgreSQL tables (PurchaseRequest, PurchaseOrder, Supplier).
-    Falls back to file-based JSON when DB access fails.
-    """
+    
     try:
         def safe_get(row, *candidates, default=None):
             for c in candidates:
@@ -3779,7 +3533,7 @@ def procurement_overview():
                 "status": safe_get(s, "status", default="")
             })
 
-        # --- NEW ALERTS LOGIC ---
+        # ALERTS LOGIC 
         alerts = []
         
         # 1. Pending Requests Alert
@@ -3865,7 +3619,6 @@ def add_purchase_request():
         status = request.form.get('status', '').strip()
         request_id = request.form.get('request_id', '').strip()
 
-        # Try DB insert first
         try:
             pr = PurchaseRequest()
             _set_attr_if_exists(pr, "request_id", request_id)
@@ -4006,10 +3759,6 @@ def save_production_data(data):
 @app.route('/add_production_order', methods=['GET', 'POST'])
 @login_required
 def add_production_order():
-    """
-    Create a production order. Validate inputs and ensure order_id is always non-null.
-    Generates a fallback order_id when the form does not provide one.
-    """
     if request.method == 'POST':
         raw_order_id = (request.form.get('order_id') or '').strip()
         product = (request.form.get('product') or '').strip()
@@ -4120,16 +3869,13 @@ def add_production_order():
             flash('Failed to add production order.', 'error')
             return redirect(url_for('production_overview'))
 
-    # GET
     return render_template('add_production_order.html')
 
 
 @app.route('/add_bom', methods=['GET', 'POST'])
 @login_required
 def add_bom():
-    """
-    Add a Bill of Materials entry. Uses flexible attribute setter to match model column names.
-    """
+    
     if request.method == 'POST':
         product = request.form.get('product', '').strip()
         component = request.form.get('component', '').strip()
@@ -4168,11 +3914,6 @@ def add_bom():
 @app.route('/update_work_center', methods=['GET', 'POST'])
 @login_required
 def update_work_center():
-    """
-    Render form to update a work center (select by name) and apply changes to the DB.
-    Falls back to PRODUCTION_DATA_FILE when DB is unavailable.
-    """
-    # load work centers for the select box
     try:
         wc_rows = db.session.query(WorkCenter).order_by(getattr(WorkCenter, "id", WorkCenter)).all()
         work_centers = [{"id": getattr(w, "id", None), "name": getattr(w, "name", "")} for w in wc_rows]
@@ -4206,7 +3947,6 @@ def update_work_center():
             db.session.rollback()
             app.logger.exception("Failed to update WorkCenter in DB")
 
-        # Fallback to file-based update
         if not updated:
             try:
                 data = load_production_data()
@@ -4455,10 +4195,6 @@ def delete_work_center(id):
 
 @app.route('/production-overview')
 def production_overview():
-    """
-    Load production overview from PostgreSQL tables (ProductionOrder, BillOfMaterials, WorkCenter).
-    Falls back to file-based JSON when DB access fails.
-    """
     try:
         def safe_get(row, *candidates, default=None):
             for c in candidates:
@@ -4628,7 +4364,7 @@ def upload_to_hadoop():
 
         partitioned_data_file = sales_dataframe.withColumn('SalesYear', col('OrderDate').substr(7,10))
 """
-# Define available groups and roles (add more groups here as needed)
+
 GROUPS = {
     0: "Administrator",
     1: "Pending User",
@@ -4677,7 +4413,6 @@ def admin_users():
             .all()
         )
     except Exception:
-        # If logging tables or DB are unavailable, fall back to empty lists
         app.logger.debug("Auth/Audit logs not available for admin view", exc_info=True)
         auth_logs = []
         audit_logs = []
@@ -4712,7 +4447,6 @@ def admin_update_user(user_id):
         return redirect(url_for("admin_users"))
 
     try:
-        # Validate and set group_id
         group_id_raw = request.form.get("group_id")
         if group_id_raw is not None and group_id_raw != "":
             try:
@@ -4724,7 +4458,6 @@ def admin_update_user(user_id):
                 flash("Invalid group selected.", "error")
                 return redirect(url_for("admin_users"))
 
-        # Validate and set role
         role = request.form.get("role")
         if role:
             if role not in ROLES:
@@ -4732,9 +4465,7 @@ def admin_update_user(user_id):
                 return redirect(url_for("admin_users"))
             setattr(user, "role", role)
 
-        # is_active checkbox
         is_active = request.form.get("is_active") == "on"
-        # Some models may use boolean column or attribute name; handle both
         if hasattr(user, "is_active"):
             setattr(user, "is_active", bool(is_active))
         else:
@@ -4755,13 +4486,8 @@ def admin_update_user(user_id):
 
     return redirect(url_for("admin_users"))
 
-
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
-    """
-    Simple signup route for templates/signup.html.
-    Creates a user with role 'pending_user'. Uses model fields if present.
-    """
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
@@ -5006,7 +4732,6 @@ def create_sale():
     if quantity <= 0:
         return jsonify(ok=False, error="Quantity must be greater than zero"), 400
 
-    # load customer
     cust = None
     if 'Customer' in globals():
         try:
@@ -5016,7 +4741,6 @@ def create_sale():
     if cust is None:
         return jsonify(ok=False, error="Customer not found"), 404
 
-    # load inventory item
     item = None
     if 'InventoryItem' in globals():
         try:
@@ -5026,7 +4750,6 @@ def create_sale():
     if item is None:
         return jsonify(ok=False, error="Inventory item not found"), 404
 
-    # realtime inventory check
     try:
         available = float(getattr(item, "quantity", 0) or 0)
     except Exception:
@@ -5050,7 +4773,6 @@ def create_sale():
         db.session.rollback()
         app.logger.exception("Credit check failed; continuing without blocking")
 
-    # Perform DB transaction
     try:
         db.session.rollback()
 
@@ -5083,7 +4805,6 @@ def create_sale():
             db.session.flush() 
             so_id = getattr(so, "id", None)
 
-        # decrement inventory
         new_qty = available - quantity
         try:
             if hasattr(item, "quantity"):
@@ -5096,7 +4817,6 @@ def create_sale():
             app.logger.exception("Failed to decrement inventory quantity; aborting")
             raise
 
-        # create invoice
         if 'Invoice' in globals():
             inv = Invoice()
             _set_attr_if_exists(inv, "customer_id", customer_id)
@@ -5109,16 +4829,13 @@ def create_sale():
             db.session.flush()
             inv_id = getattr(inv, "id", None)
 
-            # link invoice to sales order if possible
             if so is not None:
                 _set_attr_if_exists(so, "invoice_id", inv_id)
                 db.session.add(so)
                 db.session.flush()
 
-        # notify warehouse by creating Shipment record
         if 'Shipment' in globals():
             sh = Shipment()
-            # Generate shipment_id
             try:
                 shipment_count = db.session.query(Shipment).count()
                 _set_attr_if_exists(sh, "shipment_id", shipment_count + 1)
@@ -5134,12 +4851,10 @@ def create_sale():
             _set_attr_if_exists(sh, "customer_id", customer_id)
             db.session.add(sh)
 
-        # finalize
         db.session.commit()
  
         return jsonify(ok=True, order_id=so_id or inv_id), 201
     except Exception as exc:
-         # ensure rollback and return error JSON
          try:
              db.session.rollback()
          except Exception:
@@ -5166,12 +4881,11 @@ def sales_forecast():
     return render_template('sales_forecast.html', sales_forecast_graph=sales_forecast_graph, forecast_metrics_mean_=forecast_metrics_mean, forecast_metrics_rmse=forecast_metrics_rmse, forecast_metrics_nrmse=forecast_metrics_nrmse)
 
 if __name__ == '__main__':
-     # Ensure DB tables exist (create missing tables from models.py)
     try:
         with app.app_context():
             db.create_all()
 
-            # seed a default admin user if no users exist
+            # make a default admin user
             try:
                 user_count = 0
                 try:
