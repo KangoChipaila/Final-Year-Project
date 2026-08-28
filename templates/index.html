@@ -2,194 +2,194 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-<body class="bg-gray-50 font-sans">
-    <div class="container mx-auto max-w-7xl px-4 py-8">
-        <!-- Header -->
-        <section class="flex justify-between items-center mb-10">
-            <div>
-                <h1 class="text-3xl font-bold text-blue-700 tracking-tight">ERP Dashboard</h1>
-                <p class="text-gray-500 mt-2">Welcome to your business overview</p>
-            </div>
-        </section>
 
-        <!-- KPI Summary Cards -->
-        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-            <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
-                <div class="text-gray-500 text-sm mb-2">Total Revenue</div>
-                <div class="text-3xl font-bold text-blue-700">K{{ kpi.total_revenue }}</div>
-            </div>
-            <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
-                <div class="text-gray-500 text-sm mb-2">Total Customers</div>
-                <div class="text-3xl font-bold text-green-700">{{ kpi.total_customers }}</div>
-            </div>
-            <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
-                <div class="text-gray-500 text-sm mb-2">Inventory Value</div>
-                <div class="text-3xl font-bold text-yellow-700">K{{ kpi.inventory_value }}</div>
-            </div>
-            <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
-                <div class="text-gray-500 text-sm mb-2">Total Orders</div>
-                <div class="text-3xl font-bold text-red-700">{{ kpi.total_orders }}</div>
-            </div>
-        </section>
+<div class="container bg-black mx-auto min-w-full px-4 py-8">
+    <!-- Header -->
+    <section class="flex justify-between items-center mb-10">
+        <div>
+            <h1 class="text-3xl font-bold text-blue-700 tracking-tight">ERP Dashboard</h1>
+            <p class="text-black mt-2">Welcome to your business overview</p>
+        </div>
+    </section>
 
-        <!-- Quick Navigation Links -->
-        <section class="mb-10">
-            <div class="text-xl font-semibold mb-4 text-gray-700">Quick Access</div>
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                <a href="{{ url_for('sales_overview') }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-blue-800 transition">Sales</a>
-                <a href="{{ url_for('customer_overview') }}" class="bg-green-600 text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-green-800 transition">Customers</a>
-                <a href="{{ url_for('distribution_overview') }}" class="bg-yellow-600 text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-yellow-700 transition">Inventory</a>
-                <a href="{{ url_for('procurement_overview') }}" class="bg-purple-600 text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-purple-800 transition">Procurement</a>
-                <a href="{{ url_for('human_resources_overview') }}" class="bg-pink-600 text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-pink-800 transition">HR</a>
-                <a href="{{ url_for('finance_overview') }}" class="bg-gray-700 text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-gray-800 transition">Finance</a>
-            </div>
-        </section>
+    <!-- KPI Summary Cards -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
+            <div class="text-gray-500 text-sm mb-2">Total Revenue</div>
+            <div class="text-3xl font-bold text-blue-700">K{{ kpi.total_revenue }}</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
+            <div class="text-gray-500 text-sm mb-2">Total Customers</div>
+            <div class="text-3xl font-bold text-green-700">{{ kpi.total_customers }}</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
+            <div class="text-gray-500 text-sm mb-2">Inventory Value</div>
+            <div class="text-3xl font-bold text-yellow-700">K{{ kpi.inventory_value }}</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
+            <div class="text-gray-500 text-sm mb-2">Total Orders</div>
+            <div class="text-3xl font-bold text-red-700">{{ kpi.total_orders }}</div>
+        </div>
+    </section>
 
-        <!-- Alerts & Recent Activity -->
-        <section class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-            <!-- Alerts & Notifications -->
-            {% if alerts %}
-            <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-                <div class="font-bold mb-4 text-red-700 text-lg flex items-center gap-2">
-                    <svg class="w-6 h-6 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 8v4m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>
+    <!-- Quick Navigation Links -->
+    <section class="mb-10">
+        <div class="text-xl font-semibold mb-4 text-white">Quick Access</div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            <a href="{{ url_for('sales_overview') }}" class="border border-blue-600 text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-blue-800 transition">Sales</a>
+            <a href="{{ url_for('customer_overview') }}" class="border border-green text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-green-800 transition">Customers</a>
+            <a href="{{ url_for('distribution_overview') }}" class="border border-yellow text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-yellow-700 transition">Inventory</a>
+            <a href="{{ url_for('procurement_overview') }}" class="border border-purple text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-purple-800 transition">Procurement</a>
+            <a href="{{ url_for('human_resources_overview') }}" class="border border-pink text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-pink-800 transition">HR</a>
+            <a href="{{ url_for('finance_overview') }}" class="border border-gray-700 text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-gray-800 transition">Finance</a>
+        </div>
+    </section>
+
+    <!-- Alerts & Recent Activity -->
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+        <!-- Alerts & Notifications -->
+        {% if alerts %}
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+            <div class="font-bold mb-4 text-red-700 text-lg flex items-center gap-2">
+                <svg class="w-6 h-6 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>
+                </svg>
+                Alerts & Notifications
+            </div>
+            <ul class="space-y-2">
+                {% for alert in alerts %}
+                <li class="bg-red-50 border-l-4 border-red-700 text-red-900 px-4 py-2 rounded shadow-sm flex items-center gap-2">
+                    <svg class="w-4 h-4 text-red-700" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10A8 8 0 11 2 10a8 8 0 0116 0zm-8 4a1 1 0 100-2 1 1 0 000 2zm-.707-7.707a1 1 0 011.414 0l.293.293.293-.293a1 1 0 111.414 1.414l-1 1a1 1 0 01-1.414 0l-1-1a1 1 0 010-1.414z" clip-rule="evenodd"/>
                     </svg>
-                    Alerts & Notifications
-                </div>
-                <ul class="space-y-2">
-                    {% for alert in alerts %}
-                    <li class="bg-red-50 border-l-4 border-red-700 text-red-900 px-4 py-2 rounded shadow-sm flex items-center gap-2">
-                        <svg class="w-4 h-4 text-red-700" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M18 10A8 8 0 11 2 10a8 8 0 0116 0zm-8 4a1 1 0 100-2 1 1 0 000 2zm-.707-7.707a1 1 0 011.414 0l.293.293.293-.293a1 1 0 111.414 1.414l-1 1a1 1 0 01-1.414 0l-1-1a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                        </svg>
-                        <span>{{ alert }}</span>
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
-            {% endif %}
+                    <span>{{ alert }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
 
-            <!-- Recent Activity Feed 
-            <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-                <div class="font-bold mb-4 text-blue-700 text-lg flex items-center gap-2">
-                    <svg class="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M5 13l4 4L19 7" />
+        <!-- Recent Activity Feed 
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+            <div class="font-bold mb-4 text-blue-700 text-lg flex items-center gap-2">
+                <svg class="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M5 13l4 4L19 7" />
+                </svg>
+                Recent Activity
+            </div>
+            <ul class="space-y-2">
+                {% for activity in recent_activity %}
+                <li class="bg-blue-50 border-l-4 border-blue-700 text-blue-900 px-4 py-2 rounded shadow-sm flex items-center gap-2">
+                    <svg class="w-4 h-4 text-blue-700" fill="currentColor" viewBox="0 0 20 20">
+                        <circle cx="10" cy="10" r="8" fill="currentColor"/>
+                        <text x="10" y="14" text-anchor="middle" font-size="10" fill="white">•</text>
                     </svg>
-                    Recent Activity
-                </div>
-                <ul class="space-y-2">
-                    {% for activity in recent_activity %}
-                    <li class="bg-blue-50 border-l-4 border-blue-700 text-blue-900 px-4 py-2 rounded shadow-sm flex items-center gap-2">
-                        <svg class="w-4 h-4 text-blue-700" fill="currentColor" viewBox="0 0 20 20">
-                            <circle cx="10" cy="10" r="8" fill="currentColor"/>
-                            <text x="10" y="14" text-anchor="middle" font-size="10" fill="white">•</text>
-                        </svg>
-                        <span>{{ activity }}</span>
-                    </li>
+                    <span>{{ activity }}</span>
+                </li>
+                {% else %}
+                <li class="bg-gray-50 border-l-4 border-gray-400 text-white px-4 py-2 rounded shadow-sm flex items-center gap-2">
+                    <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <circle cx="10" cy="10" r="8" fill="currentColor"/>
+                    </svg>
+                    <span>No recent activity.</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        -->
+    </section>
+
+    <!-- Mini Tables -->
+    <div class="text-xl font-semibold mb-4 text-white">Tables</div>
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+            <div class="font-bold mb-4 text-black text-lg">Top Customers</div>
+            <table class="min-w-full bg-white rounded-lg">
+                <thead>
+                    <tr class="bg-black text-white text-left">
+                        <th class="py-2 px-4">Name</th>
+                        <th class="py-2 px-4">Total Spent</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for customer in top_customers %}
+                    <tr class="border-b text-black">
+                        <td class="py-2 px-4">{{ customer.name }}</td>
+                        <td class="py-2 px-4">K{{ customer.total }}</td>
+                    </tr>
                     {% else %}
-                    <li class="bg-gray-50 border-l-4 border-gray-400 text-gray-700 px-4 py-2 rounded shadow-sm flex items-center gap-2">
-                        <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                            <circle cx="10" cy="10" r="8" fill="currentColor"/>
-                        </svg>
-                        <span>No recent activity.</span>
-                    </li>
+                    <tr>
+                        <td colspan="2" class="text-center py-4 text-gray-500">No data.</td>
+                    </tr>
                     {% endfor %}
-                </ul>
-            </div>
-            -->
-        </section>
+                </tbody>
+            </table>
+        </div>
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+            <div class="font-bold mb-4 text-black text-lg">Recent Orders</div>
+            <table class="min-w-full bg-white rounded-lg">
+                <thead>
+                    <tr class="bg-black text-white text-left">
+                        <th class="py-2 px-4">Order #</th>
+                        <th class="py-2 px-4">Customer</th>
+                        <th class="py-2 px-4">Total</th>
+                        <th class="py-2 px-4">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in recent_orders %}
+                    <tr class="border-b text-black">
+                        <td class="py-2 px-4">{{ order.order_id }}</td>
+                        <td class="py-2 px-4">{{ order.customer }}</td>
+                        <td class="py-2 px-4">K{{ order.total }}</td>
+                        <td class="py-2 px-4">{{ order.status }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center py-4 text-gray-500">No data.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
 
-        <!-- Mini Tables -->
-        <div class="text-xl font-semibold mb-4 text-gray-700">Tables</div>
-        <section class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-            <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-                <div class="font-bold mb-4 text-gray-700 text-lg">Top Customers</div>
-                <table class="min-w-full bg-white rounded-lg">
-                    <thead>
-                        <tr class="bg-black text-white text-left">
-                            <th class="py-2 px-4">Name</th>
-                            <th class="py-2 px-4">Total Spent</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for customer in top_customers %}
-                        <tr class="border-b">
-                            <td class="py-2 px-4">{{ customer.name }}</td>
-                            <td class="py-2 px-4">K{{ customer.total }}</td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="2" class="text-center py-4 text-gray-500">No data.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-                <div class="font-bold mb-4 text-gray-700 text-lg">Recent Orders</div>
-                <table class="min-w-full bg-white rounded-lg">
-                    <thead>
-                        <tr class="bg-black text-white text-left">
-                            <th class="py-2 px-4">Order #</th>
-                            <th class="py-2 px-4">Customer</th>
-                            <th class="py-2 px-4">Total</th>
-                            <th class="py-2 px-4">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for order in recent_orders %}
-                        <tr class="border-b">
-                            <td class="py-2 px-4">{{ order.order_id }}</td>
-                            <td class="py-2 px-4">{{ order.customer }}</td>
-                            <td class="py-2 px-4">K{{ order.total }}</td>
-                            <td class="py-2 px-4">{{ order.status }}</td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="4" class="text-center py-4 text-gray-500">No data.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </section>
+    <!-- Analytics Graphs -->
+    <div class="text-xl font-semibold mb-4 text-white">Summary Graphs</div>
+    <section id="dashboard-main-content" class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full mb-10">
+        <div>
+            <div class="font-semibold mb-2 text-white">Sales Trend</div>
+            <div id="sales-analytics-dashboard-summary" class="bg-white flex justify-center rounded-lg shadow-md" style="height:320px; width:100%;"></div>
+        </div>
+        <div>
+            <div class="font-semibold mb-2 text-white">Top Customers by Expenditure</div>
+            <div id="customer-dashboard-summary" class="bg-white flex justify-center rounded-lg shadow-md" style="height:320px; width:100%;"></div>
+        </div>
+        <!--<div>
+            <div class="font-semibold mb-2 text-white">Product Performance</div>
+            <div id="product-performance-graph" class="bg-white flex justify-center rounded-lg shadow-md" style="height:320px; width:100%;"></div>
+        </div>-->
+        <div>
+            <div class="font-semibold mb-2 text-white">Inventory Status</div>
+            <div id="inventory-status-graph" class="bg-white flex justify-center rounded-lg shadow-md" style="height:320px; width:100%;"></div>
+        </div>
+        <div>
+            <div class="font-semibold mb-2 text-white">Orders Distribution</div>
+            <div id="order-status-graph" class="bg-white flex justify-center rounded-lg shadow-md" style="height:320px; width:100%;"></div>
+        </div>
+        <div>
+            <div class="font-semibold mb-2 text-white">Revenue vs Expenses</div>
+            <div id="revenue-expenses-graph" class="bg-white flex justify-center rounded-lg shadow-md" style="height:320px; width:100%;"></div>
+        </div>
+        <div>
+            <div class="font-semibold mb-2 text-white">Employee Status Distribution</div>
+            <div id="employee-status-graph" class="bg-white flex justify-center rounded-lg shadow-md" style="height:320px; width:100%;"></div>
+        </div>
+    </section>
+</div>
 
-        <!-- Analytics Graphs -->
-        <div class="text-xl font-semibold mb-4 text-gray-700">Summary Graphs</div>
-        <section id="dashboard-main-content" class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full mb-10">
-            <div>
-                <div class="font-semibold mb-2 text-gray-700">Sales Trend</div>
-                <div id="sales-analytics-dashboard-summary" class="rounded-lg shadow-md" style="height:320px; width:100%;"></div>
-            </div>
-            <div>
-                <div class="font-semibold mb-2 text-gray-700">Top Customers by Expenditure</div>
-                <div id="customer-dashboard-summary" class="rounded-lg shadow-md" style="height:320px; width:100%;"></div>
-            </div>
-            <!--<div>
-                <div class="font-semibold mb-2 text-gray-700">Product Performance</div>
-                <div id="product-performance-graph" class="rounded-lg shadow-md" style="height:320px; width:100%;"></div>
-            </div>-->
-            <div>
-                <div class="font-semibold mb-2 text-gray-700">Inventory Status</div>
-                <div id="inventory-status-graph" class="rounded-lg shadow-md" style="height:320px; width:100%;"></div>
-            </div>
-            <div>
-                <div class="font-semibold mb-2 text-gray-700">Orders Distribution</div>
-                <div id="order-status-graph" class="rounded-lg shadow-md" style="height:320px; width:100%;"></div>
-            </div>
-            <div>
-                <div class="font-semibold mb-2 text-gray-700">Revenue vs Expenses</div>
-                <div id="revenue-expenses-graph" class="rounded-lg shadow-md" style="height:320px; width:100%;"></div>
-            </div>
-            <div>
-                <div class="font-semibold mb-2 text-gray-700">Employee Status Distribution</div>
-                <div id="employee-status-graph" class="rounded-lg shadow-md" style="height:320px; width:100%;"></div>
-            </div>
-        </section>
-    </div>
-</body>
 {% endblock %}
 
 {% block scripts %}

@@ -5,11 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{% block title %}ERP System{% endblock %}</title>
 
-    <!-- Tailwind CSS & Custom Styles -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 
-    <!-- Plotly for Charts -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
     <style>
@@ -33,27 +31,26 @@
     {% block head_scripts %}{% endblock %}
 </head>
 
-<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col font-sans">
+<body class="bg-black text-white min-h-screen flex flex-col font-sans">
 
     <!-- Navbar -->
-    <header class="bg-white shadow-sm border-b flex justify-between items-center px-6 py-4 fixed top-0 left-0 w-full z-40">
+    <header class="bg-black shadow-sm border-b flex justify-between items-center px-6 py-4 fixed top-0 left-0 w-full z-40">
         <div class="flex items-center gap-3">
             <!-- Sidebar toggle -->
             <button id="sidebarToggle" aria-label="Toggle sidebar"
                     class="mr-2 p-1 rounded hover:bg-gray-100 md:hidden focus:outline-none"
                     title="Toggle sidebar">
-                <!-- simple hamburger icon -->
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <svg xmlns="http://w3.org" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
             </button>
 
             <!-- Desktop toggle -->
             <button id="sidebarToggleDesktop" aria-label="Toggle sidebar"
-                    class="mr-2 p-1 rounded hidden md:inline-flex hover:bg-gray-100 focus:outline-none"
+                    class="flex flex-col mr-2 p-1 rounded hidden md:inline-flex hover:bg-gray-100 focus:outline-none"
                     title="Toggle sidebar">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 12h18" />
+                <svg xmlns="http://w3.org" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
             </button>
 
@@ -62,7 +59,7 @@
         </div>
         <div class="flex items-center space-x-3">
             {% if current_user.is_authenticated %}
-                <span class="font-medium text-gray-700">{{ current_user.username }}</span>
+                <span class="font-medium text-white">{{ current_user.username }}</span>
                 <form action="{{ url_for('logout') }}" method="POST" style="display:inline;">
                     <button class="bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-sm text-white transition" type="submit">
                         Logout
@@ -94,13 +91,13 @@
 
     <div class="flex flex-1 pt-20">
         <!-- Sidebar -->
-        <aside id="sidebar" class="w-64 bg-white border-r shadow-md hidden md:flex flex-col fixed left-0 z-30" style="top:4.5rem; height:calc(100vh - 4.5rem);">
-            <div class="p-4 font-bold border-b text-blue-700 text-lg tracking-tight">ERP Navigation</div>
+        <aside id="sidebar" class="w-64 bg-black border-r shadow-md hidden md:flex flex-col fixed left-0 z-30" style="top:4.5rem; height:calc(100vh - 4.5rem);">
+            <div class="p-4 font-bold border-b text-white text-lg tracking-tight">ERP Navigation</div>
             <nav class="p-4 space-y-6 text-sm overflow-y-auto">
                 <!-- Core Section -->
                 <div>
-                    <div class="text-xs uppercase text-gray-400 mb-2 pl-2">Core</div>
-                    <a href="{{ url_for('index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if request.path == '/' %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                    <div class="text-xs uppercase text-white mb-2 pl-2">Core</div>
+                    <a href="{{ url_for('index') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white hover:text-black transition {% if request.path == '/' %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
                         <span>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
@@ -108,7 +105,7 @@
                         </span> 
                         <span>Dashboard</span>
                     </a>
-                    <a href="{{ url_for('asset_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/assets-overview' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                    <a href="{{ url_for('asset_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white hover:text-black transition {% if '/assets-overview' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
                         <span>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0 1 12 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 0 1-.673-.38m0 0A2.18 2.18 0 0 1 3 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 0 1 3.413-.387m7.5 0V5.25A2.25 2.25 0 0 0 13.5 3h-3a2.25 2.25 0 0 0-2.25 2.25v.894m7.5 0a48.667 48.667 0 0 0-7.5 0M12 12.75h.008v.008H12v-.008Z" />
@@ -116,14 +113,14 @@
                         </span> 
                         <span>Assets</span>
                     </a>
-                    <a href="{{ url_for('accounting_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/accounting' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                    <a href="{{ url_for('accounting_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white hover:text-black transition {% if '/accounting' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
                         <span>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
                             </svg>
                         </span> <span>Accounting</span>
                     </a>
-                    <a href="{{ url_for('finance_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/finance' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                    <a href="{{ url_for('finance_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white hover:text-black transition {% if '/finance' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
                         <span>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />
@@ -148,7 +145,7 @@
                     {% endif %}
 
                     {% if is_admin %}
-                    <a href="{{ url_for('admin_users') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/admin-users' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                    <a href="{{ url_for('admin_users') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white hover:text-black transition {% if '/admin-users' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
                         <span>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
@@ -160,8 +157,8 @@
                 </div>
                 <!-- Operations Section -->
                 <div>
-                    <div class="text-xs uppercase text-gray-400 mb-2 pl-2">Operations</div>
-                    <a href="{{ url_for('sales_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/sales-overview' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                    <div class="text-xs uppercase text-white mb-2 pl-2">Operations</div>
+                    <a href="{{ url_for('sales_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white hover:text-black transition {% if '/sales-overview' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
                         <span>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" />
@@ -169,7 +166,7 @@
                         </span> 
                         <span>Sales</span>
                     </a>
-                    <a href="{{ url_for('sales_forecast') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/sales-forecast' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                    <a href="{{ url_for('sales_forecast') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white hover:text-black transition {% if '/sales-forecast' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
                         <span>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5m.75-9 3-3 2.148 2.148A12.061 12.061 0 0 1 16.5 7.605" />
@@ -177,7 +174,7 @@
                         </span> 
                         <span>Sales Forecast</span>
                     </a>
-                    <a href="{{ url_for('churn_analysis') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/churn' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                    <a href="{{ url_for('churn_analysis') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white hover:text-black transition {% if '/churn' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
                         <span>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5m.75-9 3-3 2.148 2.148A12.061 12.061 0 0 1 16.5 7.605" />
@@ -187,7 +184,7 @@
                     </a>
                     <!--
                     Time-Task Analysis link
-                    <a href="{{ url_for('time_task_analysis_page') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/time-task-analysis' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                    <a href="{{ url_for('time_task_analysis_page') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white hover:text-black transition {% if '/time-task-analysis' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
                         <span>
                             <svg xmlns="http://www.w3.org/2000/svg" class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -196,7 +193,7 @@
                         <span>Time‑Task Analysis</span>
                     </a>
                     -->
-                    <a href="{{ url_for('customer_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/customer' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                    <a href="{{ url_for('customer_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white hover:text-black transition {% if '/customer' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
                         <span>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
@@ -204,7 +201,7 @@
                         </span> 
                         <span>Customers</span>
                     </a>
-                    <a href="{{ url_for('human_resources_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/human' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                    <a href="{{ url_for('human_resources_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white hover:text-black transition {% if '/human' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
                         <span>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
@@ -212,7 +209,7 @@
                         </span> 
                         <span>HR</span>
                     </a>
-                    <a href="{{ url_for('procurement_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/procurement' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                    <a href="{{ url_for('procurement_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white hover:text-black transition {% if '/procurement' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
                         <span>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
@@ -220,7 +217,7 @@
                         </span> 
                         <span>Procurement</span>
                     </a>
-                    <a href="{{ url_for('production_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/production' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                    <a href="{{ url_for('production_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white hover:text-black transition {% if '/production' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
                         <span>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 21v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21m0 0h4.5V3.545M12.75 21h7.5V10.75M2.25 21h1.5m18 0h-18M2.25 9l4.5-1.636M18.75 3l-1.5.545m0 6.205 3 1m1.5.5-1.5-.5M6.75 7.364V3h-3v18m3-13.636 10.5-3.819" />
@@ -228,7 +225,7 @@
                         </span> 
                         <span>Production</span>
                     </a>
-                    <a href="{{ url_for('distribution_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 transition {% if '/distribution' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
+                    <a href="{{ url_for('distribution_overview') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white hover:text-black transition {% if '/distribution' in request.path %}bg-blue-100 font-bold text-blue-700 border-l-4 border-blue-600{% endif %}">
                         <span>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
@@ -241,7 +238,7 @@
         </aside>
 
         <!-- Main Content Area -->
-        <main id="mainContent" class="flex-1 p-6 overflow-y-auto bg-gray-50 rounded-lg ml-0 md:ml-64">
+        <main id="mainContent" class="flex-1 overflow-y-auto bg-gray-50 rounded-lg ml-0 md:ml-64">
             {% block content %}
             
             {% endblock %}
