@@ -47,7 +47,7 @@
 
             <!-- Desktop toggle -->
             <button id="sidebarToggleDesktop" aria-label="Toggle sidebar"
-                    class="flex flex-col mr-2 p-1 rounded hidden md:inline-flex hover:bg-gray-100 focus:outline-none"
+                    class="flex flex-col mr-2 p-1 rounded hidden md:inline-flex hover:bg-cyan-400 focus:outline-none"
                     title="Toggle sidebar">
                 <svg xmlns="http://w3.org" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
@@ -55,7 +55,7 @@
             </button>
 
             <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="Logo" class="h-8 w-8 rounded-full border border-gray-300">
-            <a href="{{ url_for('index') }}" class="text-2xl font-bold text-blue-700 tracking-tight hover:text-blue-900 transition">Data-Driven ERP System</a>
+            <a href="{{ url_for('index') }}" class="text-2xl font-bold text-white tracking-tight hover:text-white/90 transition">Data-Driven ERP System</a>
         </div>
         <div class="flex items-center space-x-3">
             {% if current_user.is_authenticated %}

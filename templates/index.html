@@ -7,28 +7,28 @@
     <!-- Header -->
     <section class="flex justify-between items-center mb-10">
         <div>
-            <h1 class="text-3xl font-bold text-blue-700 tracking-tight">ERP Dashboard</h1>
-            <p class="text-black mt-2">Welcome to your business overview</p>
+            <h1 class="text-3xl font-bold text-white tracking-tight">ERP Dashboard</h1>
+            <p class="text-gray-400 mt-2">Welcome to your business overview</p>
         </div>
     </section>
 
     <!-- KPI Summary Cards -->
     <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
-            <div class="text-gray-500 text-sm mb-2">Total Revenue</div>
-            <div class="text-3xl font-bold text-blue-700">K{{ kpi.total_revenue }}</div>
+        <div class="bg-cyan-950/25 font-semibold border border-cyan-600/50 rounded-xl p-6 text-center">
+            <div class="text-green-400/80 text-sm mb-2">Total Revenue</div>
+            <div class="text-3xl font-bold text-green-400/90">K{{ kpi.total_revenue }}</div>
         </div>
-        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
-            <div class="text-gray-500 text-sm mb-2">Total Customers</div>
-            <div class="text-3xl font-bold text-green-700">{{ kpi.total_customers }}</div>
+        <div class="bg-cyan-950/25 font-semibold rounded-xl border border-cyan-600/50 p-6 text-center">
+            <div class="text-red-400/80 text-sm mb-2">Total Customers</div>
+            <div class="text-3xl font-bold text-red-400/90">{{ kpi.total_customers }}</div>
         </div>
-        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
-            <div class="text-gray-500 text-sm mb-2">Inventory Value</div>
-            <div class="text-3xl font-bold text-yellow-700">K{{ kpi.inventory_value }}</div>
+        <div class="bg-cyan-950/25 font-semibold rounded-xl border border-cyan-600/50 p-6 text-center">
+            <div class="text-purple-400/80 text-sm mb-2">Inventory Value</div>
+            <div class="text-3xl font-bold text-purple-400/90">K{{ kpi.inventory_value }}</div>
         </div>
-        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6 text-center transition hover:shadow-xl">
-            <div class="text-gray-500 text-sm mb-2">Total Orders</div>
-            <div class="text-3xl font-bold text-red-700">{{ kpi.total_orders }}</div>
+        <div class="bg-cyan-950/25 font-semibold rounded-xl border border-cyan-600/50 p-6 text-center">
+            <div class="text-cyan-400/80 text-sm mb-2">Total Orders</div>
+            <div class="text-3xl font-bold text-cyan-400/90">{{ kpi.total_orders }}</div>
         </div>
     </section>
 
@@ -36,12 +36,12 @@
     <section class="mb-10">
         <div class="text-xl font-semibold mb-4 text-white">Quick Access</div>
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            <a href="{{ url_for('sales_overview') }}" class="border border-blue-600 text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-blue-800 transition">Sales</a>
-            <a href="{{ url_for('customer_overview') }}" class="border border-green text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-green-800 transition">Customers</a>
-            <a href="{{ url_for('distribution_overview') }}" class="border border-yellow text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-yellow-700 transition">Inventory</a>
-            <a href="{{ url_for('procurement_overview') }}" class="border border-purple text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-purple-800 transition">Procurement</a>
-            <a href="{{ url_for('human_resources_overview') }}" class="border border-pink text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-pink-800 transition">HR</a>
-            <a href="{{ url_for('finance_overview') }}" class="border border-gray-700 text-white px-4 py-2 rounded-lg text-center font-semibold shadow hover:bg-gray-800 transition">Finance</a>
+            <a href="{{ url_for('sales_overview') }}" class="border border-cyan-500 text-cyan-400 px-4 py-2 rounded-lg text-center font-semibold hover:bg-cyan-600 hover:border-none hover:text-white transition ease-in">Sales</a>
+            <a href="{{ url_for('customer_overview') }}" class="border border-red-500 text-red-400 px-4 py-2 rounded-lg text-center font-semibold hover:bg-red-600 hover:border-none hover:text-white transition ease-in">Customers</a>
+            <a href="{{ url_for('distribution_overview') }}" class="border border-yellow-500 text-yellow-400 px-4 py-2 rounded-lg text-center font-semibold hover:bg-yellow-700 hover:border-none hover:text-white transition ease-in">Inventory</a>
+            <a href="{{ url_for('procurement_overview') }}" class="border border-purple-500 text-purple-400 px-4 py-2 rounded-lg text-center font-semibold hover:bg-purple-800 hover:border-none hover:text-white transition ease-in">Procurement</a>
+            <a href="{{ url_for('human_resources_overview') }}" class="border border-pink-500 text-pink-400 px-4 py-2 rounded-lg text-center font-semibold hover:bg-pink-800 hover:border-none hover:text-white transition ease-in">HR</a>
+            <a href="{{ url_for('finance_overview') }}" class="border border-green-500 text-green-400 px-4 py-2 rounded-lg text-center font-semibold hover:bg-green-800 hover:border-none hover:text-white transition ease-in">Finance</a>
         </div>
     </section>
 
@@ -104,34 +104,34 @@
     <!-- Mini Tables -->
     <div class="text-xl font-semibold mb-4 text-white">Tables</div>
     <section class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-            <div class="font-bold mb-4 text-black text-lg">Top Customers</div>
-            <table class="min-w-full bg-white rounded-lg">
+        <div class="border border-cyan-500 rounded-xl shadow-lg p-6">
+            <div class="font-bold mb-4 text-white text-lg">Top Customers</div>
+            <table class="min-w-full rounded-lg">
                 <thead>
-                    <tr class="bg-black text-white text-left">
+                    <tr class="bg-cyan-600 text-white text-left">
                         <th class="py-2 px-4">Name</th>
                         <th class="py-2 px-4">Total Spent</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for customer in top_customers %}
-                    <tr class="border-b text-black">
+                    <tr class="border-b text-cyan-400">
                         <td class="py-2 px-4">{{ customer.name }}</td>
                         <td class="py-2 px-4">K{{ customer.total }}</td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="2" class="text-center py-4 text-gray-500">No data.</td>
+                        <td colspan="2" class="text-center py-4 text-cyan-400">No data.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-            <div class="font-bold mb-4 text-black text-lg">Recent Orders</div>
-            <table class="min-w-full bg-white rounded-lg">
+        <div class="rounded-xl shadow-lg border border-cyan-500 p-6">
+            <div class="font-bold mb-4 text-white text-lg">Recent Orders</div>
+            <table class="min-w-full rounded-lg">
                 <thead>
-                    <tr class="bg-black text-white text-left">
+                    <tr class="bg-cyan-600 text-white text-left">
                         <th class="py-2 px-4">Order #</th>
                         <th class="py-2 px-4">Customer</th>
                         <th class="py-2 px-4">Total</th>
@@ -140,7 +140,7 @@
                 </thead>
                 <tbody>
                     {% for order in recent_orders %}
-                    <tr class="border-b text-black">
+                    <tr class="border-b text-cyan-400">
                         <td class="py-2 px-4">{{ order.order_id }}</td>
                         <td class="py-2 px-4">{{ order.customer }}</td>
                         <td class="py-2 px-4">K{{ order.total }}</td>
