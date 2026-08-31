@@ -3,7 +3,7 @@
 
 {% block content %}
 
-<div class="container bg-black mx-auto min-w-full px-4 py-8">
+<div class="container bg-[#00000F] mx-auto w-full px-4 py-8">
     <!-- Header -->
     <section class="flex justify-between items-center mb-10">
         <div>
@@ -14,21 +14,21 @@
 
     <!-- KPI Summary Cards -->
     <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        <div class="bg-cyan-950/25 font-semibold border border-cyan-600/50 rounded-xl p-6 text-center">
+        <div class="bg-cyan-950/25 font-semibold border border-cyan-600/10 rounded-xl p-6 text-center">
             <div class="text-green-400/80 text-sm mb-2">Total Revenue</div>
-            <div class="text-3xl font-bold text-green-400/90">K{{ kpi.total_revenue }}</div>
+            <div class="text-2xl font-bold text-green-400/90">K{{ kpi.total_revenue }}</div>
         </div>
-        <div class="bg-cyan-950/25 font-semibold rounded-xl border border-cyan-600/50 p-6 text-center">
+        <div class="bg-cyan-950/25 font-semibold rounded-xl border border-cyan-600/10 p-6 text-center">
             <div class="text-red-400/80 text-sm mb-2">Total Customers</div>
-            <div class="text-3xl font-bold text-red-400/90">{{ kpi.total_customers }}</div>
+            <div class="text-2xl font-bold text-red-400/90">{{ kpi.total_customers }}</div>
         </div>
-        <div class="bg-cyan-950/25 font-semibold rounded-xl border border-cyan-600/50 p-6 text-center">
+        <div class="bg-cyan-950/25 font-semibold rounded-xl border border-cyan-600/10 p-6 text-center">
             <div class="text-purple-400/80 text-sm mb-2">Inventory Value</div>
-            <div class="text-3xl font-bold text-purple-400/90">K{{ kpi.inventory_value }}</div>
+            <div class="text-2xl font-bold text-purple-400/90">K{{ kpi.inventory_value }}</div>
         </div>
-        <div class="bg-cyan-950/25 font-semibold rounded-xl border border-cyan-600/50 p-6 text-center">
+        <div class="bg-cyan-950/25 font-semibold rounded-xl border border-cyan-600/10 p-6 text-center">
             <div class="text-cyan-400/80 text-sm mb-2">Total Orders</div>
-            <div class="text-3xl font-bold text-cyan-400/90">{{ kpi.total_orders }}</div>
+            <div class="text-2xl font-bold text-cyan-400/90">{{ kpi.total_orders }}</div>
         </div>
     </section>
 
