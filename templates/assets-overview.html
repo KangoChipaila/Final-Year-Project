@@ -6,7 +6,7 @@
     <!-- Header -->
     <section class="flex justify-between items-center mb-8">
         <div>
-            <h1 class="text-3xl font-bold text-blue-700 tracking-tight">Asset Overview</h1>
+            <h1 class="text-3xl font-bold text-white tracking-tight">Asset Overview</h1>
             <p class="text-gray-500 mt-2">Manage and track your company assets efficiently</p>
         </div>
     </section>
@@ -15,14 +15,13 @@
         <div class="flex justify-end items-center gap-3 mb-8">
             <a href="{{ url_for('add_asset') }}"
                class="bg-green-700 text-white px-5 py-2 rounded-xl font-semibold shadow hover:bg-green-800 transition">
-               + Add Asset
+                Manually Add Asset
             </a>
             <div>OR</div>
             <!-- Asset Upload Title + CSV Upload Form -->
             <div class="flex flex-col items-start gap-2">
-                <div class="text-sm font-semibold text-gray-700">Import Assets (CSV)</div>
                 <form action="{{ url_for('assets_upload.upload_assets') }}" method="POST" enctype="multipart/form-data"
-                      class="bg-white rounded-xl p-2 shadow border border-gray-200 flex items-center gap-2">
+                      class="rounded-xl p-2 shadow bg-cyan-950/25 font-semibold border border-cyan-600/10 flex items-center gap-2">
                     <input type="file" name="csv_file" accept=".csv" required
                            class="text-sm file:bg-blue-700 file:text-white file:py-1 file:px-3 file:rounded-md file:border-none" />
                     <button type="submit"
@@ -58,19 +57,19 @@
     {% endif %}
 
     <!-- Search and Filter Bar -->
-    <form method="GET" action="{{ url_for('asset_overview') }}" class="flex flex-wrap items-center gap-4 mb-8 bg-white rounded-xl shadow-lg border border-gray-200 p-4">
+    <form method="GET" action="{{ url_for('asset_overview') }}" class="flex flex-wrap items-center gap-4 mb-8 rounded-xl bg-cyan-950/25 font-semibold border border-cyan-600/10 p-4 text-cyan-400">
         <input type="text" name="query" placeholder="Search by name..."
                value="{{ query }}"
-               class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-blue-300 focus:outline-none w-60" />
+               class="border border-cyan-300 rounded-lg px-4 py-2 focus:ring-blue-300 focus:outline-none w-60" />
 
-        <select name="category" class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-blue-300 focus:outline-none">
+        <select name="category" class="border border-cyan-300 rounded-lg px-4 py-2 focus:ring-blue-300 focus:outline-none">
             <option value="">All Categories</option>
             {% for c in categories %}
             <option value="{{ c }}" {% if selected_category == c %}selected{% endif %}>{{ c }}</option>
             {% endfor %}
         </select>
 
-        <select name="status" class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-blue-300 focus:outline-none">
+        <select name="status" class="border border-cyan-300 rounded-lg px-4 py-2 focus:ring-blue-300 focus:outline-none">
             <option value="">All Statuses</option>
             <option value="Active" {% if selected_status == 'Active' %}selected{% endif %}>Active</option>
             <option value="Retired" {% if selected_status == 'Retired' %}selected{% endif %}>Retired</option>
